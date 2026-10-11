@@ -1,0 +1,31 @@
+<!-- ===== フラッシュ暗算 ===== -->
+<div class="mode" id="modeAnzan" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="azSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">あそび方</span><div class="chips" id="azModeChips"></div></div>
+        <div class="opt" id="azDigitsOpt"><span class="row-label">けた数</span><div class="chips" id="azDigitsChips"></div></div>
+        <div class="opt" id="azCountOpt"><span class="row-label">口数（数字の個数）</span><div class="chips" id="azCountChips"></div></div>
+        <div class="opt" id="azSpeedOpt"><span class="row-label">表示スピード（1つあたり）</span><div class="chips" id="azSpeedChips"></div></div>
+      </div>
+      <p class="anzan-best" id="azBest"></p>
+      <ul class="rules" id="azRules"></ul>
+    </section>
+    <section class="panel" id="azPlay" hidden>
+      <span class="label" id="azLabel"></span>
+      <p class="d-title" id="azTitle"></p>
+      <div class="anzan-board" id="azBoard" aria-live="off">
+        <span class="anzan-num" id="azNum"></span>
+        <div class="anzan-dots" id="azDots" aria-hidden="true"></div>
+      </div>
+      <div class="anzan-entry" id="azEntry" aria-label="あなたの答え" hidden></div>
+      <div class="anzan-pad" id="azPad" hidden></div>
+      <div class="word-card" id="azCard" hidden></div>
+      <div class="anzan-ladder" id="azLadder" aria-hidden="true" hidden></div>
+      <div class="anzan-tape" id="azTape" hidden></div>
+      <ul class="anzan-stats" id="azStats" hidden></ul>
+      <p class="hint" id="azHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="azActions"></div>
+</div>

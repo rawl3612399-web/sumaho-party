@@ -4772,6 +4772,295 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   .simon-badge.simon-pop { animation: none; }
 }
 </style>
+<style>
+/* IQチャレンジ: quiz bar (progress, timer ring), question figures, the 2×2 answer grid and result bars.
+   Colors come from tokens; the puzzle figures are drawn with currentColor. */
+#modeIqChallenge { --iq: var(--c-violet); }
+#modeIqChallenge .stage { padding-block: 14px; }
+.iq-play { gap: 8px; flex: 1; }
+
+/* ---------- setup ---------- */
+.iq-best {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label num" "sub num";
+  align-items: center; gap: 2px 12px; width: 100%; box-sizing: border-box; text-align: left;
+  padding: 10px 16px; border-radius: 16px; border: 2.5px solid var(--iq); background: var(--paper);
+}
+.iq-best-label { grid-area: label; font-size: .78rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.iq-best-sub { grid-area: sub; font-size: .88rem; font-weight: 700; }
+.iq-best-num {
+  grid-area: num; font-family: var(--display); font-weight: 400; font-size: 2.5rem; line-height: 1;
+  color: var(--iq); font-variant-numeric: tabular-nums;
+}
+.iq-note { margin: 0; font-size: .78rem; color: var(--muted); text-wrap: balance; }
+.iq-error { color: var(--alert); }
+
+/* ---------- quiz bar ---------- */
+.iq-hud { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; }
+.iq-quit {
+  font: inherit; font-size: .8rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  min-height: 44px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--card);
+}
+.iq-progress { display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; }
+.iq-count { font-size: .8rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.iq-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.iq-fill {
+  display: block; width: 0; height: 100%; border-radius: inherit; background: var(--iq);
+  transition: width .4s cubic-bezier(.2, .9, .3, 1);
+}
+.iq-ring { position: relative; flex: none; width: 48px; height: 48px; }
+.iq-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.iq-ring-track, .iq-ring-bar { fill: none; stroke-width: 5; }
+.iq-ring-track { stroke: var(--line); }
+.iq-ring-bar { stroke: var(--iq); stroke-linecap: round; }
+.iq-ring-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-weight: 900; font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.iq-ring.urgent .iq-ring-bar { stroke: var(--alert); }
+.iq-ring.urgent .iq-ring-num { color: var(--alert); animation: pulse .5s ease-in-out infinite; }
+
+/* ---------- question ---------- */
+.iq-question { display: flex; justify-content: center; width: 100%; }
+.iq-term {
+  min-width: 0; height: 50px; box-sizing: border-box; padding: 0 2px; display: grid; place-items: center;
+  border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink);
+  font-family: var(--display); font-size: clamp(1.05rem, 5vw, 1.5rem); font-variant-numeric: tabular-nums;
+}
+.iq-blank {
+  border-style: dashed; border-color: var(--iq); color: var(--iq); background: var(--card);
+  animation: iqBlink 1.4s ease-in-out infinite;
+}
+@keyframes iqBlink { 50% { background: var(--hl); } }
+.iq-seq { display: flex; gap: 6px; width: 100%; max-width: 400px; }
+.iq-seq .iq-term { flex: 1 1 0; }
+.iq-pairs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; max-width: 360px; }
+.iq-ops { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.iq-row { display: flex; align-items: center; gap: 6px; }
+.iq-row .iq-term { width: 54px; height: 44px; }
+.iq-op { font-weight: 900; font-size: 1.1rem; color: var(--muted); }
+.iq-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; }
+/* Sizes follow the small viewport height (svh, with a vh fallback) so the figure and all four answers fit a phone screen. */
+.iq-matrix { width: min(100%, 270px, 28vh); width: min(100%, 270px, 28svh); }
+.iq-matrix-svg { display: block; width: 100%; height: auto; color: var(--ink); }
+.iq-cell { stroke: var(--line); stroke-width: 2.5; }
+.iq-missing { stroke: var(--iq); stroke-width: 3; stroke-dasharray: 8 6; }
+.iq-qmark { fill: var(--iq); font-family: var(--display); font-size: 54px; }
+.iq-model {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 20px 4px; border-radius: 16px; border: 2px dashed var(--line);
+}
+.iq-model .iq-fig { width: min(36vw, 150px, 20vh); width: min(36vw, 150px, 20svh); height: auto; color: var(--ink); }
+.iq-tag { font-size: .75rem; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.iq-mark { fill: var(--iq); }
+.iq-tint { fill: var(--iq); fill-opacity: .24; }
+
+/* ---------- answers ---------- */
+.iq-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 420px; margin-top: auto; }
+.iq-choice {
+  position: relative; min-width: 0; box-sizing: border-box; padding: 8px; display: grid; place-items: center;
+  font: inherit; color: var(--ink); cursor: pointer; touch-action: manipulation;
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 16px;
+  box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+  transition: transform .06s, box-shadow .06s, opacity .25s, background-color .25s;
+  animation: iqIn .32s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+.iq-choice:nth-child(2) { animation-delay: .04s; }
+.iq-choice:nth-child(3) { animation-delay: .08s; }
+.iq-choice:nth-child(4) { animation-delay: .12s; }
+@keyframes iqIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+.iq-choice:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.iq-choice:disabled { cursor: default; }
+.iq-numbers .iq-choice { height: clamp(58px, 11vh, 72px); height: clamp(58px, 11svh, 72px); }
+.iq-figures .iq-choice { height: clamp(76px, 13.5vh, 132px); height: clamp(76px, 13.5svh, 132px); }
+.iq-question[hidden] + .iq-figures .iq-choice { height: clamp(100px, 20vh, 170px); height: clamp(100px, 20svh, 170px); }
+.iq-choice .iq-fig { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1; }
+.iq-num { font-family: var(--display); font-size: clamp(1.7rem, 8vw, 2.2rem); font-variant-numeric: tabular-nums; }
+.iq-key { position: absolute; top: 4px; left: 9px; font-size: .7rem; font-weight: 900; color: var(--muted); }
+.iq-choice[data-state="right"] {
+  border-color: var(--go); box-shadow: 0 4px 0 var(--go);
+  background: color-mix(in srgb, var(--go) 16%, var(--card));
+  animation: iqRight .5s cubic-bezier(.2, 1.4, .4, 1);
+}
+.iq-choice[data-state="wrong"] {
+  border-color: var(--alert); box-shadow: 0 4px 0 var(--alert);
+  background: color-mix(in srgb, var(--alert) 12%, var(--card));
+}
+.iq-choice[data-state="dim"] { opacity: .35; }
+.iq-choice[data-state="right"]::after, .iq-choice[data-state="wrong"]::after {
+  position: absolute; top: -10px; right: -6px; padding: 2px 9px; border-radius: 999px;
+  font-size: .75rem; font-weight: 900; line-height: 1.4;
+}
+.iq-choice[data-state="right"]::after { content: "正解"; background: var(--go); color: var(--on-go); }
+.iq-choice[data-state="wrong"]::after { content: "×"; background: var(--alert); color: var(--on-accent); }
+@keyframes iqRight { 0% { transform: scale(.94); } 60% { transform: scale(1.05); } 100% { transform: none; } }
+
+/* ---------- result ---------- */
+.word-card.iq-score { border-color: var(--iq); box-shadow: 0 6px 0 var(--iq); }
+.word-card.iq-score .wc-main { color: var(--iq); }
+.iq-detail {
+  list-style: none; margin: 0; padding: 0; width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+}
+.iq-detail li {
+  display: grid; grid-template-columns: 6.4em 1fr auto; align-items: center; gap: 10px;
+  padding: 6px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-size: .88rem; font-variant-numeric: tabular-nums;
+}
+.iq-d-name { font-weight: 700; }
+.iq-d-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.iq-d-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--iq); }
+.iq-d-val { grid-column: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .iq-choice, .iq-choice[data-state="right"], .iq-blank, .iq-ring.urgent .iq-ring-num { animation: none; }
+  .iq-choice, .iq-fill { transition: none; }
+  .iq-choice:active:not(:disabled) { transform: none; }
+}
+</style>
+<style>
+/* フラッシュ暗算: a dark scoreboard with glowing digits, a calculator-style keypad, and the result tape. */
+:root {
+  --anzan-board: #17202c;
+  --anzan-board-hi: #243245;
+  --anzan-rim: #0c121a;
+  --anzan-digit: #ffd76a;
+  --anzan-glow: rgba(255, 196, 64, .5);
+  --anzan-pip: #3a4859;
+  --anzan-scan: rgba(255, 255, 255, .035);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --anzan-board: #0d1512;
+    --anzan-board-hi: #18241f;
+    --anzan-rim: #060a08;
+    --anzan-digit: #ffd76a;
+    --anzan-glow: rgba(255, 196, 64, .42);
+    --anzan-pip: #2c3a34;
+    --anzan-scan: rgba(255, 255, 255, .03);
+  }
+}
+:root[data-theme="dark"] {
+  --anzan-board: #0d1512;
+  --anzan-board-hi: #18241f;
+  --anzan-rim: #060a08;
+  --anzan-digit: #ffd76a;
+  --anzan-glow: rgba(255, 196, 64, .42);
+  --anzan-pip: #2c3a34;
+  --anzan-scan: rgba(255, 255, 255, .03);
+}
+
+/* ---------- setup ---------- */
+.anzan-best {
+  margin: 0; align-self: stretch; text-align: left; font-size: .9rem; font-weight: 700;
+  padding: 8px 12px; border-radius: 12px; border: 2px dashed var(--c-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- flash board ---------- */
+.anzan-board {
+  position: relative; width: min(100%, 340px); aspect-ratio: 16 / 11; box-sizing: border-box;
+  display: grid; place-items: center; overflow: hidden;
+  border-radius: 22px; border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink), inset 0 0 0 6px var(--anzan-rim);
+  background:
+    repeating-linear-gradient(0deg, var(--anzan-scan) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 42%, var(--anzan-board-hi) 0%, var(--anzan-board) 72%);
+  margin-bottom: 6px;
+  user-select: none; -webkit-user-select: none;
+}
+.anzan-num {
+  font-family: var(--display); font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: clamp(4.4rem, 26vw, 8rem); letter-spacing: .02em;
+  color: var(--anzan-digit); text-shadow: 0 0 22px var(--anzan-glow), 0 0 4px var(--anzan-glow);
+  min-height: 1em;
+}
+.anzan-in { animation: anzanIn 90ms ease-out; }
+@keyframes anzanIn { from { opacity: .35; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.anzan-dots {
+  position: absolute; left: 0; right: 0; bottom: 14px;
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; padding-inline: 18px;
+}
+.anzan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--anzan-pip); transition: background .15s, transform .15s; }
+.anzan-dot.lit { background: var(--anzan-digit); box-shadow: 0 0 6px var(--anzan-glow); }
+.anzan-dot.cur { transform: scale(1.35); }
+
+/* ---------- answer entry + keypad ---------- */
+.anzan-entry {
+  width: min(100%, 340px); box-sizing: border-box; min-height: 74px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  padding: 8px 18px; border-radius: 18px;
+  background: var(--paper); border: 2.5px solid var(--ink); box-shadow: inset 0 3px 0 var(--line);
+  font-family: var(--display); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.anzan-typed { font-size: clamp(2.4rem, 12vw, 3.2rem); letter-spacing: .04em; }
+.anzan-ph { font-family: var(--body); font-size: 1rem; font-weight: 700; color: var(--muted); }
+.anzan-caret { width: 3px; height: 2.2rem; border-radius: 2px; background: var(--accent); animation: anzanBlink 1s steps(1) infinite; }
+@keyframes anzanBlink { 50% { opacity: 0; } }
+.anzan-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(100%, 340px); }
+.anzan-pad .key.anzan-key {
+  font: inherit; font-family: var(--display); font-size: 1.75rem; font-variant-numeric: tabular-nums;
+  min-height: 54px; padding: 6px 0; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--card); color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform .05s, box-shadow .05s;
+}
+.anzan-pad .key.anzan-key.fn { font-family: var(--body); font-size: 1.05rem; font-weight: 900; }
+.anzan-pad .key.anzan-key.ok { background: var(--accent); border-color: var(--accent-deep); color: var(--on-accent); box-shadow: 0 4px 0 var(--accent-deep); }
+.anzan-pad .key.anzan-key:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.anzan-pad .key.anzan-key.ok:active:not(:disabled) { box-shadow: 0 1px 0 var(--accent-deep); }
+.anzan-pad .key.anzan-key:disabled { opacity: .35; cursor: default; }
+
+/* ---------- verdict cards ---------- */
+.word-card.anzan-ok { border-color: var(--go); box-shadow: 0 6px 0 var(--go); }
+.word-card.anzan-ok .wc-main { color: var(--go); }
+.word-card.anzan-ok .wc-sub { color: var(--go); font-weight: 900; font-size: 1.05rem; }
+.word-card.anzan-ng .wc-main { color: var(--alert); }
+.word-card.anzan-rank {
+  background: var(--c-gold); border-color: var(--ink); color: var(--on-tile);
+  background-image: repeating-linear-gradient(45deg, transparent 0 14px, var(--anzan-scan) 14px 28px);
+}
+.word-card.anzan-rank .wc-main { font-size: clamp(3rem, 16vw, 4.4rem); }
+.word-card.anzan-rank .wc-sub { color: var(--on-tile); font-weight: 700; opacity: .9; }
+
+/* ---------- ladder progress (段位チャレンジ) ---------- */
+.anzan-ladder { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; width: min(100%, 340px); }
+.anzan-ladder-end { font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.anzan-pips { display: grid; grid-template-columns: repeat(20, 1fr); align-items: end; gap: 3px; }
+.anzan-pip { height: 10px; border-radius: 3px; background: var(--line); }
+.anzan-pip.dan { height: 14px; }
+.anzan-pip.dan:nth-child(11) { margin-left: 4px; }
+.anzan-pip.done { background: var(--c-gold); animation: anzanDeal .3s both; }
+.anzan-pip.next { background: transparent; box-shadow: inset 0 0 0 2px var(--c-gold); }
+.anzan-pip.miss { background: transparent; box-shadow: inset 0 0 0 2px var(--alert); }
+
+/* ---------- tape of the numbers that flashed ---------- */
+.anzan-tape { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; width: min(100%, 340px); }
+.anzan-tape-head { width: 100%; margin: 0; font-size: .8rem; color: var(--muted); letter-spacing: .08em; }
+.anzan-chip {
+  display: inline-flex; align-items: baseline; gap: 3px;
+  padding: 4px 9px; border-radius: 10px; border: 2px solid var(--line); background: var(--paper);
+  font-family: var(--display); font-size: 1.15rem; font-variant-numeric: tabular-nums; line-height: 1.2;
+  animation: anzanDeal .32s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(var(--i, 0) * 40ms);
+}
+.anzan-chip.add::before { content: "+"; font-size: .8em; color: var(--muted); }
+.anzan-chip.sum { border-color: var(--go); color: var(--go); }
+@keyframes anzanDeal { from { opacity: 0; transform: translateY(6px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* ---------- stats on the dan result ---------- */
+.anzan-stats { list-style: none; margin: 0; padding: 0; width: min(100%, 340px); display: flex; flex-direction: column; gap: 6px; }
+.anzan-stats li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 7px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-size: .9rem; font-variant-numeric: tabular-nums; text-align: left;
+}
+.anzan-stats b { font-family: var(--display); font-weight: 400; font-size: 1.15rem; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anzan-in, .anzan-chip, .anzan-caret, .anzan-pip.done { animation: none; }
+  .anzan-dot { transition: none; }
+  .anzan-pad .key.anzan-key:active:not(:disabled) { transform: none; }
+}
+</style>
 <!-- games:styles -->
 
 <div class="app">
@@ -5966,6 +6255,72 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   </main>
   <div class="actions" id="siActions"></div>
 </div>
+  <!-- ===== IQチャレンジ ===== -->
+<div class="mode" id="modeIqChallenge" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="iqSetup">
+      <div class="iq-best" id="iqBest"></div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">時間</span><div class="chips" id="iqTimeChips"></div></div>
+      </div>
+      <ul class="rules" id="iqRules"></ul>
+      <p class="iq-note">IQ目安は遊びの目安です。本物のIQ検査ではありません</p>
+      <p class="hint iq-error" id="iqError" hidden></p>
+    </section>
+    <section class="panel iq-play" id="iqPlay" hidden>
+      <div class="iq-hud" id="iqHud" hidden>
+        <button class="iq-quit" id="iqQuit" type="button">やめる</button>
+        <div class="iq-progress">
+          <span class="iq-count" id="iqCount">1 / 20</span>
+          <div class="iq-track" aria-hidden="true"><span class="iq-fill" id="iqBar"></span></div>
+        </div>
+        <div class="iq-ring" id="iqRing" aria-hidden="true">
+          <svg viewBox="0 0 44 44"><circle class="iq-ring-track" cx="22" cy="22" r="19"></circle><circle class="iq-ring-bar" id="iqRingBar" cx="22" cy="22" r="19"></circle></svg>
+          <span class="iq-ring-num" id="iqRingNum">30</span>
+        </div>
+      </div>
+      <span class="label" id="iqLabel"></span>
+      <p class="d-title" id="iqTitle"></p>
+      <div class="iq-question" id="iqQuestion" hidden></div>
+      <div class="iq-choices" id="iqChoices" role="group" aria-label="答えの候補" hidden></div>
+      <div class="word-card" id="iqCard" hidden></div>
+      <ul class="iq-detail" id="iqDetail" hidden></ul>
+      <p class="hint" id="iqHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="iqActions"></div>
+</div>
+  <!-- ===== フラッシュ暗算 ===== -->
+<div class="mode" id="modeAnzan" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="azSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">あそび方</span><div class="chips" id="azModeChips"></div></div>
+        <div class="opt" id="azDigitsOpt"><span class="row-label">けた数</span><div class="chips" id="azDigitsChips"></div></div>
+        <div class="opt" id="azCountOpt"><span class="row-label">口数（数字の個数）</span><div class="chips" id="azCountChips"></div></div>
+        <div class="opt" id="azSpeedOpt"><span class="row-label">表示スピード（1つあたり）</span><div class="chips" id="azSpeedChips"></div></div>
+      </div>
+      <p class="anzan-best" id="azBest"></p>
+      <ul class="rules" id="azRules"></ul>
+    </section>
+    <section class="panel" id="azPlay" hidden>
+      <span class="label" id="azLabel"></span>
+      <p class="d-title" id="azTitle"></p>
+      <div class="anzan-board" id="azBoard" aria-live="off">
+        <span class="anzan-num" id="azNum"></span>
+        <div class="anzan-dots" id="azDots" aria-hidden="true"></div>
+      </div>
+      <div class="anzan-entry" id="azEntry" aria-label="あなたの答え" hidden></div>
+      <div class="anzan-pad" id="azPad" hidden></div>
+      <div class="word-card" id="azCard" hidden></div>
+      <div class="anzan-ladder" id="azLadder" aria-hidden="true" hidden></div>
+      <div class="anzan-tape" id="azTape" hidden></div>
+      <ul class="anzan-stats" id="azStats" hidden></ul>
+      <p class="hint" id="azHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="azActions"></div>
+</div>
   <!-- games:partials -->
 </div>
 
@@ -6950,6 +7305,8 @@ const Icons = (() => {
     stroop: svg('<rect x="2.5" y="4" width="13" height="11" rx="2.5"/><path d="M6 8h6M6 11.5h3.5"/><path d="M18.5 12.5c1.7 2.1 3 3.7 3 5.3a3 3 0 0 1-6 0c0-1.6 1.3-3.2 3-5.3z"/>'),
     schulte: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M5.4 5.6l1-.8v2.6" stroke-width="1.4"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
     simon: svg('<path d="M3.14 10.4A9 9 0 0 1 10.4 3.14V8.78A3.6 3.6 0 0 0 8.78 10.4z" fill="currentColor"/><path d="M13.6 3.14A9 9 0 0 1 20.86 10.4H15.22A3.6 3.6 0 0 0 13.6 8.78z"/><path d="M20.86 13.6A9 9 0 0 1 13.6 20.86V15.22A3.6 3.6 0 0 0 15.22 13.6z"/><path d="M10.4 20.86A9 9 0 0 1 3.14 13.6H8.78A3.6 3.6 0 0 0 10.4 15.22z"/>'),
+    iq: svg('<path d="M9.5 17.5h5M10.5 20.5h3"/><path d="M12 3.5a5.5 5.5 0 0 0-3.2 10c.5.4.7.9.7 1.5v.5h5V15c0-.6.2-1.1.7-1.5a5.5 5.5 0 0 0-3.2-10z"/><path d="M10.5 9.5l1.5 1.5 1.5-1.5"/>'),
+    anzan: svg('<rect x="2.5" y="4.5" width="19" height="13" rx="2.5"/><path d="M6.5 11h4M8.5 9v4"/><path d="M15.5 7.5l-2 3.5h3l-2 3.5"/><path d="M9 21h6"/>'),
     /* games:icons */
   };
 })();
@@ -28203,6 +28560,1592 @@ const Simon = (() => {
   return { init, onShow, leave };
 })();
 </script>
+<script>
+/* iq-rules.js */
+/* IQ challenge rules: builds 20 multiple-choice puzzles (number series, figure matrix, odd one out, rotation,
+ * number relations) from random numbers, keeps only puzzles where exactly one choice fits, scores the run
+ * and keeps records. Figures are plain descriptions; figureSvg / matrixSvg turn them into SVG markup that
+ * is drawn with currentColor (theme colors come from CSS). */
+const IqRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+
+  const TOTAL = 20;
+  const LEVELS = 5;
+  const CHOICES = 4;
+  const TIME_LIMIT_SEC = 30;
+  const MAX_MS = 600000;
+  const TIMINGS = Object.freeze(["timed", "free"]);
+  const TYPES = Object.freeze([
+    Object.freeze({ id: "seq", name: "数列" }),
+    Object.freeze({ id: "matrix", name: "図形の規則" }),
+    Object.freeze({ id: "odd", name: "仲間はずれ" }),
+    Object.freeze({ id: "rotate", name: "図形の回転" }),
+    Object.freeze({ id: "relation", name: "数の関係" })
+  ]);
+  const TYPE_IDS = Object.freeze(TYPES.map(t => t.id));
+  const IQ_MIN = 70;
+  const IQ_MAX = 145;
+  const LEVEL_WEIGHT = Object.freeze([1, 1.25, 1.5, 1.75, 2]);
+  const TITLES = Object.freeze([
+    { min: 140, title: "ひらめき天才級" }, { min: 130, title: "名探偵級" }, { min: 120, title: "博士級" },
+    { min: 110, title: "秀才級" }, { min: 100, title: "切れ者級" }, { min: 90, title: "ひらめき見習い" },
+    { min: 0, title: "のびしろ無限大" }
+  ].map(Object.freeze));
+
+  /* ---------- small helpers ---------- */
+  const randInt = (min, max, r) => min + Math.floor(r() * (max - min + 1));
+  const range = (n) => Array.from({ length: n }, (_, i) => i);
+  const uniq = (list) => [...new Set(list)];
+  const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+  const f1 = (n) => Math.round(n * 10) / 10;
+
+  function retry(make, ok = Boolean, tries = 600) {
+    for (let i = 0; i < tries; i++) {
+      const v = make();
+      if (v && ok(v)) return v;
+    }
+    throw new Error("問題を作れませんでした");
+  }
+  function arrange(answer, wrong, r) {
+    const choices = R.shuffle([answer, ...wrong], r);
+    return { choices, answer: choices.indexOf(answer) };
+  }
+  /* Three wrong numbers: up to two tempting mistakes, the rest close to the answer. */
+  function numberDistractors(ans, extras, isBad, r) {
+    const ok = (v) => Number.isInteger(v) && v > 0 && v !== ans && !isBad(v);
+    const spread = Math.max(3, Math.round(ans * 0.2));
+    const take = (list, n, have) => list.reduce((acc, v) => (acc.length >= n || acc.includes(v) || !ok(v) ? acc : [...acc, v]), have);
+    const tempting = take(R.shuffle(uniq(extras), r), 2, []);
+    const wrong = take(R.shuffle(range(spread * 2 + 1).map(i => ans - spread + i), r), CHOICES - 1, tempting);
+    return wrong.length === CHOICES - 1 ? wrong : null;
+  }
+
+  /* ---------- 数列 ---------- */
+  const diffs = (s) => s.slice(1).map((v, i) => v - s[i]);
+  const allSame = (s) => s.length > 0 && s.every(v => v === s[0]);
+  /* s[i+1] = a * s[i] + b for a small whole a (covers +d, ×q and ×q+b). */
+  const affine = (s) => s.length >= 3 && range(5).some(i => {
+    const a = i + 1, b = s[1] - a * s[0];
+    return s.every((v, j) => j === 0 || v === a * s[j - 1] + b);
+  });
+  function polynomial(s) {
+    let d = s;
+    for (let k = 0; k < 3; k++) {
+      d = diffs(d);
+      if (d.length >= 2 && allSame(d)) return true;
+    }
+    return false;
+  }
+  const sameStep = (pairs) => pairs.length > 0 && (allSame(pairs.map(([a, b]) => b - a)) ||
+    (pairs.every(([a, b]) => a !== 0 && b % a === 0) && allSame(pairs.map(([a, b]) => b / a))));
+  function alternating(s) {
+    const steps = s.slice(1).map((v, i) => [s[i], v]);
+    return sameStep(steps.filter((_, i) => i % 2 === 0)) && sameStep(steps.filter((_, i) => i % 2 === 1));
+  }
+  const interleaved = (s) => [0, 1].every(p => {
+    const sub = s.filter((_, i) => i % 2 === p);
+    return sub.length >= 3 && (allSame(diffs(sub)) || affine(sub));
+  });
+  const fibLike = (s) => s.every((v, i) => i < 2 || v === s[i - 1] + s[i - 2]);
+  /* True when a complete series follows any rule a player could reasonably see. */
+  const seqFits = (s) => polynomial(s) || affine(s) || affine([...s].reverse()) || alternating(s) ||
+    interleaved(s) || fibLike(s) || affine(diffs(s));
+
+  const steps = (a, n, step) => range(n - 1).reduce((acc, i) => [...acc, step(acc[i], i)], [a]);
+  const SEQ_MAKERS = {
+    arith: (r) => { const a = randInt(1, 20, r), d = randInt(2, 9, r); return range(6).map(i => a + i * d); },
+    down: (r) => { const d = randInt(3, 9, r), a = randInt(5 * d + 1, 5 * d + 30, r); return range(6).map(i => a - i * d); },
+    double: (r) => { const a = randInt(1, 5, r); return range(6).map(i => a * 2 ** i); },
+    triple: (r) => { const a = randInt(1, 3, r); return range(6).map(i => a * 3 ** i); },
+    halve: (r) => { const a = randInt(1, 6, r); return range(6).map(i => a * 2 ** (5 - i)); },
+    altAdd: (r) => {
+      const p = randInt(1, 9, r), q = (p - 1 + randInt(1, 8, r)) % 9 + 1;
+      return steps(randInt(1, 15, r), 6, (v, i) => v + (i % 2 ? q : p));
+    },
+    altMul: (r) => { const k = randInt(1, 6, r); return steps(randInt(1, 4, r), 6, (v, i) => (i % 2 ? v + k : v * 2)); },
+    interleave: (r) => {
+      const a = randInt(1, 9, r), d1 = randInt(1, 5, r), d2 = randInt(2, 6, r), b = randInt(2 * d2 + 12, 40, r);
+      return range(6).map(i => (i % 2 ? b - ((i - 1) / 2) * d2 : a + (i / 2) * d1));
+    },
+    square: (r) => { const c = randInt(1, 4, r), k = R.pick([0, 0, 1, -1, 2], r); return range(6).map(i => (i + c) ** 2 + k); },
+    fib: (r) => { const a = randInt(1, 6, r), b = randInt(1, 9, r); return range(4).reduce(acc => [...acc, acc[acc.length - 1] + acc[acc.length - 2]], [a, b]); },
+    diffArith: (r) => { const d0 = randInt(1, 5, r), dd = randInt(1, 4, r); return steps(randInt(1, 30, r), 6, (v, i) => v + d0 + i * dd); },
+    cube: (r) => { const c = randInt(1, 2, r), k = R.pick([0, 0, 1, -1, 2], r); return range(6).map(i => (i + c) ** 3 + k); },
+    diffGeo: (r) => { const d0 = randInt(1, 3, r), q = R.pick([2, 2, 3], r); return steps(randInt(1, 20, r), 6, (v, i) => v + d0 * q ** i); }
+  };
+  const SEQ_LEVELS = Object.freeze([
+    ["arith", "double", "down"],
+    ["arith", "triple", "halve", "altAdd"],
+    ["square", "fib", "altAdd", "interleave", "down"],
+    ["diffArith", "cube", "altMul", "fib", "square"],
+    ["diffGeo", "cube", "altMul", "diffArith", "interleave"]
+  ]);
+
+  function seqQuestion(level, r) {
+    return retry(() => {
+      const kind = R.pick(SEQ_LEVELS[level], r);
+      const full = SEQ_MAKERS[kind](r);
+      const hide = level >= 4 ? R.pick([3, 4, 5], r) : 5;
+      const ans = full[hide], prev = full[hide - 1], prev2 = full[hide - 2];
+      const fill = (v) => full.map((x, i) => (i === hide ? v : x));
+      if (!full.every(v => Number.isInteger(v) && v > 0) || !seqFits(full)) return null;
+      const extras = [prev + (prev - prev2), ans + (ans - prev), ans + (prev - prev2), prev * 2, ans + 1, ans - 1, ans + 2];
+      const wrong = numberDistractors(ans, extras, v => seqFits(fill(v)), r);
+      return wrong && { type: "seq", level, kind, prompt: { kind: "seq", terms: fill(null) }, ...arrange(ans, wrong, r) };
+    });
+  }
+
+  /* ---------- 数の関係 ---------- */
+  /* Simple rules a player might think of; a question is kept only when they all agree on the answer. */
+  const FUNCS = (() => {
+    const list = [];
+    for (let a = 0; a <= 12; a++) for (let b = -10; b <= 10; b++) list.push(x => a * x + b);
+    for (let a = 1; a <= 3; a++) for (let b = -10; b <= 10; b++) list.push(x => a * x * x + b);
+    for (let b = -5; b <= 5; b++) list.push(x => x * x + b * x, x => x ** 3 + b, x => 2 ** x + b);
+    return Object.freeze(list);
+  })();
+  const OPS = (() => {
+    const list = [];
+    for (let k = -5; k <= 5; k++) list.push((a, b) => a + b + k, (a, b) => a - b + k, (a, b) => b - a + k, (a, b) => a * b + k);
+    for (let m = 2; m <= 4; m++) {
+      list.push((a, b) => (a + b) * m, (a, b) => a * m + b, (a, b) => a + b * m, (a, b) => (a - b) * m, (a, b) => a * b * m);
+    }
+    list.push((a, b) => a * a + b, (a, b) => a * a - b, (a, b) => a + b * b, (a, b) => b * b - a, (a, b) => a * b - a,
+      (a, b) => a * b - b, (a, b) => a * b + a + b, (a, b) => 10 * a + b, (a, b) => a * a + b * b);
+    return Object.freeze(list);
+  })();
+  const fnPredictions = (pairs, q) => uniq(FUNCS.filter(f => pairs.every(([x, y]) => f(x) === y)).map(f => f(q)));
+  function rowPredictions(rows) {
+    const done = rows.slice(0, -1), [a, b] = rows[rows.length - 1];
+    const byOps = OPS.filter(op => done.every(([x, y, z]) => op(x, y) === z)).map(op => op(a, b));
+    const sums = uniq(done.map(([x, y, z]) => x + y + z)), prods = uniq(done.map(([x, y, z]) => x * y * z));
+    const inv = [...(sums.length === 1 ? [sums[0] - a - b] : []), ...(prods.length === 1 && a * b !== 0 ? [prods[0] / (a * b)] : [])];
+    return uniq([...byOps, ...inv]).filter(Number.isInteger);
+  }
+  /* Every value that some simple rule gives for the "?" of a relation prompt. */
+  const relationPredictions = (p) => (p.kind === "pairs" ? fnPredictions(p.pairs, p.query) : rowPredictions(p.rows));
+
+  const FN_LEVELS = Object.freeze([
+    [(r) => { const k = randInt(2, 9, r); return x => x + k; }, (r) => { const k = randInt(2, 5, r); return x => k * x; }],
+    [(r) => { const k = R.pick([-3, -1, 1, 3, 5], r); return x => 2 * x + k; }, (r) => { const k = randInt(1, 4, r); return x => 3 * x - k; }, () => x => x * x],
+    [(r) => { const k = R.pick([-4, -1, 1, 2, 5], r); return x => x * x + k; }, () => x => x * (x + 1), (r) => { const k = randInt(1, 6, r); return x => 4 * x - k; }],
+    [() => x => x ** 3, (r) => { const k = randInt(-3, 3, r); return x => 2 * x * x + k; }, () => x => x * x - x, () => x => 2 ** x],
+    [(r) => { const k = R.pick([-2, -1, 1, 2], r); return x => x ** 3 + k; }, () => x => x * (x + 2),
+      (r) => { const k = R.pick([-3, 1, 3], r); return x => 2 ** x + k; }, (r) => { const k = randInt(1, 5, r); return x => 3 * x * x - k; }]
+  ]);
+  const ROW_LEVELS = Object.freeze([
+    [{ op: (a, b) => a + b }, { sum: true }],
+    [{ op: (a, b) => a * b }, { op: (a, b) => a - b }, { sum: true }],
+    [{ op: (a, b) => a * b + 1 }, { op: (a, b) => (a + b) * 2 }, { op: (a, b) => a * 2 + b }, { sum: true }],
+    [{ op: (a, b) => a * a + b }, { op: (a, b) => a * b - a }, { op: (a, b) => (a - b) * 3 }, { sum: true }],
+    [{ op: (a, b) => a * a - b }, { op: (a, b) => a * b + a + b }, { op: (a, b) => a + b * 3 }, { op: (a, b) => a * a + b * b }]
+  ]);
+
+  function pairsQuestion(level, r) {
+    const f = R.pick(FN_LEVELS[level], r)(r);
+    const [q, ...xs] = R.shuffle(range(level >= 3 ? 6 : 9).map(i => i + 1), r).slice(0, level >= 2 ? 4 : 3);
+    const pairs = [...xs].sort((a, b) => a - b).map(x => [x, f(x)]);
+    const ans = f(q);
+    if (ans <= 0 || pairs.some(([, y]) => y <= 0)) return null;
+    const preds = fnPredictions(pairs, q);
+    if (preds.length !== 1 || preds[0] !== ans) return null;
+    const [[x1, y1], [x2, y2]] = pairs.slice(-2);
+    const extras = [y2 + ((y2 - y1) / (x2 - x1)) * (q - x2), ans + q, ans - q, q * q, q * 2, ans + 1, ans - 1];
+    const wrong = numberDistractors(ans, extras, v => preds.includes(v), r);
+    return wrong && { type: "relation", level, prompt: { kind: "pairs", pairs, query: q }, ...arrange(ans, wrong, r) };
+  }
+  function makeRows(rule, level, r) {
+    const hi = level >= 3 ? 12 : 9;
+    if (rule.sum) {
+      const s = randInt(hi + 3, hi * 2, r);
+      return range(3).map(() => retry(() => {
+        const a = randInt(1, hi, r), b = randInt(1, hi, r), c = s - a - b;
+        return c >= 1 && c <= hi ? [a, b, c] : null;
+      }));
+    }
+    return range(level >= 2 ? 4 : 3).map(() => { const a = randInt(2, hi, r), b = randInt(2, hi, r); return [a, b, rule.op(a, b)]; });
+  }
+  /* A grid can also be read down the columns: when the first two columns have the same sum, the "?" that would
+   * give the last column that sum too must not be offered as a wrong choice. */
+  function columnSumGuess(rows) {
+    const col = (c) => rows.reduce((s, row) => s + (row[c] ?? 0), 0);
+    return col(0) === col(1) ? col(0) - col(2) : null;
+  }
+  function rowsQuestion(level, r) {
+    const rule = R.pick(ROW_LEVELS[level], r);
+    const full = makeRows(rule, level, r);
+    if (full.some(row => row[2] <= 0) || uniq(full.map(row => row.join())).length !== full.length) return null;
+    const rows = full.map((row, i) => (i === full.length - 1 ? [row[0], row[1], null] : row));
+    const [a, b, ans] = full[full.length - 1];
+    const preds = rowPredictions(rows);
+    if (preds.length !== 1 || preds[0] !== ans) return null;
+    const extras = [a + b, a * b, a * b + 1, (a + b) * 2, ans + a, ans - b, ans + 1, ans - 1];
+    const byColumn = rule.sum ? columnSumGuess(rows) : null;
+    const wrong = numberDistractors(ans, extras, v => preds.includes(v) || v === byColumn, r);
+    return wrong && { type: "relation", level, prompt: { kind: rule.sum ? "grid" : "ops", rows }, ...arrange(ans, wrong, r) };
+  }
+  const relationQuestion = (level, r) => retry(() => (r() < 0.5 ? pairsQuestion(level, r) : rowsQuestion(level, r)));
+
+  /* ---------- 図形の規則 (3×3) ---------- */
+  const SHAPES = Object.freeze(["circle", "square", "triangle", "diamond", "star", "hexagon", "plus"]);
+  const FILLS = Object.freeze(["empty", "stripe", "solid"]);
+  const ATTRS = Object.freeze(["shape", "count", "fill", "rot"]);
+  const MAT_VARY = Object.freeze([1, 1, 2, 2, 3]);
+
+  function attrValues(attr, level, r) {
+    if (attr === "count") { const s = randInt(1, 2, r), v = [s, s + 1, s + 2]; return r() < 0.3 ? v.reverse() : v; }
+    if (attr === "fill") return R.shuffle(FILLS, r);
+    if (attr === "shape") return R.shuffle(SHAPES, r).slice(0, 3);
+    const step = level >= 4 && r() < 0.5 ? 45 : 90, s = R.pick([0, 90, 180, 270], r);
+    return [0, 1, 2].map(i => (s + i * step) % 360);
+  }
+  function matrixPlan(level, r) {
+    const pool = level >= 2 ? ["count", "fill", "shape", "rot"] : ["count", "fill", "shape"];
+    const vary = retry(() => R.shuffle(pool, r).slice(0, MAT_VARY[level]), v => !(v.includes("rot") && v.includes("shape")));
+    const rowAttr = level >= 1 && r() < 0.5 ? R.pick(["count", "fill", "shape"].filter(a => !vary.includes(a) && !(a === "shape" && vary.includes("rot"))), r) : null;
+    return Object.fromEntries(ATTRS.map(attr => {
+      if (vary.includes(attr)) return [attr, { mode: level === 0 ? "prog" : R.pick(["prog", "latin"], r), shift: randInt(1, 2, r), vals: attrValues(attr, level, r) }];
+      if (attr === rowAttr) return [attr, { mode: "row", vals: attrValues(attr, level, r) }];
+      if (attr === "shape") return [attr, { mode: "const", vals: [vary.includes("rot") ? "arrow" : R.pick(SHAPES, r)] }];
+      if (attr === "rot") return [attr, { mode: "const", vals: [0] }];
+      return [attr, { mode: "const", vals: [attr === "count" ? randInt(1, 3, r) : R.pick(FILLS, r)] }];
+    }));
+  }
+  const MODE_INDEX = { prog: (p, row, col) => col, latin: (p, row, col) => (col + row * p.shift) % 3, row: (p, row) => row, const: () => 0 };
+  const cellAt = (plan, row, col) => ({ t: "cell", ...Object.fromEntries(ATTRS.map(a => [a, plan[a].vals[MODE_INDEX[plan[a].mode](plan[a], row, col)]])) });
+
+  function cellVariants(ans, plan, r) {
+    const alt = (attr, values) => uniq(values).filter(v => v !== ans[attr]).map(v => ({ attr, fig: { ...ans, [attr]: v } }));
+    const shapes = plan.shape.vals.length === 3 ? plan.shape.vals : R.shuffle(SHAPES, r).slice(0, 3);
+    return [
+      ...alt("count", [...plan.count.vals, ans.count - 1, ans.count + 1].filter(n => n >= 1 && n <= 4)),
+      ...alt("fill", FILLS),
+      ...(ans.shape === "arrow" ? alt("rot", [...plan.rot.vals, ...[90, 180, 270].map(d => (ans.rot + d) % 360)]) : alt("shape", shapes))
+    ];
+  }
+  /* Wrong cells change one thing about the answer, preferring the things that follow a rule. */
+  function pickWrongCells(ans, plan, r) {
+    const all = cellVariants(ans, plan, r);
+    const varied = (v) => plan[v.attr].mode !== "const";
+    const ordered = [...R.shuffle(all.filter(varied), r), ...R.shuffle(all.filter(v => !varied(v)), r)];
+    return ordered.reduce((acc, v) => {
+      const full = acc.length >= 3, tooMany = acc.filter(x => x.attr === v.attr).length >= 2;
+      return full || tooMany || acc.some(x => visualKey(x.fig) === visualKey(v.fig)) ? acc : [...acc, v];
+    }, []).map(v => v.fig);
+  }
+  function matrixQuestion(level, r) {
+    return retry(() => {
+      const plan = matrixPlan(level, r);
+      const cells = range(9).map(i => cellAt(plan, Math.floor(i / 3), i % 3));
+      const wrong = pickWrongCells(cells[8], plan, r);
+      return wrong.length === 3 && { type: "matrix", level, prompt: { kind: "matrix", cells: [...cells.slice(0, 8), null] }, ...arrange(cells[8], wrong, r) };
+    });
+  }
+
+  /* ---------- polyomino figures (cells on a grid, optional marked cell) ---------- */
+  const byRowCol = (a, b) => a[1] - b[1] || a[0] - b[0];
+  function normPoly(cells, mark = null) {
+    const mx = Math.min(...cells.map(c => c[0])), my = Math.min(...cells.map(c => c[1]));
+    const shift = ([x, y]) => [x - mx + 0, y - my + 0];
+    return { t: "poly", cells: cells.map(shift).sort(byRowCol), mark: mark ? shift(mark) : null };
+  }
+  const mapPoly = (f, fn) => normPoly(f.cells.map(fn), f.mark && fn(f.mark));
+  const turn = (f, k) => range(((k % 4) + 4) % 4).reduce(g => mapPoly(g, ([x, y]) => [-y, x]), normPoly(f.cells, f.mark));
+  const flip = (f) => mapPoly(f, ([x, y]) => [-x, y]);
+  const polyKey = (f) => JSON.stringify([f.cells, f.mark]);
+  const samePoly = (a, b) => polyKey(normPoly(a.cells, a.mark)) === polyKey(normPoly(b.cells, b.mark));
+  const rotations = (f) => range(4).map(k => turn(f, k));
+  const hasMirror = (f) => rotations(flip(f)).some(g => samePoly(g, f));
+  const hasTurnSymmetry = (f) => [1, 2, 3].some(k => samePoly(turn(f, k), f));
+  const freeKey = (f) => [...rotations(f), ...rotations(flip(f))].map(polyKey).sort()[0];
+  const span = (cells, i) => Math.max(...cells.map(c => c[i])) - Math.min(...cells.map(c => c[i])) + 1;
+
+  /* Random connected shape of k cells that fits a w×h box. With mirrorX, every cell comes with its mirror image. */
+  function grow(k, w, h, r, mirrorX = null) {
+    let cells = mirrorX ? uniq([[0, 0], mirrorX([0, 0])].map(c => c.join())).map(c => c.split(",").map(Number)) : [[0, 0]];
+    while (cells.length < k) {
+      const taken = new Set(cells.map(c => c.join()));
+      const left = k - cells.length;
+      const options = cells.flatMap(([x, y]) => [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]])
+        .filter(c => !taken.has(c.join()))
+        .map(c => (!mirrorX || mirrorX(c).join() === c.join() ? [c] : [c, mirrorX(c)]))
+        .filter(add => add.length <= left && span([...cells, ...add], 0) <= w && span([...cells, ...add], 1) <= h);
+      if (!options.length) return null;
+      cells = [...cells, ...R.pick(options, r)];
+    }
+    return normPoly(cells);
+  }
+  const growPoly = (k, w, h, r) => grow(k, w, h, r);
+  /* Same when flipped left to right; the axis runs through a column or between two columns. */
+  function growSymmetric(k, w, h, r) {
+    const between = k % 2 === 0 && r() < 0.5;
+    return grow(k, w, h, r, ([x, y]) => [between ? -1 - x : -x, y]);
+  }
+  function collectDistinct(n, make) {
+    let out = [];
+    let keys = [];
+    for (let tries = 0; out.length < n; tries++) {
+      if (tries > 5000) throw new Error("問題を作れませんでした");
+      const f = make();
+      const key = f && freeKey(f);
+      if (key && !keys.includes(key)) {
+        out = [...out, f];
+        keys = [...keys, key];
+      }
+    }
+    return out;
+  }
+
+  /* ---------- 図形の回転 ---------- */
+  function rotateQuestion(level, r) {
+    const size = [5, 5, 6, 6, 7][level];
+    const base = retry(() => {
+      const f = growPoly(size, 4, 4, r);
+      return f && level >= 3 ? { ...f, mark: R.pick(f.cells, r) } : f;
+    }, f => !hasMirror(f) && !hasTurnSymmetry(f));
+    const answer = turn(base, randInt(1, 3, r));
+    const wrong = R.shuffle(range(4), r).slice(0, 3).map(k => turn(flip(base), k));
+    return { type: "rotate", level, prompt: { kind: "rotate", figure: base }, ...arrange(answer, wrong, r) };
+  }
+
+  /* ---------- 仲間はずれ ---------- */
+  /* Every corner must bend at least this much, so a corner never looks like a straight side. */
+  const MIN_TURN_DEG = 35;
+  const MIN_SIDE = 16;
+  function clearPolygon(f) {
+    const n = f.pts.length;
+    return f.pts.every((p, i) => {
+      const a = f.pts[(i + n - 1) % n], b = f.pts[(i + 1) % n];
+      const u = [p[0] - a[0], p[1] - a[1]], v = [b[0] - p[0], b[1] - p[1]];
+      const cos = (u[0] * v[0] + u[1] * v[1]) / (Math.hypot(...u) * Math.hypot(...v));
+      return Math.hypot(...v) >= MIN_SIDE && (Math.acos(clamp(cos, -1, 1)) * 180) / Math.PI >= MIN_TURN_DEG;
+    });
+  }
+  function polygonFig(n, irregular, r) {
+    return retry(() => {
+      const rot = r() * 360, scale = 0.86 + r() * 0.14, step = 360 / n;
+      const pts = range(n).map(i => {
+        const a = ((rot + i * step + (irregular ? (r() - 0.5) * step * 0.5 : 0)) * Math.PI) / 180;
+        const rad = 40 * scale * (irregular ? 0.68 + r() * 0.32 : 1);
+        return [f1(50 + rad * Math.cos(a)), f1(50 + rad * Math.sin(a))];
+      });
+      return { t: "polygon", pts };
+    }, clearPolygon);
+  }
+  const dotsFig = (n, r) => ({ t: "dots", spots: R.shuffle(range(9), r).slice(0, n).sort((a, b) => a - b) });
+  const ODD_MAKERS = {
+    sides: (level, need, r) => {
+      const n = randInt(3, 6, r);
+      const m = R.pick((level >= 2 ? [-1, 1] : [-2, 2]).map(g => n + g).filter(v => v >= 3 && v <= 7), r);
+      return { same: range(need).map(() => polygonFig(n, level >= 3, r)), odd: polygonFig(m, level >= 3, r) };
+    },
+    curl: (level, need, r) => {
+      const dir = R.pick([1, -1], r), starts = R.shuffle(range(8).map(i => i * 45), r);
+      return { same: range(need).map(i => ({ t: "curl", dir, start: starts[i] })), odd: { t: "curl", dir: -dir, start: starts[need] } };
+    },
+    parity: (level, need, r) => {
+      const p = randInt(0, 1, r), pool = range(8).map(i => i + 2);
+      const same = R.shuffle(pool.filter(n => n % 2 === p), r).slice(0, need);
+      return { same: same.map(n => dotsFig(n, r)), odd: dotsFig(R.pick(pool.filter(n => n % 2 !== p), r), r) };
+    },
+    symmetry: (level, need, r) => {
+      const size = level >= 3 ? 8 : 7;
+      const same = collectDistinct(need, () => growSymmetric(size, 5, 4, r)).map(f => (level >= 3 ? turn(f, randInt(0, 3, r)) : f));
+      return { same, odd: retry(() => growPoly(size, 5, 4, r), f => !hasMirror(f)) };
+    }
+  };
+  const ODD_RULES = Object.freeze([["sides", 0], ["curl", 1], ["symmetry", 1], ["parity", 2]]);
+  /* Other things a player could read as the rule. None of them may single out a choice other than the odd one. */
+  const dotCount = (f) => f.spots.length;
+  const boxShape = (f) => [span(f.cells, 0), span(f.cells, 1)].sort((a, b) => a - b).join("x");
+  const SIDE_FEATURES = Object.freeze({
+    sides: [], curl: [],
+    parity: [f => dotCount(f) % 3 === 0, f => [2, 3, 5, 7].includes(dotCount(f)), f => [4, 9].includes(dotCount(f))],
+    symmetry: [boxShape, hasTurnSymmetry]
+  });
+  /* figs[0] is the odd one. True when value i alone differs from the rest, and the example (if shown) sides with the rest. */
+  const lonely = (vals, i, ex) => {
+    const rest = vals.filter((_, j) => j !== i);
+    return rest.every(w => w === rest[0]) && vals[i] !== rest[0] && (ex === undefined || ex === rest[0]);
+  };
+  /* A dot count far away from three close ones (2, 3, 4 and 8) looks like the odd one by size alone. */
+  const standsApart = (counts, i) => {
+    const rest = counts.filter((_, j) => j !== i);
+    return Math.min(...rest.map(c => Math.abs(c - counts[i]))) >= 3 && Math.max(...rest) - Math.min(...rest) <= 3;
+  };
+  function misleads(rule, figs, example) {
+    const others = range(figs.length).slice(1);
+    const byFeature = SIDE_FEATURES[rule].some(fn => others.some(i => lonely(figs.map(fn), i, example ? fn(example) : undefined)));
+    return byFeature || (rule === "parity" && others.some(i => standsApart(figs.map(dotCount), i)));
+  }
+  function oddQuestion(level, r) {
+    const rule = R.pick(ODD_RULES.filter(([, min]) => level >= min).map(([id]) => id), r);
+    const need = level >= 3 ? 4 : 3;
+    const { same, odd } = retry(() => {
+      const made = ODD_MAKERS[rule](level, need, r);
+      return misleads(rule, [made.odd, ...made.same.slice(0, 3)], need === 4 ? made.same[3] : null) ? null : made;
+    });
+    return { type: "odd", level, rule, prompt: { kind: "odd", example: need === 4 ? same[3] : null }, ...arrange(odd, same.slice(0, 3), r) };
+  }
+
+  /* ---------- whole run ---------- */
+  const MAKERS = { seq: seqQuestion, matrix: matrixQuestion, odd: oddQuestion, rotate: rotateQuestion, relation: relationQuestion };
+  function makeQuestion(type, level, r = Math.random) {
+    if (!MAKERS[type]) throw new Error("問題の種類が正しくありません");
+    if (!Number.isInteger(level) || level < 0 || level >= LEVELS) throw new Error("レベルが正しくありません");
+    return MAKERS[type](level, r);
+  }
+  /* 5 blocks of 4 questions, one block per level; each type appears 4 times and never twice in a row. */
+  function questionPlan(r = Math.random) {
+    const drops = R.shuffle(TYPE_IDS, r);
+    return range(LEVELS).reduce((order, level) => {
+      const block = R.shuffle(TYPE_IDS.filter(t => t !== drops[level]), r);
+      const fixed = order.length && block[0] === order[order.length - 1].type ? [...block.slice(1), block[0]] : block;
+      return [...order, ...fixed.map(type => ({ type, level }))];
+    }, []);
+  }
+  function newRun(timing, r = Math.random) {
+    if (!TIMINGS.includes(timing)) throw new Error("時間の設定が正しくありません");
+    return { timing, questions: questionPlan(r).map(p => makeQuestion(p.type, p.level, r)), answers: [] };
+  }
+  const finished = (run) => run.answers.length >= run.questions.length;
+  const current = (run) => (finished(run) ? null : run.questions[run.answers.length]);
+  /* choice: 0-3, or null when time ran out. */
+  function submit(run, choice, ms) {
+    if (finished(run)) throw new Error("もう全問終わっています");
+    if (choice !== null && !(Number.isInteger(choice) && choice >= 0 && choice < CHOICES)) throw new Error("選んだ答えが正しくありません");
+    if (!Number.isFinite(ms) || ms < 0) throw new Error("時間が正しくありません");
+    const q = current(run);
+    const limit = run.timing === "timed" ? TIME_LIMIT_SEC * 1000 : MAX_MS;
+    const entry = { type: q.type, level: q.level, choice, correct: choice === q.answer, ms: Math.round(Math.min(ms, limit)) };
+    return { ...run, answers: [...run.answers, entry] };
+  }
+
+  /* ---------- score, titles, records ---------- */
+  function estimateIq(rate, avgSec) {
+    if (!Number.isFinite(rate) || rate < 0 || rate > 1) throw new Error("正解率が正しくありません");
+    if (!Number.isFinite(avgSec) || avgSec < 0) throw new Error("時間が正しくありません");
+    const speed = clamp((20 - avgSec) / 14, 0, 1) * 5 * rate;
+    return clamp(Math.round(100 + (rate - 0.5) * 80 + speed), IQ_MIN, IQ_MAX);
+  }
+  const titleFor = (iq) => TITLES.find(t => iq >= t.min).title;
+  function result(run) {
+    if (!finished(run)) throw new Error("まだ終わっていません");
+    const list = run.answers;
+    const weight = (a) => LEVEL_WEIGHT[a.level];
+    const rate = list.reduce((s, a) => s + (a.correct ? weight(a) : 0), 0) / list.reduce((s, a) => s + weight(a), 0);
+    const avgSec = list.reduce((s, a) => s + a.ms, 0) / list.length / 1000;
+    const iq = estimateIq(rate, avgSec);
+    const byType = TYPES.map(t => {
+      const mine = list.filter(a => a.type === t.id);
+      return { id: t.id, name: t.name, correct: mine.filter(a => a.correct).length, total: mine.length };
+    });
+    return { correct: list.filter(a => a.correct).length, total: list.length, avgSec, iq, title: titleFor(iq), byType };
+  }
+  const validRecord = (v) => !!v && Number.isInteger(v.iq) && v.iq >= IQ_MIN && v.iq <= IQ_MAX &&
+    Number.isInteger(v.correct) && v.correct >= 0 && v.correct <= TOTAL;
+  const normalizeRecords = (raw) => Object.fromEntries(TIMINGS.map(t => {
+    const v = raw && typeof raw === "object" ? raw[t] : null;
+    return [t, validRecord(v) ? { iq: v.iq, correct: v.correct } : null];
+  }));
+  function updateRecords(records, timing, res) {
+    if (!TIMINGS.includes(timing)) throw new Error("時間の設定が正しくありません");
+    const prev = records[timing];
+    const better = !prev || res.iq > prev.iq || (res.iq === prev.iq && res.correct > prev.correct);
+    return { records: better ? { ...records, [timing]: { iq: res.iq, correct: res.correct } } : records, isNew: better, prev };
+  }
+  const normalizeSettings = (raw) => ({ timing: raw && TIMINGS.includes(raw.timing) ? raw.timing : "timed" });
+
+  /* ---------- SVG drawing (strings only; colors come from currentColor and CSS classes) ---------- */
+  const LINE = 'stroke="currentColor" stroke-linejoin="round" stroke-linecap="round"';
+  const pts = (list) => list.map(([x, y]) => `${f1(x)},${f1(y)}`).join(" ");
+  const ring = (n, rad, x, y, startDeg) => range(n).map(i => {
+    const a = ((startDeg + (i * 360) / n) * Math.PI) / 180;
+    return [x + rad * Math.cos(a), y + rad * Math.sin(a)];
+  });
+  const scaled = (list, x, y, h) => list.map(([dx, dy]) => [x + dx * h, y + dy * h]);
+  const OUTLINES = {
+    triangle: (x, y, h) => ring(3, h * 1.15, x, y + h * 0.15, -90),
+    diamond: (x, y, h) => ring(4, h * 1.1, x, y, -90),
+    hexagon: (x, y, h) => ring(6, h, x, y, 0),
+    star: (x, y, h) => range(10).map(i => {
+      const a = ((-90 + i * 36) * Math.PI) / 180, rad = i % 2 ? h * 0.48 : h * 1.1;
+      return [x + rad * Math.cos(a), y + rad * Math.sin(a)];
+    }),
+    plus: (x, y, h) => scaled([[-1, -3], [1, -3], [1, -1], [3, -1], [3, 1], [1, 1], [1, 3], [-1, 3], [-1, 1], [-3, 1], [-3, -1], [-1, -1]], x, y, h * 0.32),
+    arrow: (x, y, h) => scaled([[0, -1], [0.8, -0.1], [0.32, -0.1], [0.32, 1], [-0.32, 1], [-0.32, -0.1], [-0.8, -0.1]], x, y, h)
+  };
+  function shapeEl(shape, x, y, h, rot, paint) {
+    if (shape === "circle") return `<circle cx="${f1(x)}" cy="${f1(y)}" r="${f1(h * 0.95)}" ${paint}/>`;
+    if (shape === "square") {
+      return `<rect x="${f1(x - h * 0.85)}" y="${f1(y - h * 0.85)}" width="${f1(h * 1.7)}" height="${f1(h * 1.7)}" rx="${f1(h * 0.15)}" ${paint}/>`;
+    }
+    const spin = shape === "arrow" && rot ? ` transform="rotate(${rot} ${f1(x)} ${f1(y)})"` : "";
+    return `<polygon points="${pts(OUTLINES[shape](x, y, h))}"${spin} ${paint}/>`;
+  }
+  const SPOTS = { 1: [[50, 50]], 2: [[28, 50], [72, 50]], 3: [[50, 27], [27, 71], [73, 71]], 4: [[28, 28], [72, 28], [28, 72], [72, 72]] };
+  const SPOT_SIZE = { 1: 28, 2: 17, 3: 15, 4: 14 };
+  function cellBody(c, uid) {
+    const fill = c.fill === "solid" ? "currentColor" : c.fill === "stripe" ? `url(#${uid})` : "none";
+    const paint = `fill="${fill}" ${LINE} stroke-width="${c.count === 1 ? 4 : 3}"`;
+    return SPOTS[c.count].map(([x, y]) => shapeEl(c.shape, x, y, SPOT_SIZE[c.count], c.rot, paint)).join("");
+  }
+  function polyBody(f) {
+    const u = 18, w = span(f.cells, 0), h = span(f.cells, 1), ox = 50 - (w * u) / 2, oy = 50 - (h * u) / 2;
+    const cells = f.cells.map(([x, y]) =>
+      `<rect x="${f1(ox + x * u + 1.5)}" y="${f1(oy + y * u + 1.5)}" width="${u - 3}" height="${u - 3}" rx="3" class="iq-tint" fill="currentColor" fill-opacity=".2" ${LINE} stroke-width="2.5"/>`);
+    const mark = f.mark ? `<circle class="iq-mark" cx="${f1(ox + (f.mark[0] + 0.5) * u)}" cy="${f1(oy + (f.mark[1] + 0.5) * u)}" r="5.5" fill="currentColor"/>` : "";
+    return cells.join("") + mark;
+  }
+  const polygonBody = (f) => `<polygon points="${pts(f.pts)}" class="iq-tint" fill="currentColor" fill-opacity=".16" ${LINE} stroke-width="3.5"/>`;
+  function curlBody(f) {
+    const rad = 28, a0 = (f.start * Math.PI) / 180, a1 = ((f.start + f.dir * 270) * Math.PI) / 180;
+    const at = (a) => [50 + rad * Math.cos(a), 50 + rad * Math.sin(a)];
+    const [x0, y0] = at(a0), [x1, y1] = at(a1);
+    const tan = [-Math.sin(a1) * f.dir, Math.cos(a1) * f.dir], nrm = [Math.cos(a1), Math.sin(a1)];
+    const head = [[x1 + tan[0] * 11, y1 + tan[1] * 11], [x1 - tan[0] * 3 + nrm[0] * 9, y1 - tan[1] * 3 + nrm[1] * 9], [x1 - tan[0] * 3 - nrm[0] * 9, y1 - tan[1] * 3 - nrm[1] * 9]];
+    return `<path d="M${f1(x0)} ${f1(y0)} A${rad} ${rad} 0 1 ${f.dir > 0 ? 1 : 0} ${f1(x1)} ${f1(y1)}" fill="none" ${LINE} stroke-width="6"/>` +
+      `<circle cx="${f1(x0)}" cy="${f1(y0)}" r="5" fill="currentColor"/><polygon points="${pts(head)}" fill="currentColor" ${LINE} stroke-width="2"/>`;
+  }
+  const dotsBody = (f) => f.spots.map(i => `<circle cx="${22 + (i % 3) * 28}" cy="${22 + Math.floor(i / 3) * 28}" r="9" fill="currentColor"/>`).join("");
+  const BODIES = { cell: cellBody, poly: polyBody, polygon: polygonBody, curl: curlBody, dots: dotsBody };
+  const hatch = (uid) => `<defs><pattern id="${uid}" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="2.6" height="7" fill="currentColor"/></pattern></defs>`;
+  function checkUid(uid) {
+    if (typeof uid !== "string" || !/^iq[A-Za-z0-9_-]*$/.test(uid)) throw new Error("図形のidが正しくありません");
+  }
+  function figureSvg(fig, uid = "iqHatch") {
+    if (!fig || !BODIES[fig.t]) throw new Error("図形の形式が正しくありません");
+    checkUid(uid);
+    const defs = fig.t === "cell" && fig.fill === "stripe" ? hatch(uid) : "";
+    return `<svg class="iq-fig" viewBox="0 0 100 100" aria-hidden="true" focusable="false">${defs}${BODIES[fig.t](fig, uid)}</svg>`;
+  }
+  function matrixSvg(cells, uid = "iqHatch") {
+    if (!Array.isArray(cells) || cells.length !== 9) throw new Error("3×3の図形が必要です");
+    checkUid(uid);
+    const defs = cells.some(c => c && c.fill === "stripe") ? hatch(uid) : "";
+    const body = cells.map((c, i) => {
+      const box = `<rect class="iq-cell${c ? "" : " iq-missing"}" x="4" y="4" width="92" height="92" rx="12" fill="none"/>`;
+      const inner = c ? cellBody(c, uid) : '<text class="iq-qmark" x="50" y="53" text-anchor="middle" dominant-baseline="central">?</text>';
+      return `<g transform="translate(${(i % 3) * 100} ${Math.floor(i / 3) * 100})">${box}${inner}</g>`;
+    }).join("");
+    return `<svg class="iq-matrix-svg" viewBox="0 0 300 300" aria-hidden="true" focusable="false">${defs}${body}</svg>`;
+  }
+  /* Two choices with the same key look the same on screen. */
+  function visualKey(f) {
+    if (typeof f === "number") return `n:${f}`;
+    if (f.t === "cell") return `cell:${f.shape}:${f.count}:${f.fill}:${f.shape === "arrow" ? f.rot % 360 : 0}`;
+    if (f.t === "poly") return `poly:${polyKey(normPoly(f.cells, f.mark))}`;
+    return JSON.stringify(f);
+  }
+
+  return {
+    TOTAL, LEVELS, CHOICES, TIME_LIMIT_SEC, TIMINGS, TYPES, IQ_MIN, IQ_MAX, TITLES, SHAPES, FILLS,
+    makeQuestion, questionPlan, newRun, current, finished, submit,
+    estimateIq, titleFor, result, normalizeRecords, updateRecords, normalizeSettings,
+    seqFits, relationPredictions, figureSvg, matrixSvg, visualKey
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = IqRules;
+</script>
+<script>
+/* iq.js */
+/* IQ challenge screen: 20 generated puzzles with a timer ring, instant feedback, and a playful IQ-style estimate. */
+const IqChallenge = (() => {
+  const Q = IqRules;
+  const KEY = "iq.settings";
+  const RECORD_KEY = "iq.records";
+  const FEEDBACK_MS = Object.freeze({ ok: 900, ng: 1800 });
+  const DRUM_MS = 1600;
+  const COUNT_UP_MS = 900;
+  const URGENT_SEC = 5;
+  const RING = 2 * Math.PI * 19;
+  const NOTE = "遊びの目安です。本物のIQ検査ではありません";
+  const TIMING_LABEL = Object.freeze({ timed: "1問30秒", free: "じっくり" });
+  const ASK = Object.freeze({
+    seq: "? に入る数は？", matrix: "? に入る図形は？", odd: "仲間はずれはどれ？",
+    rotate: "回すと同じになるのは？", relation: "? に入る数は？"
+  });
+  const HINTS = Object.freeze({
+    seq: "数の並び方のルールを見つけよう",
+    matrix: "横の列ごとに、形・数・ぬり方・向きのルールがある",
+    odd: "1つだけ、ほかの3つと違うルールのものがある",
+    rotate: "裏返した形はハズレ。回すだけでぴったり重なるものを選ぼう",
+    pairs: "左の数が、同じルールで右の数に変わる",
+    ops: "○ はどの行も同じ計算",
+    grid: "横の列には、どれも同じルールがある"
+  });
+
+  const el = {
+    mode: $("modeIqChallenge"), setup: $("iqSetup"), play: $("iqPlay"),
+    label: $("iqLabel"), title: $("iqTitle"), card: $("iqCard"), hint: $("iqHint"), actions: $("iqActions"),
+    hud: $("iqHud"), quit: $("iqQuit"), count: $("iqCount"), bar: $("iqBar"),
+    ring: $("iqRing"), ringBar: $("iqRingBar"), ringNum: $("iqRingNum"),
+    question: $("iqQuestion"), choices: $("iqChoices"), detail: $("iqDetail"),
+    best: $("iqBest"), timeChips: $("iqTimeChips"), rules: $("iqRules"), error: $("iqError")
+  };
+
+  let settings = Q.normalizeSettings(null);
+  let records = Q.normalizeRecords(null);
+  let run = null;
+  let ui = { phase: "setup", picked: null, streak: 0, error: "" };
+  let clock = { start: 0, spent: 0, raf: 0, lastSec: null };
+  let pending = [];
+  let session = 0;
+  let uidSeq = 0;
+  let outcome = null;
+  let countRaf = 0;
+
+  const reduced = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const timed = () => !!run && run.timing === "timed";
+  const nextUid = () => `iqH${++uidSeq}`;
+  const shown = () => (ui.phase === "question" ? Q.current(run) : run.questions[run.answers.length - 1]);
+  const typeName = (id) => Q.TYPES.find(t => t.id === id).name;
+
+  function update(patch) {
+    settings = Q.normalizeSettings({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function later(ms, fn) {
+    const id = setTimeout(() => {
+      pending = pending.filter(x => x !== id);
+      fn();
+    }, ms);
+    pending = [...pending, id];
+  }
+  function halt() {
+    pending.forEach(clearTimeout);
+    pending = [];
+    cancelAnimationFrame(countRaf);
+    stopClock();
+  }
+
+  /* ---------- per-question clock (pauses while the page is hidden) ---------- */
+  const elapsed = () => clock.spent + (clock.start ? performance.now() - clock.start : 0);
+  function stopClock() {
+    cancelAnimationFrame(clock.raf);
+    clock = { ...clock, spent: elapsed(), start: 0, raf: 0 };
+  }
+  function runClock() {
+    clock = { ...clock, start: performance.now() };
+    if (timed()) tick();
+  }
+  function tick() {
+    const left = Q.TIME_LIMIT_SEC * 1000 - elapsed();
+    paintRing(left);
+    if (left <= 0) {
+      choose(null);
+      return;
+    }
+    const sec = Math.ceil(left / 1000);
+    if (sec !== clock.lastSec && sec <= URGENT_SEC) Sound.sfx("tick", sec % 2 === 0);
+    clock = { ...clock, lastSec: sec, raf: requestAnimationFrame(tick) };
+  }
+  function paintRing(left) {
+    const ms = Math.max(0, left);
+    const sec = Math.ceil(ms / 1000);
+    el.ringBar.style.strokeDashoffset = String(RING * (1 - ms / (Q.TIME_LIMIT_SEC * 1000)));
+    el.ringNum.textContent = String(sec);
+    el.ring.classList.toggle("urgent", sec <= URGENT_SEC);
+  }
+
+  /* ---------- flow ---------- */
+  async function start() {
+    if (ui.phase === "count") return;
+    Sound.ensure();
+    Awake.keep();
+    halt();
+    const token = ++session;
+    try {
+      run = Q.newRun(settings.timing);
+    } catch (e) {
+      Sound.sfx("wrong");
+      go({ phase: "setup", error: "問題を作れませんでした。もう一度押してください" });
+      return;
+    }
+    outcome = null;
+    Sound.sfx("confirm");
+    go({ phase: "count", picked: null, streak: 0, error: "" });
+    await Fx.countdown("スタート！");
+    if (token !== session || ui.phase !== "count") return;
+    Music.play("think");
+    ask();
+  }
+  function ask() {
+    buildQuestion(Q.current(run));
+    clock = { start: 0, spent: 0, raf: 0, lastSec: null };
+    go({ phase: "question", picked: null });
+    Sound.sfx("flip");
+    el.question.classList.remove("fx-shake"); /* a leftover shake class would block the pop below */
+    Fx.pop(el.question);
+    paintRing(Q.TIME_LIMIT_SEC * 1000);
+    if (!document.hidden) runClock();
+  }
+  /* choice: 0-3, or null when the time ran out. */
+  function choose(choice) {
+    if (ui.phase !== "question") return;
+    stopClock();
+    const q = Q.current(run);
+    run = Q.submit(run, choice, clock.spent);
+    const ok = choice === q.answer;
+    const streak = ok ? ui.streak + 1 : 0;
+    Sound.sfx(ok ? "correct" : "wrong");
+    if (ok && streak >= 3) later(280, () => Sound.sfx("coin"));
+    if (!ok) Fx.shake(el.question);
+    go({ phase: "feedback", picked: choice, streak });
+    later(ok ? FEEDBACK_MS.ok : FEEDBACK_MS.ng, () => (Q.finished(run) ? judge() : ask()));
+  }
+  function judge() {
+    Music.stop();
+    go({ phase: "judge" });
+    Sound.sfx("drumroll", DRUM_MS / 1000);
+    later(DRUM_MS, reveal);
+  }
+  function reveal() {
+    const res = Q.result(run);
+    const up = Q.updateRecords(records, run.timing, res);
+    records = up.records;
+    Store.save(RECORD_KEY, records);
+    outcome = { result: res, isNew: up.isNew };
+    go({ phase: "result" });
+    Fx.pop(el.card);
+    countUp(res.iq);
+    if (up.isNew) {
+      Sound.sfx("victory");
+      Fx.confetti();
+    } else {
+      Sound.sfx(res.iq >= 110 ? "fanfare" : "reveal");
+    }
+  }
+  function countUp(to) {
+    const main = el.card.querySelector(".wc-main");
+    if (!main || reduced()) return;
+    const from = Q.IQ_MIN;
+    const t0 = performance.now();
+    main.textContent = String(from);
+    const step = (now) => {
+      const p = Math.min(1, (now - t0) / COUNT_UP_MS);
+      main.textContent = String(Math.round(from + (to - from) * (1 - (1 - p) ** 3)));
+      if (p < 1) countRaf = requestAnimationFrame(step);
+    };
+    countRaf = requestAnimationFrame(step);
+  }
+  function quit() {
+    session++;
+    halt();
+    Music.stop();
+    run = null;
+    go({ phase: "setup" });
+  }
+
+  /* ---------- question markup (numbers come from the rules, so they are safe to inline) ---------- */
+  function box(cls, html) {
+    const d = document.createElement("div");
+    d.className = cls;
+    d.innerHTML = html;
+    return d;
+  }
+  const term = (v) => (v === null ? '<span class="iq-term iq-blank">?</span>' : `<span class="iq-term">${v}</span>`);
+  const sym = (s) => `<span class="iq-op" aria-hidden="true">${s}</span>`;
+  const PROMPTS = {
+    seq: (p) => box("iq-seq", p.terms.map(term).join("")),
+    pairs: (p) => box("iq-pairs", [...p.pairs, [p.query, null]].map(([x, y]) => `<div class="iq-row">${term(x)}${sym("→")}${term(y)}</div>`).join("")),
+    ops: (p) => box("iq-ops", p.rows.map(([a, b, c]) => `<div class="iq-row">${term(a)}${sym("○")}${term(b)}${sym("=")}${term(c)}</div>`).join("")),
+    grid: (p) => box("iq-grid", p.rows.flat().map(term).join("")),
+    matrix: (p) => box("iq-matrix", Q.matrixSvg(p.cells, nextUid())),
+    rotate: (p) => box("iq-model", `<span class="iq-tag">この図形を回すと…</span>${Q.figureSvg(p.figure, nextUid())}`),
+    odd: (p) => (p.example ? box("iq-model", `<span class="iq-tag">なかまの例</span>${Q.figureSvg(p.example, nextUid())}`) : null)
+  };
+  function choiceButton(c, i) {
+    const b = document.createElement("button");
+    const isNum = typeof c === "number";
+    b.type = "button";
+    b.className = "iq-choice";
+    b.setAttribute("aria-label", isNum ? `${i + 1}番 ${c}` : `${i + 1}番の図形`);
+    b.innerHTML = `<span class="iq-key" aria-hidden="true">${i + 1}</span>${isNum ? `<span class="iq-num">${c}</span>` : Q.figureSvg(c, nextUid())}`;
+    b.addEventListener("click", () => choose(i));
+    return b;
+  }
+  function buildQuestion(q) {
+    const prompt = PROMPTS[q.prompt.kind](q.prompt);
+    el.question.replaceChildren(...(prompt ? [prompt] : []));
+    el.choices.className = `iq-choices ${typeof q.choices[0] === "number" ? "iq-numbers" : "iq-figures"}`;
+    el.choices.replaceChildren(...q.choices.map(choiceButton));
+  }
+
+  /* ---------- screens ---------- */
+  const labelFor = (q) => `${typeName(q.type)}・レベル${q.level + 1}`;
+  function hintFor(q) {
+    if (q.type === "relation") return HINTS[q.prompt.kind];
+    if (q.type === "odd" && q.prompt.example) return "「なかまの例」と同じルールにならないものが1つだけある";
+    return HINTS[q.type];
+  }
+  function feedbackView() {
+    const last = run.answers[run.answers.length - 1];
+    const title = last.correct ? "正解！" : last.choice === null ? "時間切れ！" : "ざんねん…";
+    const hint = last.correct ? (ui.streak >= 3 ? `${ui.streak}問連続で正解！` : "いい調子！") : "「正解」の印がついたものが答え";
+    return { label: labelFor(shown()), title, hint, actions: [] };
+  }
+  function resultView() {
+    const { result: res, isNew } = outcome;
+    return {
+      label: "結果発表",
+      title: isNew ? `新記録！ ${res.title}` : res.title,
+      card: { main: String(res.iq), sub: "IQ目安", cls: "number iq-score" },
+      hint: NOTE,
+      actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("もう一回", start, "primary")]
+    };
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    count: () => ({ actions: [] }),
+    question: () => ({ label: labelFor(shown()), title: ASK[shown().type], hint: hintFor(shown()), actions: [] }),
+    feedback: feedbackView,
+    judge: () => ({ label: "採点中", title: "あなたのIQ目安は…", card: { main: "？", back: true }, actions: [] }),
+    result: resultView
+  };
+
+  function renderAsking() {
+    const total = run.questions.length;
+    const done = run.answers.length;
+    const q = shown();
+    el.count.textContent = `${ui.phase === "question" ? done + 1 : done} / ${total}`;
+    el.bar.style.width = `${(done / total) * 100}%`;
+    el.ring.hidden = !timed();
+    [...el.choices.children].forEach((b, i) => {
+      b.disabled = ui.phase !== "question";
+      b.dataset.state = ui.phase !== "feedback" ? "" : i === q.answer ? "right" : i === ui.picked ? "wrong" : "dim";
+    });
+  }
+  function detailRow(name, value, rate) {
+    const li = document.createElement("li");
+    li.innerHTML = '<span class="iq-d-name"></span><span class="iq-d-bar" aria-hidden="true"><span></span></span><b class="iq-d-val"></b>';
+    li.querySelector(".iq-d-name").textContent = name;
+    li.querySelector(".iq-d-val").textContent = value;
+    const bar = li.querySelector(".iq-d-bar");
+    bar.hidden = rate === null;
+    bar.firstChild.style.width = `${Math.round((rate || 0) * 100)}%`;
+    return li;
+  }
+  function renderDetail() {
+    const res = outcome.result;
+    const best = records[run.timing];
+    el.detail.replaceChildren(
+      detailRow("正解", `${res.correct} / ${res.total}問`, res.correct / res.total),
+      ...res.byType.map(t => detailRow(t.name, `${t.correct} / ${t.total}`, t.total ? t.correct / t.total : 0)),
+      detailRow("平均タイム", `${res.avgSec.toFixed(1)}秒`, null),
+      detailRow("自己ベスト", best ? `IQ目安 ${best.iq}` : "-", null)
+    );
+  }
+  function renderPlay() {
+    const asking = ui.phase === "question" || ui.phase === "feedback";
+    el.hud.hidden = !asking;
+    el.choices.hidden = !asking;
+    el.question.hidden = !asking || el.question.childElementCount === 0;
+    el.detail.hidden = ui.phase !== "result";
+    if (asking) renderAsking();
+    if (ui.phase === "result") renderDetail();
+  }
+  function bestNodes() {
+    const best = records[settings.timing];
+    const make = (tag, cls, text) => {
+      const n = document.createElement(tag);
+      n.className = cls;
+      n.textContent = text;
+      return n;
+    };
+    return [
+      make("span", "iq-best-label", `自己ベスト（${TIMING_LABEL[settings.timing]}）`),
+      make("b", "iq-best-num", best ? String(best.iq) : "--"),
+      make("span", "iq-best-sub", best ? `IQ目安・${best.correct} / ${Q.TOTAL}問正解` : "まだ記録なし")
+    ];
+  }
+  function renderSetup() {
+    View.chips(el.timeChips, Q.TIMINGS.map(t => ({ value: t, label: TIMING_LABEL[t] })), settings.timing, v => update({ timing: v }));
+    el.best.replaceChildren(...bestNodes());
+    View.text(el.error, ui.error);
+    View.list(el.rules, [
+      "数列・図形の規則・仲間はずれ・図形の回転・数の関係の5種類、全20問",
+      "4つの中から答えをタップ。後半ほど難しくなる",
+      settings.timing === "timed" ? "1問30秒。時間切れは不正解になる" : "時間制限なし。じっくり考えてOK",
+      "最後に正解数と「IQ目安」が出る。問題は毎回ちがう"
+    ]);
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (ui.phase !== "setup") renderPlay();
+  }
+
+  /* ---------- input and lifecycle ---------- */
+  function onKey(e) {
+    if (el.mode.hidden || ui.phase !== "question" || e.repeat) return;
+    const i = ["1", "2", "3", "4"].indexOf(e.key);
+    if (i < 0) return;
+    e.preventDefault();
+    Sound.sfx("tap");
+    choose(i);
+  }
+  function onVisibility() {
+    if (ui.phase !== "question") return;
+    if (document.hidden) stopClock();
+    else if (!clock.start) runClock();
+  }
+  function init() {
+    settings = Q.normalizeSettings(Store.load(KEY, null));
+    records = Q.normalizeRecords(Store.load(RECORD_KEY, null));
+    el.ringBar.style.strokeDasharray = String(RING);
+    el.quit.addEventListener("click", quit);
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVisibility);
+    render();
+  }
+  function leave() {
+    session++;
+    halt();
+    if (ui.phase !== "setup" && ui.phase !== "result") run = null;
+    ui = { ...ui, phase: run ? ui.phase : "setup" };
+    render();
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* anzan-rules.js */
+/* Flash mental arithmetic rules: numbers flash one at a time and the player answers their total.
+ * Pure functions: number generation, flash timing, the 級/段 ladder, rank notes and personal records. */
+const AnzanRules = (() => {
+  const DIGITS = Object.freeze([1, 2, 3]);
+  const COUNTS = Object.freeze([3, 5, 10, 15]);
+  const SPEED_IDS = Object.freeze(["slow", "normal", "fast"]);
+  const SPEEDS = Object.freeze({
+    slow: Object.freeze({ label: "ゆっくり", ms: 1200 }),
+    normal: Object.freeze({ label: "ふつう", ms: 800 }),
+    fast: Object.freeze({ label: "はやい", ms: 450 })
+  });
+  const MODES = Object.freeze(["free", "dan"]);
+  const DEFAULTS = Object.freeze({ mode: "free", digits: 1, count: 5, speed: "normal" });
+  const LIMITS = Object.freeze({ minCount: 2, maxCount: 30, minMs: 200, maxMs: 3000, maxRecord: 9999 });
+  /* Blank between numbers, so the same digits twice in a row would still look like two numbers. */
+  const GAP = Object.freeze({ ratio: 0.22, min: 70, max: 200 });
+
+  const step = (title, digits, count, ms) => Object.freeze({ title, digits, count, ms });
+  /* 段位チャレンジ: each correct answer moves one step down this list. Never gets easier. */
+  const LADDER = Object.freeze([
+    step("10級", 1, 3, 1000), step("9級", 1, 4, 900), step("8級", 1, 5, 800), step("7級", 1, 5, 650),
+    step("6級", 1, 7, 600), step("5級", 1, 10, 550), step("4級", 2, 3, 900), step("3級", 2, 4, 800),
+    step("2級", 2, 5, 700), step("1級", 2, 5, 600), step("初段", 2, 7, 600), step("二段", 2, 10, 550),
+    step("三段", 2, 10, 450), step("四段", 2, 15, 400), step("五段", 3, 3, 800), step("六段", 3, 5, 700),
+    step("七段", 3, 5, 550), step("八段", 3, 7, 500), step("九段", 3, 10, 400), step("十段", 3, 15, 300)
+  ]);
+  /* A short comment for how far the ladder was climbed (number of steps cleared). Highest first. */
+  const NOTES = Object.freeze([
+    Object.freeze({ min: 20, text: "伝説の暗算王" }),
+    Object.freeze({ min: 16, text: "暗算の達人" }),
+    Object.freeze({ min: 11, text: "有段者の仲間入り" }),
+    Object.freeze({ min: 7, text: "なかなかの暗算力" }),
+    Object.freeze({ min: 1, text: "そろばん教室デビュー" }),
+    Object.freeze({ min: 0, text: "まずは10級をめざそう" })
+  ]);
+  /* Titles for a run of correct answers in a row (自由に mode). Highest first. */
+  const STREAK_TITLES = Object.freeze([
+    Object.freeze({ min: 10, text: "暗算マシーン！" }),
+    Object.freeze({ min: 5, text: "ノッてきた！" }),
+    Object.freeze({ min: 3, text: "いい調子！" }),
+    Object.freeze({ min: 0, text: "正解！" })
+  ]);
+
+  const isInt = (n, min, max) => Number.isInteger(n) && n >= min && n <= max;
+
+  function checkDigits(digits) {
+    if (!DIGITS.includes(digits)) throw new Error("けた数は1〜3です");
+  }
+  function checkCount(count) {
+    if (!isInt(count, LIMITS.minCount, LIMITS.maxCount)) throw new Error(`口数は${LIMITS.minCount}〜${LIMITS.maxCount}です`);
+  }
+  function checkMs(ms) {
+    if (!isInt(ms, LIMITS.minMs, LIMITS.maxMs)) throw new Error("表示スピードが正しくありません");
+  }
+
+  /* Uniform integer in [min, max] from the random source r (returns [0, 1)). */
+  function int(min, max, r) {
+    const v = r();
+    if (typeof v !== "number" || !(v >= 0 && v < 1)) throw new Error("乱数が正しくありません");
+    return min + Math.floor(v * (max - min + 1));
+  }
+  /* Numbers with exactly `digits` digits: 1けた 1〜9, 2けた 10〜99, 3けた 100〜999. Never 0. */
+  function range(digits) {
+    checkDigits(digits);
+    return { min: 10 ** (digits - 1), max: 10 ** digits - 1 };
+  }
+
+  /* `count` numbers of `digits` digits; no number is the same as the one right before it. */
+  function generate(digits, count, r = Math.random) {
+    const { min, max } = range(digits);
+    checkCount(count);
+    if (typeof r !== "function") throw new Error("乱数が正しくありません");
+    return Array.from({ length: count }).reduce((acc) => {
+      if (acc.length === 0) return [int(min, max, r)];
+      const prev = acc[acc.length - 1];
+      const n = int(min, max - 1, r);
+      return [...acc, n >= prev ? n + 1 : n];
+    }, []);
+  }
+
+  function sum(numbers) {
+    if (!Array.isArray(numbers) || numbers.length === 0) throw new Error("数字がありません");
+    if (!numbers.every(n => isInt(n, 1, 999))) throw new Error("数字が正しくありません");
+    return numbers.reduce((a, b) => a + b, 0);
+  }
+
+  /* How long each number stays on screen, and the blank after it. on + gap = ms. */
+  function timing(ms) {
+    checkMs(ms);
+    const gap = Math.round(Math.min(GAP.max, Math.max(GAP.min, ms * GAP.ratio)));
+    return { on: ms - gap, gap };
+  }
+
+  function newProblem(spec, r = Math.random) {
+    if (!spec || typeof spec !== "object") throw new Error("問題の設定がありません");
+    const { digits, count, ms } = spec;
+    checkMs(ms);
+    const numbers = generate(digits, count, r);
+    return { digits, count, ms, ...timing(ms), numbers, total: sum(numbers) };
+  }
+
+  /* The flash as steps in order: a lead-in blank, then each number followed by a blank.
+   * n is the number index on screen (-1 = blank); passed is how many numbers have been shown minus one. */
+  function schedule(problem, leadMs = 0) {
+    if (!problem || !Array.isArray(problem.numbers)) throw new Error("問題がありません");
+    if (!isInt(leadMs, 0, LIMITS.maxMs)) throw new Error("待ち時間が正しくありません");
+    const { on, gap } = timing(problem.ms);
+    const lead = Object.freeze({ n: -1, passed: -1, ms: leadMs });
+    const body = problem.numbers.flatMap((_, i) => [Object.freeze({ n: i, passed: i, ms: on }), Object.freeze({ n: -1, passed: i, ms: gap })]);
+    return Object.freeze([lead, ...body]);
+  }
+
+  /* Longest possible answer, so the keypad can stop accepting digits. */
+  function answerLength(digits, count) {
+    const { max } = range(digits);
+    checkCount(count);
+    return String(max * count).length;
+  }
+  /* The typed answer as a number, or null if it is not a plain positive integer. */
+  function parseAnswer(entry) {
+    const text = typeof entry === "number" ? String(entry) : entry;
+    if (typeof text !== "string" || !/^[0-9]{1,8}$/.test(text)) return null;
+    return Number(text);
+  }
+  function isCorrect(problem, entry) {
+    if (!problem || !Number.isInteger(problem.total)) throw new Error("問題がありません");
+    return parseAnswer(entry) === problem.total;
+  }
+
+  /* ---------- settings ---------- */
+  function normalizeSettings(raw) {
+    const s = raw && typeof raw === "object" ? raw : {};
+    return {
+      mode: MODES.includes(s.mode) ? s.mode : DEFAULTS.mode,
+      digits: DIGITS.includes(s.digits) ? s.digits : DEFAULTS.digits,
+      count: COUNTS.includes(s.count) ? s.count : DEFAULTS.count,
+      speed: SPEED_IDS.includes(s.speed) ? s.speed : DEFAULTS.speed
+    };
+  }
+  function specFor(settings) {
+    const s = normalizeSettings(settings);
+    return { digits: s.digits, count: s.count, ms: SPEEDS[s.speed].ms };
+  }
+  const seconds = (ms) => `${Number((ms / 1000).toFixed(2))}秒`;
+  const describe = (spec) => `${spec.digits}けた ${spec.count}口 ${seconds(spec.ms)}`;
+
+  /* ---------- ladder ---------- */
+  function checkCleared(cleared) {
+    if (!isInt(cleared, 0, LADDER.length)) throw new Error("段位の値が正しくありません");
+  }
+  function danTitle(cleared) {
+    checkCleared(cleared);
+    return cleared === 0 ? "無級" : LADDER[cleared - 1].title;
+  }
+  function danNote(cleared) {
+    checkCleared(cleared);
+    return NOTES.find(n => cleared >= n.min).text;
+  }
+  function streakTitle(streak) {
+    if (!isInt(streak, 0, LIMITS.maxRecord)) throw new Error("連続正解の数が正しくありません");
+    return STREAK_TITLES.find(t => streak >= t.min).text;
+  }
+
+  /* 自由に: one answer moves the run { streak, startBest, celebrated }. A miss starts a new try that is measured
+   * against the best so far (bestNow). cheer is true the first time a try beats an earlier best; the very first
+   * record (no earlier best) is saved quietly. */
+  function freeStep(state, ok, bestNow) {
+    if (!state || !isInt(state.streak, 0, LIMITS.maxRecord) || !isInt(state.startBest, 0, LIMITS.maxRecord)) {
+      throw new Error("連続正解の状態が正しくありません");
+    }
+    if (!ok) {
+      if (!isInt(bestNow, 0, LIMITS.maxRecord)) throw new Error("自己ベストが正しくありません");
+      return { streak: 0, startBest: bestNow, celebrated: false, cheer: false };
+    }
+    const streak = Math.min(state.streak + 1, LIMITS.maxRecord);
+    const beats = state.startBest > 0 && streak > state.startBest;
+    return { streak, startBest: state.startBest, celebrated: !!state.celebrated || beats, cheer: beats && !state.celebrated };
+  }
+
+  /* ---------- records: { free: { "2-5-normal": best streak }, dan: steps cleared } ---------- */
+  const KEY_RE = /^([1-3])-([0-9]{1,2})-([a-z]+)$/;
+  function isRecordKey(key) {
+    const m = typeof key === "string" ? KEY_RE.exec(key) : null;
+    return !!m && DIGITS.includes(Number(m[1])) && COUNTS.includes(Number(m[2])) && SPEED_IDS.includes(m[3]);
+  }
+  function recordKey(digits, count, speed) {
+    const key = `${digits}-${count}-${speed}`;
+    if (!isRecordKey(key)) throw new Error("記録の設定が正しくありません");
+    return key;
+  }
+  function normalizeRecords(raw) {
+    const r = raw && typeof raw === "object" ? raw : {};
+    const free = r.free && typeof r.free === "object" && !Array.isArray(r.free) ? r.free : {};
+    const entries = Object.entries(free).filter(([k, v]) => isRecordKey(k) && isInt(v, 1, LIMITS.maxRecord));
+    return { free: Object.fromEntries(entries), dan: isInt(r.dan, 0, LADDER.length) ? r.dan : 0 };
+  }
+  function freeBest(records, key) {
+    if (!isRecordKey(key)) throw new Error("記録の設定が正しくありません");
+    return normalizeRecords(records).free[key] || 0;
+  }
+  function addFree(records, key, streak) {
+    const prev = freeBest(records, key);
+    if (!isInt(streak, 0, LIMITS.maxRecord)) throw new Error("連続正解の数が正しくありません");
+    const base = normalizeRecords(records);
+    const isNew = streak > prev;
+    return { records: isNew ? { ...base, free: { ...base.free, [key]: streak } } : base, isNew };
+  }
+  function addDan(records, cleared) {
+    checkCleared(cleared);
+    const base = normalizeRecords(records);
+    const isNew = cleared > base.dan;
+    return { records: isNew ? { ...base, dan: cleared } : base, isNew };
+  }
+
+  return {
+    DIGITS, COUNTS, SPEED_IDS, SPEEDS, MODES, DEFAULTS, LIMITS, GAP, LADDER, NOTES, STREAK_TITLES,
+    range, generate, sum, timing, newProblem, schedule, answerLength, parseAnswer, isCorrect,
+    normalizeSettings, specFor, seconds, describe,
+    danTitle, danNote, streakTitle, freeStep,
+    recordKey, normalizeRecords, freeBest, addFree, addDan
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = AnzanRules;
+</script>
+<script>
+/* anzan.js */
+/* フラッシュ暗算 screen: numbers flash one at a time; add them in your head and type the total on the keypad. */
+const Anzan = (() => {
+  const R = AnzanRules;
+  const KEY = "anzan.settings";
+  const RECORD_KEY = "anzan.records";
+  const LEAD_MS = 380;          /* blank board after the count-in, before the first number */
+  const MIN_SHARE = 0.6;        /* a late frame still leaves each number on screen this share of its time */
+  const PASS_COIN_MS = 380;
+  const RESULT_SOUND_MS = 900;
+  const PAD = Object.freeze(["7", "8", "9", "4", "5", "6", "1", "2", "3", "del", "0", "ok"]);
+  const PAD_LABEL = Object.freeze({ del: "消す", ok: "決定" });
+  const MODE_LABEL = Object.freeze({ free: "自由に", dan: "段位チャレンジ" });
+  const RULES = Object.freeze({
+    free: ["数字が1つずつパッと出て、すぐ消える", "出てきた数字を、頭の中でぜんぶ足していく",
+      "最後に合計をキーで入れて「決定」", "まちがえるまで何問つづけて正解できるかが記録になる"],
+    dan: ["10級からスタート。出てくる数字を頭の中で全部足す", "正解するたびに1つ上へ。数字が増えて、速くなる",
+      "1回まちがえたら終わり。たどり着いた級・段が記録になる", "いちばん上は十段。暗算の達人をめざそう"]
+  });
+
+  const el = {
+    mode: $("modeAnzan"), setup: $("azSetup"), play: $("azPlay"), label: $("azLabel"), title: $("azTitle"),
+    board: $("azBoard"), num: $("azNum"), dots: $("azDots"), entry: $("azEntry"), pad: $("azPad"),
+    card: $("azCard"), ladder: $("azLadder"), tape: $("azTape"), stats: $("azStats"), hint: $("azHint"), actions: $("azActions"),
+    best: $("azBest"), digitsOpt: $("azDigitsOpt"), countOpt: $("azCountOpt"), speedOpt: $("azSpeedOpt")
+  };
+
+  let settings = { ...R.DEFAULTS };
+  let records = R.normalizeRecords(null);
+  let run = null; /* { mode, level, streak, played, startBest, celebrated, problem } */
+  let ui = { phase: "setup", entry: "", result: null }; /* result: { ok, answer, isNew, streak, cleared } */
+  let flash = { token: 0, raf: 0 };
+  let keys = new Map();
+
+  const freeKey = () => R.recordKey(settings.digits, settings.count, settings.speed);
+  const step = () => R.LADDER[run.level];
+  const currentSpec = () => (run.mode === "dan" ? step() : R.specFor(settings));
+  const bestDanText = () => (records.dan > 0 ? R.danTitle(records.dan) : "まだ記録なし");
+
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function update(patch) {
+    settings = R.normalizeSettings({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function saveRecords(next) {
+    records = next;
+    Store.save(RECORD_KEY, records);
+  }
+  /* Delayed effect that is dropped if the player has moved on. */
+  function later(fn, ms) {
+    const token = flash.token;
+    setTimeout(() => { if (token === flash.token) fn(); }, ms);
+  }
+
+  /* ---------- sounds ---------- */
+  /* Soft, same-pitch tick for every number, so the sound gives nothing away. */
+  const tick = () => [[1568, 0.07, 0.06], [3136, 0.025, 0.015]].forEach(([freq, dur, vol]) => Sound.tone({ freq, dur, vol }));
+  function answerCue() {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    Sound.tone({ freq: Sound.hz(84), type: "triangle", t, dur: 0.12, vol: 0.1 });
+    Sound.tone({ freq: Sound.hz(91), type: "triangle", t: t + 0.09, dur: 0.24, vol: 0.1, send: 0.2 });
+  }
+  const keySound = (k) => Sound.tone({ freq: 560 + Number(k) * 32, type: "triangle", dur: 0.06, vol: 0.12 });
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    Sound.sfx("confirm");
+    const startBest = settings.mode === "dan" ? records.dan : R.freeBest(records, freeKey());
+    run = { mode: settings.mode, level: 0, streak: 0, played: 0, startBest, celebrated: false, problem: null };
+    nextProblem();
+  }
+  function stopFlash() {
+    cancelAnimationFrame(flash.raf);
+    flash = { token: flash.token + 1, raf: 0 };
+  }
+  async function nextProblem() {
+    stopFlash();
+    const token = flash.token;
+    run = { ...run, problem: R.newProblem(currentSpec()), played: run.played + 1 };
+    go({ phase: "count", entry: "", result: null });
+    await Fx.countdown("スタート！");
+    if (token !== flash.token) return;
+    go({ phase: "flash" });
+    playFlash(token);
+  }
+  /* Walks the steps one at a time on the frame clock. Late frames slow the flash down but never skip a number. */
+  function playFlash(token) {
+    const p = run.problem;
+    const steps = R.schedule(p, LEAD_MS);
+    let at = 0;
+    let end = performance.now() + steps[0].ms;
+    showSlot(p, steps[0]);
+    const frame = (now) => {
+      if (token !== flash.token) return;
+      if (now >= end) {
+        at += 1;
+        if (at >= steps.length) { endFlash(); return; }
+        end = Math.max(end + steps[at].ms, now + steps[at].ms * MIN_SHARE);
+        showSlot(p, steps[at]);
+      }
+      flash = { ...flash, raf: requestAnimationFrame(frame) };
+    };
+    flash = { ...flash, raf: requestAnimationFrame(frame) };
+  }
+  function showSlot(p, { n, passed }) {
+    el.num.textContent = n >= 0 ? String(p.numbers[n]) : "";
+    [...el.dots.children].forEach((d, k) => {
+      d.classList.toggle("lit", k <= passed);
+      d.classList.toggle("cur", k === n);
+    });
+    if (n < 0) return;
+    Fx.replay(el.num, "anzan-in");
+    tick();
+  }
+  function endFlash() {
+    flash = { ...flash, raf: 0 };
+    answerCue();
+    go({ phase: "answer", entry: "" });
+  }
+  function toSetup() {
+    stopFlash();
+    run = null;
+    go({ phase: "setup", entry: "", result: null });
+  }
+
+  /* ---------- answering ---------- */
+  function press(k) {
+    if (ui.phase !== "answer") return;
+    if (ui.entry.length >= R.answerLength(run.problem.digits, run.problem.count)) return;
+    if (ui.entry === "" && k === "0") return;
+    keySound(k);
+    go({ entry: ui.entry + k });
+  }
+  function erase() {
+    if (ui.phase !== "answer" || !ui.entry) return;
+    Sound.sfx("back");
+    go({ entry: ui.entry.slice(0, -1) });
+  }
+  function submit() {
+    if (ui.phase !== "answer" || !ui.entry) return;
+    const ok = R.isCorrect(run.problem, ui.entry);
+    const answer = Number(ui.entry);
+    if (run.mode === "dan") (ok ? danPass : danFail)(answer);
+    else (ok ? freePass : freeFail)(answer);
+  }
+  function freePass(answer) {
+    const { cheer, ...next } = R.freeStep(run, true, 0);
+    const res = R.addFree(records, freeKey(), next.streak);
+    saveRecords(res.records);
+    run = { ...run, ...next };
+    Sound.sfx("correct");
+    go({ phase: "verdict", result: { ok: true, answer, isNew: res.isNew, streak: next.streak } });
+    Fx.pop(el.card);
+    if (cheer) later(() => { Sound.sfx("victory"); Fx.confetti(); }, 450);
+  }
+  function freeFail(answer) {
+    const streak = run.streak;
+    const next = R.freeStep(run, false, R.freeBest(records, freeKey()));
+    run = { ...run, streak: next.streak, startBest: next.startBest, celebrated: next.celebrated };
+    Sound.sfx("wrong");
+    go({ phase: "verdict", result: { ok: false, answer, isNew: false, streak } });
+    Fx.shake(el.card);
+  }
+  function danPass(answer) {
+    const cleared = run.level + 1;
+    saveRecords(R.addDan(records, cleared).records);
+    if (cleared >= R.LADDER.length) { finishDan(answer, cleared, true); return; }
+    Sound.sfx("correct");
+    later(() => Sound.sfx("coin"), PASS_COIN_MS);
+    go({ phase: "verdict", result: { ok: true, answer, isNew: false, cleared } });
+    Fx.pop(el.card);
+  }
+  function danFail(answer) {
+    Sound.sfx("wrong");
+    finishDan(answer, run.level, false);
+  }
+  function finishDan(answer, cleared, allClear) {
+    const isNew = cleared > run.startBest;
+    go({ phase: "over", result: { ok: allClear, answer, isNew, cleared } });
+    Fx.pop(el.card);
+    later(() => {
+      if (isNew || allClear) { Sound.sfx("victory"); Fx.confetti(); } else Sound.sfx("reveal");
+    }, allClear ? 0 : RESULT_SOUND_MS);
+  }
+  function climb() {
+    run = { ...run, level: run.level + 1 };
+    Sound.sfx("whoosh");
+    nextProblem();
+  }
+
+  /* ---------- screens ---------- */
+  const playLabel = () => (run.mode === "dan"
+    ? `${step().title}に挑戦 ・ ${R.describe(step())}`
+    : `${R.describe(currentSpec())} ・ 連続${run.streak}問`);
+  const settingsBtn = () => makeButton("設定", toSetup, "small");
+  const flashTitle = () => (run.mode === "dan" ? `${step().title}の問題` : `第${run.played}問`);
+
+  const flashScreen = () => ({
+    label: playLabel(), title: flashTitle(), hint: "数字が出たら、どんどん足していこう", actions: [makeButton("やめる", toSetup, "small")]
+  });
+  function verdictScreen() {
+    const r = ui.result;
+    const p = run.problem;
+    if (run.mode === "dan") {
+      const next = R.LADDER[run.level + 1];
+      return {
+        label: playLabel(), title: `${step().title} 合格！`,
+        card: { main: String(p.total), sub: `${p.count}個の合計`, cls: "number anzan-ok" },
+        hint: `次は${next.title}（${R.describe(next)}）`,
+        actions: [settingsBtn(), makeButton(`${next.title}に挑戦`, climb, "primary")]
+      };
+    }
+    const best = R.freeBest(records, freeKey());
+    const bestText = best > 0 ? `自己ベスト ${best}問` : "";
+    if (r.ok) {
+      return {
+        label: playLabel(), title: r.isNew && run.startBest > 0 ? "新記録！" : R.streakTitle(r.streak),
+        card: { main: String(p.total), sub: `${p.count}個の合計`, cls: "number anzan-ok" },
+        hint: `連続正解 ${r.streak}問 ・ ${bestText}`,
+        actions: [settingsBtn(), makeButton("次の問題", nextProblem, "primary")]
+      };
+    }
+    return {
+      label: playLabel(), title: "ざんねん…",
+      card: { main: String(p.total), sub: `が正しい答え（あなたは${r.answer}）`, cls: "number anzan-ng" },
+      hint: r.streak > 0 ? `連続正解 ${r.streak}問でストップ ・ ${bestText}` : "出た数字を見て、足し算を確かめよう",
+      actions: [settingsBtn(), makeButton("もう一回", nextProblem, "primary")]
+    };
+  }
+  function overScreen() {
+    const r = ui.result;
+    const title = r.ok ? "全段クリア！" : r.isNew ? "新記録！" : "チャレンジ終了";
+    return {
+      label: "段位チャレンジの結果", title,
+      card: { main: R.danTitle(r.cleared), sub: R.danNote(r.cleared), cls: "anzan-rank" },
+      hint: "",
+      actions: [settingsBtn(), makeButton("もう一回", start, "primary")]
+    };
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    count: () => flashScreen(), flash: () => flashScreen(),
+    answer: () => ({ label: playLabel(), title: "合計は？", hint: "", actions: [] }),
+    verdict: verdictScreen,
+    over: overScreen,
+    paused: () => ({
+      label: "", title: "中断しました", hint: "画面を切りかえたので、この問題はなしにしました",
+      actions: [settingsBtn(), makeButton("再開", nextProblem, "primary")]
+    })
+  };
+
+  /* ---------- rendering ---------- */
+  const node = (tag, cls = "", text = "") => Object.assign(document.createElement(tag), { className: cls, textContent: text });
+  const withKids = (parent, ...kids) => { parent.append(...kids); return parent; };
+  function renderBoard() {
+    el.num.textContent = "";
+    el.dots.replaceChildren(...run.problem.numbers.map(() => node("span", "anzan-dot")));
+  }
+  function renderEntry() {
+    el.entry.replaceChildren(node("span", ui.entry ? "anzan-typed" : "anzan-ph", ui.entry || "ここに合計"), node("span", "anzan-caret"));
+    const full = ui.entry.length >= R.answerLength(run.problem.digits, run.problem.count);
+    keys.forEach((b, k) => {
+      if (k === "del" || k === "ok") b.disabled = ui.entry === "";
+      else b.disabled = full || (ui.entry === "" && k === "0");
+    });
+  }
+  function chip(text, cls, i) {
+    const s = node("span", `anzan-chip ${cls}`.trim(), text);
+    s.style.setProperty("--i", String(i));
+    return s;
+  }
+  function renderTape() {
+    const r = ui.result;
+    const show = !!r && !r.ok && (ui.phase === "verdict" || ui.phase === "over");
+    el.tape.hidden = !show;
+    if (!show) return;
+    const p = run.problem;
+    const nums = p.numbers.map((n, i) => chip(String(n), i > 0 ? "add" : "", i));
+    el.tape.replaceChildren(node("p", "anzan-tape-head", `出た数字（${p.count}個）`), ...nums, chip(`= ${p.total}`, "sum", p.count));
+  }
+  /* 10級 to 十段 as a row of pips: cleared steps lit, the next (or missed) one outlined. */
+  function renderLadder() {
+    const r = ui.result;
+    const show = run?.mode === "dan" && !!r && (ui.phase === "verdict" || ui.phase === "over");
+    el.ladder.hidden = !show;
+    if (!show) return;
+    const mark = ui.phase === "over" ? "miss" : "next";
+    const pips = R.LADDER.map((s, k) => node("span", `anzan-pip${k >= 10 ? " dan" : ""}${k < r.cleared ? " done" : k === r.cleared ? ` ${mark}` : ""}`));
+    const ends = [R.LADDER[0], R.LADDER[R.LADDER.length - 1]].map(s => node("span", "anzan-ladder-end", s.title));
+    el.ladder.replaceChildren(ends[0], withKids(node("span", "anzan-pips"), ...pips), ends[1]);
+  }
+  function renderStats() {
+    const r = ui.result;
+    const show = ui.phase === "over" && !!r;
+    el.stats.hidden = !show;
+    if (!show) return;
+    const rows = [
+      ["合格した数", `${r.cleared} / ${R.LADDER.length}`],
+      ["自己ベスト", bestDanText()],
+      ...(r.ok ? [] : [["まちがえた問題", R.describe(run.problem)], ["あなたの答え", String(r.answer)]])
+    ];
+    el.stats.replaceChildren(...rows.map(([k, v]) => withKids(node("li"), node("span", "", k), node("b", "", v))));
+  }
+  function renderPlay() {
+    const ph = ui.phase;
+    const flashing = ph === "count" || ph === "flash";
+    el.board.hidden = !flashing;
+    el.entry.hidden = ph !== "answer";
+    el.pad.hidden = ph !== "answer";
+    if (flashing) renderBoard();
+    if (ph === "answer") renderEntry();
+    renderLadder();
+    renderTape();
+    renderStats();
+  }
+  function renderSetup() {
+    const free = settings.mode === "free";
+    View.chips($("azModeChips"), R.MODES.map(m => ({ value: m, label: MODE_LABEL[m] })), settings.mode, m => update({ mode: m }));
+    [el.digitsOpt, el.countOpt, el.speedOpt].forEach(o => { o.hidden = !free; });
+    View.chips($("azDigitsChips"), View.options(R.DIGITS, d => `${d}けた`), settings.digits, d => update({ digits: d }));
+    View.chips($("azCountChips"), View.options(R.COUNTS, n => `${n}口`), settings.count, n => update({ count: n }));
+    View.chips($("azSpeedChips"), R.SPEED_IDS.map(id => ({ value: id, label: `${R.SPEEDS[id].label} ${R.seconds(R.SPEEDS[id].ms)}` })),
+      settings.speed, id => update({ speed: id }));
+    const best = R.freeBest(records, freeKey());
+    el.best.textContent = free
+      ? `この設定の自己ベスト：${best > 0 ? `連続${best}問正解` : "まだ記録なし"}`
+      : `自己ベスト：${bestDanText()}`;
+    View.list($("azRules"), RULES[settings.mode]);
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (ui.phase !== "setup") renderPlay();
+  }
+
+  /* ---------- input ---------- */
+  function buildPad() {
+    const handler = { del: erase, ok: submit };
+    const buttons = PAD.map(k => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = PAD_LABEL[k] ? `key anzan-key fn ${k}` : "key anzan-key";
+      b.textContent = PAD_LABEL[k] || k;
+      b.addEventListener("click", () => (handler[k] ? handler[k]() : press(k)));
+      return [k, b];
+    });
+    keys = new Map(buttons);
+    el.pad.replaceChildren(...buttons.map(([, b]) => b));
+  }
+  function onKey(e) {
+    if (el.mode.hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+    const onButton = e.target instanceof HTMLButtonElement;
+    if (ui.phase === "answer") {
+      const onPad = onButton && el.pad.contains(e.target);
+      if (/^[0-9]$/.test(e.key)) { e.preventDefault(); press(e.key); }
+      else if (e.key === "Backspace" || e.key === "Delete") { e.preventDefault(); erase(); }
+      else if (e.key === "Enter" && (onPad || !onButton)) { e.preventDefault(); submit(); }
+      return;
+    }
+    if (e.key === "Enter" && !onButton && ["verdict", "over", "paused"].includes(ui.phase)) {
+      e.preventDefault();
+      el.actions.querySelector(".primary")?.click();
+    }
+  }
+  /* Leaving the tab mid-flash would break the timing, so that problem is dropped. */
+  function onVisibility() {
+    if (!document.hidden || !(ui.phase === "count" || ui.phase === "flash")) return;
+    stopFlash();
+    go({ phase: "paused" });
+  }
+
+  function init() {
+    settings = R.normalizeSettings(Store.load(KEY, null));
+    records = R.normalizeRecords(Store.load(RECORD_KEY, null));
+    buildPad();
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("visibilitychange", onVisibility);
+    render();
+  }
+  function leave() {
+    stopFlash();
+    if (ui.phase === "setup") return;
+    run = null;
+    ui = { phase: "setup", entry: "", result: null };
+    render();
+  }
+
+  return { init, leave };
+})();
+</script>
 <!-- games:scripts -->
 <script>
 /* main.js */
@@ -28246,6 +30189,8 @@ const Simon = (() => {
     { id: "stroop", title: "色と文字", players: "1人", desc: "文字にまどわされず、色を答える脳トレ", color: "--c-red", el: "modeStroop", game: Stroop, group: "brain" },
     { id: "schulte", title: "1〜25タッチ", players: "1人", desc: "1から順に数字をタッチ。目の速さ勝負", color: "--c-blue", el: "modeSchulte", game: Schulte, group: "brain" },
     { id: "simon", title: "サイモン", players: "1人", desc: "光る順番を覚えて同じ順にタップ", color: "--c-green", el: "modeSimon", game: Simon, group: "brain" },
+    { id: "iq", title: "IQチャレンジ", players: "1人", desc: "数列と図形の20問。IQ目安が出る", color: "--c-violet", el: "modeIqChallenge", game: IqChallenge, group: "brain" },
+    { id: "anzan", title: "フラッシュ暗算", players: "1人", desc: "パッと消える数字を頭の中で足し算", color: "--c-gold", el: "modeAnzan", game: Anzan, group: "brain" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

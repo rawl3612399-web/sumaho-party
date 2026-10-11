@@ -38,6 +38,8 @@
     { id: "stroop", title: "色と文字", players: "1人", desc: "文字にまどわされず、色を答える脳トレ", color: "--c-red", el: "modeStroop", game: Stroop, group: "brain" },
     { id: "schulte", title: "1〜25タッチ", players: "1人", desc: "1から順に数字をタッチ。目の速さ勝負", color: "--c-blue", el: "modeSchulte", game: Schulte, group: "brain" },
     { id: "simon", title: "サイモン", players: "1人", desc: "光る順番を覚えて同じ順にタップ", color: "--c-green", el: "modeSimon", game: Simon, group: "brain" },
+    { id: "iq", title: "IQチャレンジ", players: "1人", desc: "数列と図形の20問。IQ目安が出る", color: "--c-violet", el: "modeIqChallenge", game: IqChallenge, group: "brain" },
+    { id: "anzan", title: "フラッシュ暗算", players: "1人", desc: "パッと消える数字を頭の中で足し算", color: "--c-gold", el: "modeAnzan", game: Anzan, group: "brain" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

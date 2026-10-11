@@ -1,0 +1,35 @@
+<!-- ===== IQチャレンジ ===== -->
+<div class="mode" id="modeIqChallenge" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="iqSetup">
+      <div class="iq-best" id="iqBest"></div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">時間</span><div class="chips" id="iqTimeChips"></div></div>
+      </div>
+      <ul class="rules" id="iqRules"></ul>
+      <p class="iq-note">IQ目安は遊びの目安です。本物のIQ検査ではありません</p>
+      <p class="hint iq-error" id="iqError" hidden></p>
+    </section>
+    <section class="panel iq-play" id="iqPlay" hidden>
+      <div class="iq-hud" id="iqHud" hidden>
+        <button class="iq-quit" id="iqQuit" type="button">やめる</button>
+        <div class="iq-progress">
+          <span class="iq-count" id="iqCount">1 / 20</span>
+          <div class="iq-track" aria-hidden="true"><span class="iq-fill" id="iqBar"></span></div>
+        </div>
+        <div class="iq-ring" id="iqRing" aria-hidden="true">
+          <svg viewBox="0 0 44 44"><circle class="iq-ring-track" cx="22" cy="22" r="19"></circle><circle class="iq-ring-bar" id="iqRingBar" cx="22" cy="22" r="19"></circle></svg>
+          <span class="iq-ring-num" id="iqRingNum">30</span>
+        </div>
+      </div>
+      <span class="label" id="iqLabel"></span>
+      <p class="d-title" id="iqTitle"></p>
+      <div class="iq-question" id="iqQuestion" hidden></div>
+      <div class="iq-choices" id="iqChoices" role="group" aria-label="答えの候補" hidden></div>
+      <div class="word-card" id="iqCard" hidden></div>
+      <ul class="iq-detail" id="iqDetail" hidden></ul>
+      <p class="hint" id="iqHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="iqActions"></div>
+</div>

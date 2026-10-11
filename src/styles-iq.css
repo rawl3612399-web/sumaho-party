@@ -1,0 +1,143 @@
+/* IQチャレンジ: quiz bar (progress, timer ring), question figures, the 2×2 answer grid and result bars.
+   Colors come from tokens; the puzzle figures are drawn with currentColor. */
+#modeIqChallenge { --iq: var(--c-violet); }
+#modeIqChallenge .stage { padding-block: 14px; }
+.iq-play { gap: 8px; flex: 1; }
+
+/* ---------- setup ---------- */
+.iq-best {
+  display: grid; grid-template-columns: 1fr auto; grid-template-areas: "label num" "sub num";
+  align-items: center; gap: 2px 12px; width: 100%; box-sizing: border-box; text-align: left;
+  padding: 10px 16px; border-radius: 16px; border: 2.5px solid var(--iq); background: var(--paper);
+}
+.iq-best-label { grid-area: label; font-size: .78rem; font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.iq-best-sub { grid-area: sub; font-size: .88rem; font-weight: 700; }
+.iq-best-num {
+  grid-area: num; font-family: var(--display); font-weight: 400; font-size: 2.5rem; line-height: 1;
+  color: var(--iq); font-variant-numeric: tabular-nums;
+}
+.iq-note { margin: 0; font-size: .78rem; color: var(--muted); text-wrap: balance; }
+.iq-error { color: var(--alert); }
+
+/* ---------- quiz bar ---------- */
+.iq-hud { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; width: 100%; }
+.iq-quit {
+  font: inherit; font-size: .8rem; font-weight: 700; color: var(--muted); cursor: pointer;
+  min-height: 44px; padding: 0 12px; border-radius: 999px; border: 2px solid var(--line); background: var(--card);
+}
+.iq-progress { display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; }
+.iq-count { font-size: .8rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.iq-track { height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.iq-fill {
+  display: block; width: 0; height: 100%; border-radius: inherit; background: var(--iq);
+  transition: width .4s cubic-bezier(.2, .9, .3, 1);
+}
+.iq-ring { position: relative; flex: none; width: 48px; height: 48px; }
+.iq-ring svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.iq-ring-track, .iq-ring-bar { fill: none; stroke-width: 5; }
+.iq-ring-track { stroke: var(--line); }
+.iq-ring-bar { stroke: var(--iq); stroke-linecap: round; }
+.iq-ring-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-weight: 900; font-size: 1rem; font-variant-numeric: tabular-nums;
+}
+.iq-ring.urgent .iq-ring-bar { stroke: var(--alert); }
+.iq-ring.urgent .iq-ring-num { color: var(--alert); animation: pulse .5s ease-in-out infinite; }
+
+/* ---------- question ---------- */
+.iq-question { display: flex; justify-content: center; width: 100%; }
+.iq-term {
+  min-width: 0; height: 50px; box-sizing: border-box; padding: 0 2px; display: grid; place-items: center;
+  border: 2.5px solid var(--ink); border-radius: 12px; background: var(--paper); color: var(--ink);
+  font-family: var(--display); font-size: clamp(1.05rem, 5vw, 1.5rem); font-variant-numeric: tabular-nums;
+}
+.iq-blank {
+  border-style: dashed; border-color: var(--iq); color: var(--iq); background: var(--card);
+  animation: iqBlink 1.4s ease-in-out infinite;
+}
+@keyframes iqBlink { 50% { background: var(--hl); } }
+.iq-seq { display: flex; gap: 6px; width: 100%; max-width: 400px; }
+.iq-seq .iq-term { flex: 1 1 0; }
+.iq-pairs { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 18px; max-width: 360px; }
+.iq-ops { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.iq-row { display: flex; align-items: center; gap: 6px; }
+.iq-row .iq-term { width: 54px; height: 44px; }
+.iq-op { font-weight: 900; font-size: 1.1rem; color: var(--muted); }
+.iq-grid { display: grid; grid-template-columns: repeat(3, 58px); gap: 6px; }
+/* Sizes follow the small viewport height (svh, with a vh fallback) so the figure and all four answers fit a phone screen. */
+.iq-matrix { width: min(100%, 270px, 28vh); width: min(100%, 270px, 28svh); }
+.iq-matrix-svg { display: block; width: 100%; height: auto; color: var(--ink); }
+.iq-cell { stroke: var(--line); stroke-width: 2.5; }
+.iq-missing { stroke: var(--iq); stroke-width: 3; stroke-dasharray: 8 6; }
+.iq-qmark { fill: var(--iq); font-family: var(--display); font-size: 54px; }
+.iq-model {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 20px 4px; border-radius: 16px; border: 2px dashed var(--line);
+}
+.iq-model .iq-fig { width: min(36vw, 150px, 20vh); width: min(36vw, 150px, 20svh); height: auto; color: var(--ink); }
+.iq-tag { font-size: .75rem; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+.iq-mark { fill: var(--iq); }
+.iq-tint { fill: var(--iq); fill-opacity: .24; }
+
+/* ---------- answers ---------- */
+.iq-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; max-width: 420px; margin-top: auto; }
+.iq-choice {
+  position: relative; min-width: 0; box-sizing: border-box; padding: 8px; display: grid; place-items: center;
+  font: inherit; color: var(--ink); cursor: pointer; touch-action: manipulation;
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 16px;
+  box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+  transition: transform .06s, box-shadow .06s, opacity .25s, background-color .25s;
+  animation: iqIn .32s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+.iq-choice:nth-child(2) { animation-delay: .04s; }
+.iq-choice:nth-child(3) { animation-delay: .08s; }
+.iq-choice:nth-child(4) { animation-delay: .12s; }
+@keyframes iqIn { from { opacity: 0; transform: translateY(8px) scale(.96); } }
+.iq-choice:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.iq-choice:disabled { cursor: default; }
+.iq-numbers .iq-choice { height: clamp(58px, 11vh, 72px); height: clamp(58px, 11svh, 72px); }
+.iq-figures .iq-choice { height: clamp(76px, 13.5vh, 132px); height: clamp(76px, 13.5svh, 132px); }
+.iq-question[hidden] + .iq-figures .iq-choice { height: clamp(100px, 20vh, 170px); height: clamp(100px, 20svh, 170px); }
+.iq-choice .iq-fig { height: 100%; width: auto; max-width: 100%; aspect-ratio: 1; }
+.iq-num { font-family: var(--display); font-size: clamp(1.7rem, 8vw, 2.2rem); font-variant-numeric: tabular-nums; }
+.iq-key { position: absolute; top: 4px; left: 9px; font-size: .7rem; font-weight: 900; color: var(--muted); }
+.iq-choice[data-state="right"] {
+  border-color: var(--go); box-shadow: 0 4px 0 var(--go);
+  background: color-mix(in srgb, var(--go) 16%, var(--card));
+  animation: iqRight .5s cubic-bezier(.2, 1.4, .4, 1);
+}
+.iq-choice[data-state="wrong"] {
+  border-color: var(--alert); box-shadow: 0 4px 0 var(--alert);
+  background: color-mix(in srgb, var(--alert) 12%, var(--card));
+}
+.iq-choice[data-state="dim"] { opacity: .35; }
+.iq-choice[data-state="right"]::after, .iq-choice[data-state="wrong"]::after {
+  position: absolute; top: -10px; right: -6px; padding: 2px 9px; border-radius: 999px;
+  font-size: .75rem; font-weight: 900; line-height: 1.4;
+}
+.iq-choice[data-state="right"]::after { content: "正解"; background: var(--go); color: var(--on-go); }
+.iq-choice[data-state="wrong"]::after { content: "×"; background: var(--alert); color: var(--on-accent); }
+@keyframes iqRight { 0% { transform: scale(.94); } 60% { transform: scale(1.05); } 100% { transform: none; } }
+
+/* ---------- result ---------- */
+.word-card.iq-score { border-color: var(--iq); box-shadow: 0 6px 0 var(--iq); }
+.word-card.iq-score .wc-main { color: var(--iq); }
+.iq-detail {
+  list-style: none; margin: 0; padding: 0; width: 100%; max-width: 360px;
+  display: flex; flex-direction: column; gap: 6px; text-align: left;
+}
+.iq-detail li {
+  display: grid; grid-template-columns: 6.4em 1fr auto; align-items: center; gap: 10px;
+  padding: 6px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-size: .88rem; font-variant-numeric: tabular-nums;
+}
+.iq-d-name { font-weight: 700; }
+.iq-d-bar { height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.iq-d-bar > span { display: block; height: 100%; border-radius: inherit; background: var(--iq); }
+.iq-d-val { grid-column: 3; }
+
+@media (prefers-reduced-motion: reduce) {
+  .iq-choice, .iq-choice[data-state="right"], .iq-blank, .iq-ring.urgent .iq-ring-num { animation: none; }
+  .iq-choice, .iq-fill { transition: none; }
+  .iq-choice:active:not(:disabled) { transform: none; }
+}

@@ -1,0 +1,142 @@
+/* フラッシュ暗算: a dark scoreboard with glowing digits, a calculator-style keypad, and the result tape. */
+:root {
+  --anzan-board: #17202c;
+  --anzan-board-hi: #243245;
+  --anzan-rim: #0c121a;
+  --anzan-digit: #ffd76a;
+  --anzan-glow: rgba(255, 196, 64, .5);
+  --anzan-pip: #3a4859;
+  --anzan-scan: rgba(255, 255, 255, .035);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --anzan-board: #0d1512;
+    --anzan-board-hi: #18241f;
+    --anzan-rim: #060a08;
+    --anzan-digit: #ffd76a;
+    --anzan-glow: rgba(255, 196, 64, .42);
+    --anzan-pip: #2c3a34;
+    --anzan-scan: rgba(255, 255, 255, .03);
+  }
+}
+:root[data-theme="dark"] {
+  --anzan-board: #0d1512;
+  --anzan-board-hi: #18241f;
+  --anzan-rim: #060a08;
+  --anzan-digit: #ffd76a;
+  --anzan-glow: rgba(255, 196, 64, .42);
+  --anzan-pip: #2c3a34;
+  --anzan-scan: rgba(255, 255, 255, .03);
+}
+
+/* ---------- setup ---------- */
+.anzan-best {
+  margin: 0; align-self: stretch; text-align: left; font-size: .9rem; font-weight: 700;
+  padding: 8px 12px; border-radius: 12px; border: 2px dashed var(--c-gold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- flash board ---------- */
+.anzan-board {
+  position: relative; width: min(100%, 340px); aspect-ratio: 16 / 11; box-sizing: border-box;
+  display: grid; place-items: center; overflow: hidden;
+  border-radius: 22px; border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink), inset 0 0 0 6px var(--anzan-rim);
+  background:
+    repeating-linear-gradient(0deg, var(--anzan-scan) 0 2px, transparent 2px 4px),
+    radial-gradient(ellipse at 50% 42%, var(--anzan-board-hi) 0%, var(--anzan-board) 72%);
+  margin-bottom: 6px;
+  user-select: none; -webkit-user-select: none;
+}
+.anzan-num {
+  font-family: var(--display); font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: clamp(4.4rem, 26vw, 8rem); letter-spacing: .02em;
+  color: var(--anzan-digit); text-shadow: 0 0 22px var(--anzan-glow), 0 0 4px var(--anzan-glow);
+  min-height: 1em;
+}
+.anzan-in { animation: anzanIn 90ms ease-out; }
+@keyframes anzanIn { from { opacity: .35; transform: scale(.94); } to { opacity: 1; transform: none; } }
+.anzan-dots {
+  position: absolute; left: 0; right: 0; bottom: 14px;
+  display: flex; justify-content: center; flex-wrap: wrap; gap: 6px; padding-inline: 18px;
+}
+.anzan-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--anzan-pip); transition: background .15s, transform .15s; }
+.anzan-dot.lit { background: var(--anzan-digit); box-shadow: 0 0 6px var(--anzan-glow); }
+.anzan-dot.cur { transform: scale(1.35); }
+
+/* ---------- answer entry + keypad ---------- */
+.anzan-entry {
+  width: min(100%, 340px); box-sizing: border-box; min-height: 74px;
+  display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+  padding: 8px 18px; border-radius: 18px;
+  background: var(--paper); border: 2.5px solid var(--ink); box-shadow: inset 0 3px 0 var(--line);
+  font-family: var(--display); font-variant-numeric: tabular-nums; line-height: 1;
+}
+.anzan-typed { font-size: clamp(2.4rem, 12vw, 3.2rem); letter-spacing: .04em; }
+.anzan-ph { font-family: var(--body); font-size: 1rem; font-weight: 700; color: var(--muted); }
+.anzan-caret { width: 3px; height: 2.2rem; border-radius: 2px; background: var(--accent); animation: anzanBlink 1s steps(1) infinite; }
+@keyframes anzanBlink { 50% { opacity: 0; } }
+.anzan-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: min(100%, 340px); }
+.anzan-pad .key.anzan-key {
+  font: inherit; font-family: var(--display); font-size: 1.75rem; font-variant-numeric: tabular-nums;
+  min-height: 54px; padding: 6px 0; border-radius: 14px; cursor: pointer;
+  border: 2px solid var(--ink); background: var(--card); color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform .05s, box-shadow .05s;
+}
+.anzan-pad .key.anzan-key.fn { font-family: var(--body); font-size: 1.05rem; font-weight: 900; }
+.anzan-pad .key.anzan-key.ok { background: var(--accent); border-color: var(--accent-deep); color: var(--on-accent); box-shadow: 0 4px 0 var(--accent-deep); }
+.anzan-pad .key.anzan-key:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.anzan-pad .key.anzan-key.ok:active:not(:disabled) { box-shadow: 0 1px 0 var(--accent-deep); }
+.anzan-pad .key.anzan-key:disabled { opacity: .35; cursor: default; }
+
+/* ---------- verdict cards ---------- */
+.word-card.anzan-ok { border-color: var(--go); box-shadow: 0 6px 0 var(--go); }
+.word-card.anzan-ok .wc-main { color: var(--go); }
+.word-card.anzan-ok .wc-sub { color: var(--go); font-weight: 900; font-size: 1.05rem; }
+.word-card.anzan-ng .wc-main { color: var(--alert); }
+.word-card.anzan-rank {
+  background: var(--c-gold); border-color: var(--ink); color: var(--on-tile);
+  background-image: repeating-linear-gradient(45deg, transparent 0 14px, var(--anzan-scan) 14px 28px);
+}
+.word-card.anzan-rank .wc-main { font-size: clamp(3rem, 16vw, 4.4rem); }
+.word-card.anzan-rank .wc-sub { color: var(--on-tile); font-weight: 700; opacity: .9; }
+
+/* ---------- ladder progress (段位チャレンジ) ---------- */
+.anzan-ladder { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; width: min(100%, 340px); }
+.anzan-ladder-end { font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.anzan-pips { display: grid; grid-template-columns: repeat(20, 1fr); align-items: end; gap: 3px; }
+.anzan-pip { height: 10px; border-radius: 3px; background: var(--line); }
+.anzan-pip.dan { height: 14px; }
+.anzan-pip.dan:nth-child(11) { margin-left: 4px; }
+.anzan-pip.done { background: var(--c-gold); animation: anzanDeal .3s both; }
+.anzan-pip.next { background: transparent; box-shadow: inset 0 0 0 2px var(--c-gold); }
+.anzan-pip.miss { background: transparent; box-shadow: inset 0 0 0 2px var(--alert); }
+
+/* ---------- tape of the numbers that flashed ---------- */
+.anzan-tape { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; width: min(100%, 340px); }
+.anzan-tape-head { width: 100%; margin: 0; font-size: .8rem; color: var(--muted); letter-spacing: .08em; }
+.anzan-chip {
+  display: inline-flex; align-items: baseline; gap: 3px;
+  padding: 4px 9px; border-radius: 10px; border: 2px solid var(--line); background: var(--paper);
+  font-family: var(--display); font-size: 1.15rem; font-variant-numeric: tabular-nums; line-height: 1.2;
+  animation: anzanDeal .32s cubic-bezier(.2, 1.3, .4, 1) both; animation-delay: calc(var(--i, 0) * 40ms);
+}
+.anzan-chip.add::before { content: "+"; font-size: .8em; color: var(--muted); }
+.anzan-chip.sum { border-color: var(--go); color: var(--go); }
+@keyframes anzanDeal { from { opacity: 0; transform: translateY(6px) scale(.9); } to { opacity: 1; transform: none; } }
+
+/* ---------- stats on the dan result ---------- */
+.anzan-stats { list-style: none; margin: 0; padding: 0; width: min(100%, 340px); display: flex; flex-direction: column; gap: 6px; }
+.anzan-stats li {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 7px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-size: .9rem; font-variant-numeric: tabular-nums; text-align: left;
+}
+.anzan-stats b { font-family: var(--display); font-weight: 400; font-size: 1.15rem; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anzan-in, .anzan-chip, .anzan-caret, .anzan-pip.done { animation: none; }
+  .anzan-dot { transition: none; }
+  .anzan-pad .key.anzan-key:active:not(:disabled) { transform: none; }
+}
