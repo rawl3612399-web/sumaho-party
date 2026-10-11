@@ -1,0 +1,4200 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スマホ1台パーティー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<style>
+/* Layout: one-screen app. Game tabs on top, settings or scores, one big stage card, actions at the bottom.
+   Light = whiteboard, dark = blackboard. */
+:root {
+  --paper: #f6f8fb;
+  --card: #ffffff;
+  --ink: #1c2838;
+  --muted: #5b6878;
+  --line: #e1e7ef;
+  --accent: #2160d4;
+  --on-accent: #ffffff;
+  --alert: #dc3e33;
+  --hl: #ffe25e;
+  --zap: #ffd400;
+  --on-zap: #1c2838;
+  --go: #16a05a;
+  --on-go: #ffffff;
+  --accent-deep: #1646a0;
+  --alert-deep: #a82a21;
+  --c-blue: #2f6fe4; --c-amber: #e8a400; --c-purple: #7b4fd6; --c-red: #e0483c; --c-orange: #f07a1f;
+  --c-pink: #e0559a; --c-teal: #12a39a; --c-green: #23a25b; --c-indigo: #4a55c9; --c-slate: #4c5d70;
+  --c-lime: #6f9a12; --c-cyan: #0f93c4; --c-rose: #c93a62; --c-brown: #9a6233; --c-sky: #3d8ee8;
+  --c-violet: #9b3fc4; --c-gold: #c78a06; --c-mint: #1a9c7c;
+  --on-tile: #ffffff;
+  --display: "Yusei Magic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+  --body: "Zen Maru Gothic", "Hiragino Maru Gothic ProN", "BIZ UDPGothic", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #1d2925; --card: #24332e; --ink: #eef3ef; --muted: #a6b6ae; --line: #2f403a;
+    --accent: #86b6ff; --on-accent: #0f1d18; --alert: #ff7c70; --hl: rgba(255, 226, 110, .28);
+    --zap: #ffd84a; --on-zap: #1d2925; --go: #4fd18b; --on-go: #0f1d18;
+    --accent-deep: #4f7fcc; --alert-deep: #c4544a;
+    --c-blue: #7aa7ff; --c-amber: #ffc83d; --c-purple: #b394ff; --c-red: #ff8075; --c-orange: #ffab66;
+    --c-pink: #ff8cc4; --c-teal: #5fd6cc; --c-green: #66d494; --c-indigo: #98a0ff; --c-slate: #a9b8c8;
+    --c-lime: #b5dc5a; --c-cyan: #6dd0f2; --c-rose: #ff8fae; --c-brown: #d9a374; --c-sky: #8cc0ff;
+    --c-violet: #d49bff; --c-gold: #ffd36b; --c-mint: #6fe0c2;
+    --on-tile: #10201a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #1d2925; --card: #24332e; --ink: #eef3ef; --muted: #a6b6ae; --line: #2f403a;
+  --accent: #86b6ff; --on-accent: #0f1d18; --alert: #ff7c70; --hl: rgba(255, 226, 110, .28);
+  --zap: #ffd84a; --on-zap: #1d2925; --go: #4fd18b; --on-go: #0f1d18;
+  --accent-deep: #4f7fcc; --alert-deep: #c4544a;
+  --c-blue: #7aa7ff; --c-amber: #ffc83d; --c-purple: #b394ff; --c-red: #ff8075; --c-orange: #ffab66;
+  --c-pink: #ff8cc4; --c-teal: #5fd6cc; --c-green: #66d494; --c-indigo: #98a0ff; --c-slate: #a9b8c8;
+    --c-lime: #b5dc5a; --c-cyan: #6dd0f2; --c-rose: #ff8fae; --c-brown: #d9a374; --c-sky: #8cc0ff;
+    --c-violet: #d49bff; --c-gold: #ffd36b; --c-mint: #6fe0c2;
+  --on-tile: #10201a;
+  color-scheme: dark;
+}
+
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 28px 28px;
+  color: var(--ink);
+  font-family: var(--body);
+  font-size: 16px;
+  -webkit-tap-highlight-color: transparent;
+}
+body.arena-open { overflow: hidden; }
+.app {
+  min-height: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding-inline: 16px;
+  padding-block: 12px 18px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.mode { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+
+/* ---------- shared controls ---------- */
+.round { color: var(--muted); font-size: .9rem; font-variant-numeric: tabular-nums; }
+.settings { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: flex-start; gap: 8px; }
+.row-label { font-size: .78rem; color: var(--muted); flex: 0 0 3.4em; letter-spacing: .08em; padding-top: 8px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.chip {
+  font: inherit; font-size: .88rem; font-weight: 700; transition: transform .08s;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink);
+  border-radius: 999px; padding: 5px 12px; cursor: pointer;
+}
+.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.chip:disabled { opacity: .45; cursor: default; }
+.level-note { font-size: .8rem; color: var(--muted); margin: 0 0 0 calc(3.4em + 8px); min-height: 1.3em; }
+
+.stage {
+  flex: 1;
+  min-height: 320px;
+  background: var(--card);
+  border: 2.5px solid var(--ink);
+  border-radius: 18px 22px 16px 24px;
+  box-shadow: 4px 5px 0 var(--ink);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: safe center;
+  text-align: center;
+  padding: 20px 16px;
+  gap: 14px;
+}
+.panel { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; min-width: 0; animation: rise .32s cubic-bezier(.2, .9, .3, 1.2); }
+.mode { animation: fade .25s ease-out; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px) scale(.98); } to { opacity: 1; transform: none; } }
+@keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+.hint { color: var(--muted); font-size: .95rem; margin: 0; text-wrap: balance; }
+.big { font-family: var(--display); font-size: 2.2rem; margin: 0; text-wrap: balance; }
+.label { font-size: .8rem; letter-spacing: .2em; color: var(--muted); }
+.d-title { font-family: var(--display); font-size: 1.45rem; margin: 0; text-wrap: balance; line-height: 1.35; }
+
+.actions { display: flex; gap: 10px; }
+.btn {
+  font: inherit; font-weight: 900; font-size: 1.1rem; letter-spacing: .02em;
+  flex: 1; padding: 15px 14px; border-radius: 16px; cursor: pointer;
+  border: 2.5px solid var(--ink); background: var(--card); color: var(--ink);
+  box-shadow: 0 5px 0 var(--ink);
+  margin-bottom: 5px;
+  transition: transform .06s, box-shadow .06s;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent-deep); color: var(--on-accent); box-shadow: 0 5px 0 var(--accent-deep); }
+.btn.primary.danger { background: var(--alert); border-color: var(--alert-deep); color: var(--on-accent); box-shadow: 0 5px 0 var(--alert-deep); }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn.small { flex: 0 0 auto; font-size: .95rem; padding: 15px 16px; }
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.btn.primary:active:not(:disabled) { box-shadow: 0 1px 0 var(--accent-deep); }
+.btn.primary.danger:active:not(:disabled) { box-shadow: 0 1px 0 var(--alert-deep); }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+details { font-size: .88rem; color: var(--muted); }
+summary { cursor: pointer; padding-block: 2px; }
+textarea, .name-input {
+  width: 100%; box-sizing: border-box;
+  font: inherit; font-size: 1rem; color: var(--ink); background: var(--card);
+  border: 2px solid var(--line); border-radius: 10px; padding: 8px 10px;
+}
+textarea { margin-top: 6px; min-height: 5.5em; resize: vertical; font-size: .95rem; }
+
+.setup-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; text-align: left; }
+.setup-form label { display: flex; flex-direction: column; gap: 4px; font-size: .8rem; color: var(--muted); min-width: 0; }
+.opts { display: flex; flex-direction: column; gap: 10px; width: 100%; text-align: left; }
+.opt { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.opt .row-label { padding-top: 0; flex: none; }
+.rules { text-align: left; margin: 0; padding-left: 1.2em; font-size: .9rem; line-height: 1.7; color: var(--ink); width: 100%; box-sizing: border-box; }
+
+/* ---------- 20秒おえかき ---------- */
+.topic {
+  font-family: var(--display);
+  font-size: clamp(2.2rem, 12vw, 4.4rem);
+  line-height: 1.2;
+  margin: 0;
+  text-wrap: balance;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  background: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%);
+  padding-inline: .15em;
+}
+.topic.long { font-size: clamp(1.7rem, 8vw, 3rem); }
+.tag { font-size: .8rem; color: var(--muted); border: 1.5px dashed var(--muted); border-radius: 999px; padding: 2px 10px; }
+.timer { position: relative; width: min(62vw, 260px, 36vh); aspect-ratio: 1; max-width: 100%; }
+.timer svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+.timer .track { fill: none; stroke: var(--line); stroke-width: 10; }
+.timer .bar { fill: none; stroke: var(--accent); stroke-width: 10; stroke-linecap: round; }
+.timer.urgent .bar { stroke: var(--alert); }
+.timer-num {
+  position: absolute; inset: 0; display: grid; place-items: center;
+  font-family: var(--display); font-size: clamp(3.6rem, 20vw, 6.5rem);
+  font-variant-numeric: tabular-nums;
+}
+.timer.urgent .timer-num { color: var(--alert); animation: pulse .5s ease-in-out infinite; }
+@keyframes pulse { 50% { transform: scale(1.08); } }
+.peek {
+  font: inherit; font-size: .9rem; font-weight: 700; color: var(--muted);
+  background: transparent; border: 2px dashed var(--line); border-radius: 12px;
+  padding: 8px 16px; min-width: 12em; max-width: 100%; cursor: pointer; user-select: none; -webkit-user-select: none;
+  touch-action: none;
+}
+.peek.on { color: var(--ink); border-color: var(--ink); font-family: var(--display); font-size: 1.3rem; font-weight: 400; }
+
+/* ---------- 電気イス ---------- */
+.scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.score {
+  min-width: 0; background: var(--card); border: 2px solid var(--line); border-radius: 14px;
+  padding: 8px 12px; display: flex; flex-direction: column; gap: 2px;
+}
+.score.sitting { border-color: var(--alert); }
+.score.won { border-color: var(--accent); background: var(--accent); color: var(--on-accent); }
+.score.won .pts small, .score.won .role, .score.won .sets { color: var(--on-accent); }
+.score-head, .score-foot { display: flex; justify-content: space-between; align-items: center; gap: 6px; }
+.score-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.role { font-size: .72rem; color: var(--muted); white-space: nowrap; letter-spacing: .05em; }
+.score.sitting .role { color: var(--alert); font-weight: 700; }
+.sets { font-size: .78rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; }
+.pts { font-family: var(--display); font-size: 2rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.pts small { font-family: var(--body); font-size: .8rem; color: var(--muted); margin-left: 2px; }
+.pips { display: flex; gap: 5px; }
+.pips span { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--alert); box-sizing: border-box; }
+.pips span.on { background: var(--alert); }
+
+.ring { position: relative; width: min(80vw, 320px, 42vh); aspect-ratio: 1; max-width: 100%; }
+.ring-center {
+  position: absolute; inset: 26%; display: grid; place-items: center; border-radius: 50%;
+  border: 2px dashed var(--line); font-family: var(--display); font-size: clamp(1rem, 5vw, 1.6rem);
+  padding: 4px; box-sizing: border-box; line-height: 1.2;
+}
+.ring-center.shocked { background: var(--zap); color: var(--on-zap); border-color: var(--zap); }
+.chair {
+  position: absolute; width: 19%; aspect-ratio: 1; transform: translate(-50%, -50%);
+  font: inherit; font-family: var(--display); font-size: clamp(1rem, 5vw, 1.45rem);
+  font-variant-numeric: tabular-nums;
+  background: var(--card); color: var(--ink);
+  border: 2.5px solid var(--ink); border-bottom-width: 6px; border-radius: 12px 12px 6px 6px;
+  cursor: pointer; padding: 0;
+}
+.chair:disabled { cursor: default; }
+.chair.bonus::after {
+  content: "×2"; position: absolute; top: -9px; right: -9px;
+  font-family: var(--body); font-size: .62rem; font-weight: 700; line-height: 1;
+  background: var(--zap); color: var(--on-zap); border-radius: 999px; padding: 3px 5px;
+}
+.chair.gone { border-style: dashed; border-bottom-width: 2.5px; opacity: .28; }
+.chair.selected { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chair.trap { background: var(--zap); border-color: var(--zap); color: var(--on-zap); opacity: 1; }
+.chair.picked { outline: 3px solid var(--alert); outline-offset: 3px; opacity: 1; }
+.d-history { font-size: .8rem; color: var(--muted); margin: 0; text-wrap: balance; font-variant-numeric: tabular-nums; }
+
+body.zapping .app { animation: shake .09s linear 12; }
+body.zapping #dStage { animation: flash .13s steps(1) 9; }
+@keyframes shake {
+  0%, 100% { transform: translate(0, 0); }
+  25% { transform: translate(-6px, 3px); }
+  75% { transform: translate(6px, -3px); }
+}
+@keyframes flash { 50% { background: var(--zap); } }
+
+/* ---------- ヒット&ブロー ---------- */
+.slots { display: flex; gap: 8px; justify-content: center; }
+.slot {
+  width: 3rem; height: 3.6rem; display: grid; place-items: center;
+  border: 2.5px solid var(--ink); border-radius: 10px;
+  font-family: var(--display); font-size: 2rem; font-variant-numeric: tabular-nums;
+}
+.slot.cur { border-color: var(--accent); box-shadow: 0 0 0 3px var(--hl); }
+.keypad { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; width: 100%; max-width: 360px; }
+.key {
+  font: inherit; font-family: var(--display); font-size: 1.5rem; font-variant-numeric: tabular-nums;
+  padding: 10px 0; border-radius: 12px; cursor: pointer;
+  border: 2px solid var(--ink); border-bottom-width: 4px; background: var(--card); color: var(--ink);
+}
+.key:disabled { opacity: .3; cursor: default; }
+.hb-logs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; text-align: left; }
+.hb-col { min-width: 0; border: 2px solid var(--line); border-radius: 12px; padding: 6px 10px; display: flex; flex-direction: column; gap: 2px; }
+.hb-col.active { border-color: var(--accent); }
+.hb-head { font-size: .78rem; color: var(--muted); font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hb-row { display: flex; justify-content: space-between; gap: 6px; font-variant-numeric: tabular-nums; }
+.hb-row.solved { color: var(--accent); font-weight: 700; }
+.hb-code { font-family: var(--display); font-size: 1.15rem; letter-spacing: .08em; }
+.hb-res { font-size: .85rem; white-space: nowrap; }
+.hb-res .h { color: var(--alert); }
+.hb-res .b { color: var(--accent); }
+
+/* ---------- 早押しバトル (full-screen arena) ---------- */
+.arena {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; grid-template-rows: 1fr auto 1fr;
+  background: var(--paper);
+  padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px);
+}
+.pad {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  margin: 10px 16px; border-radius: 22px; border: 3px solid var(--ink);
+  background: var(--card); color: var(--ink);
+  user-select: none; -webkit-user-select: none; touch-action: none; cursor: pointer;
+}
+.pad.top { transform: rotate(180deg); }
+.pad-name { font-weight: 700; font-size: 1rem; }
+.pad-msg { font-family: var(--display); font-size: clamp(2rem, 11vw, 3.6rem); text-align: center; }
+.pad-score { font-size: 1rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.arena[data-state="fake"] .pad { background: var(--alert); border-color: var(--alert); color: var(--on-accent); }
+.arena[data-state="go"] .pad { background: var(--go); border-color: var(--go); color: var(--on-go); }
+.arena[data-state="fake"] .pad-score, .arena[data-state="go"] .pad-score { color: inherit; }
+.arena[data-state="result"] .pad, .arena[data-state="over"] .pad { opacity: .55; }
+.arena[data-state="result"] .pad.lead, .arena[data-state="over"] .pad.lead {
+  opacity: 1; background: var(--accent); border-color: var(--accent); color: var(--on-accent);
+}
+.arena .pad.lead .pad-score { color: inherit; }
+.arena-mid { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding-inline: 16px; }
+.arena-info { font-size: .85rem; color: var(--muted); min-width: 0; font-variant-numeric: tabular-nums; }
+.arena-buttons { display: flex; gap: 8px; flex: 0 0 auto; }
+.arena-buttons .btn { padding: 10px 14px; font-size: .95rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  .timer.urgent .timer-num { animation: none; }
+  .btn:active:not(:disabled) { transform: none; }
+  .panel, .mode { animation: none; }
+  body.zapping .app { animation: none; }
+  body.zapping #dStage { animation: none; background: var(--zap); }
+}
+</style>
+<style>
+/* App shell (top bar, game list), the newer game screens, and visual effects. Colors come from tokens in styles.css. */
+
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- top bar ---------- */
+.topbar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 10;
+  display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 8px;
+  padding-block: 6px; background: var(--paper);
+}
+.topbar-title {
+  grid-column: 2; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0;
+  font-family: var(--display); font-size: 1.3rem; white-space: nowrap; overflow: hidden;
+}
+.topbar-title > span:last-child { overflow: hidden; text-overflow: ellipsis; }
+.topbar-icon {
+  flex: none; width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center;
+  background: var(--tile); color: var(--on-tile);
+}
+.topbar-icon svg { width: 20px; height: 20px; }
+.icon-btn {
+  width: 44px; height: 44px; border-radius: 14px; display: grid; place-items: center; cursor: pointer;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink); padding: 0;
+}
+.icon-btn svg { width: 24px; height: 24px; }
+#homeBtn { grid-column: 1; }
+.sound-btn { grid-column: 3; }
+#homeBtn::before {
+  content: ""; width: 12px; height: 12px; border-left: 3px solid currentColor; border-bottom: 3px solid currentColor;
+  transform: translateX(2px) rotate(45deg); border-radius: 2px;
+}
+
+/* ---------- game list ---------- */
+.menu-hero { text-align: center; padding-block: 6px 2px; }
+.menu-title { font-family: var(--display); font-size: clamp(1.7rem, 7vw, 2.3rem); margin: 0; text-wrap: balance; }
+.menu-sub { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.menu-sections { display: flex; flex-direction: column; gap: 22px; padding-bottom: 12px; }
+.menu-section { display: flex; flex-direction: column; gap: 10px; }
+.menu-section-head { display: flex; flex-direction: column; gap: 2px; padding-inline: 2px; }
+.menu-section-title { font-family: var(--display); font-weight: 400; font-size: 1.35rem; margin: 0; }
+.menu-section-sub { margin: 0; font-size: .8rem; color: var(--muted); }
+.menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.menu-card {
+  font: inherit; text-align: left; cursor: pointer; min-width: 0;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px; border-radius: 20px;
+  background: var(--card); color: var(--ink);
+  border: 2.5px solid var(--ink); box-shadow: 0 5px 0 var(--ink); margin-bottom: 5px;
+  transition: transform .08s, box-shadow .08s;
+  animation: rise .4s cubic-bezier(.2, .9, .3, 1.2) both;
+}
+.menu-card:nth-child(2) { animation-delay: .03s; } .menu-card:nth-child(3) { animation-delay: .06s; }
+.menu-card:nth-child(4) { animation-delay: .09s; } .menu-card:nth-child(5) { animation-delay: .12s; }
+.menu-card:nth-child(6) { animation-delay: .15s; } .menu-card:nth-child(7) { animation-delay: .18s; }
+.menu-card:nth-child(8) { animation-delay: .21s; } .menu-card:nth-child(9) { animation-delay: .24s; }
+.menu-card:nth-child(10) { animation-delay: .27s; }
+.menu-card:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); }
+.menu-card:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.menu-icon {
+  width: 48px; height: 48px; border-radius: 15px; display: grid; place-items: center;
+  background: var(--tile); color: var(--on-tile);
+  transform: rotate(-4deg);
+}
+.menu-card:nth-child(even) .menu-icon { transform: rotate(4deg); }
+.menu-icon svg { width: 30px; height: 30px; }
+.menu-text { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.menu-name { font-family: var(--display); font-size: 1.2rem; line-height: 1.2; }
+.menu-players {
+  align-self: flex-start; font-size: .72rem; font-weight: 700; letter-spacing: .04em;
+  border: 1.5px solid var(--tile); color: var(--ink); border-radius: 999px; padding: 1px 8px;
+}
+.menu-desc { font-size: .8rem; color: var(--muted); line-height: 1.45; }
+
+/* ---------- word card (deal, prompts, results) ---------- */
+.word-card {
+  width: min(100%, 340px); box-sizing: border-box; min-height: 130px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;
+  padding: 20px 16px; border-radius: 22px;
+  background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink);
+  margin-bottom: 6px;
+}
+.wc-main { font-family: var(--display); font-size: clamp(2rem, 10vw, 3rem); line-height: 1.2; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; }
+.wc-sub { font-size: .9rem; color: var(--muted); text-wrap: balance; }
+.word-card.back {
+  background-color: var(--accent); border-color: var(--accent-deep); box-shadow: 0 6px 0 var(--accent-deep); color: var(--on-accent);
+  background-image: repeating-linear-gradient(45deg, transparent 0 12px, rgba(255, 255, 255, .12) 12px 24px);
+}
+.word-card.back .wc-main { font-size: 3.4rem; }
+.word-card.number .wc-main { font-size: clamp(4rem, 22vw, 6rem); font-variant-numeric: tabular-nums; }
+.word-card.pair .wc-main { font-size: clamp(1.5rem, 7vw, 2.1rem); }
+.word-card.pair .wc-sub { font-family: var(--display); font-size: clamp(1.3rem, 6vw, 1.8rem); color: var(--alert); }
+.word-card.kana .wc-main { color: var(--accent); }
+.word-card.boom { background: var(--alert); border-color: var(--alert-deep); box-shadow: 0 6px 0 var(--alert-deep); color: var(--on-accent); }
+.word-card.boom .wc-sub { color: var(--on-accent); opacity: .85; }
+.word-card.boom .wc-main { font-size: clamp(1.6rem, 8vw, 2.4rem); }
+
+/* ---------- talk clock ---------- */
+.clock {
+  font-family: var(--display); font-size: clamp(4rem, 22vw, 6.5rem); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.clock.urgent { color: var(--alert); animation: pulse 1s ease-in-out infinite; }
+
+/* ---------- bomb ---------- */
+.bomb { position: relative; width: min(46vw, 170px); aspect-ratio: 1; --heat: 0; }
+.bomb svg { width: 100%; height: 100%; overflow: visible; }
+.bomb-body { fill: var(--ink); }
+.bomb-heat { fill: var(--alert); opacity: calc(var(--heat) * .85); }
+.bomb-cap { fill: var(--muted); }
+.bomb-shine { fill: var(--paper); opacity: .35; }
+.bomb-fuse { fill: none; stroke: var(--muted); stroke-width: 4; stroke-linecap: round; }
+.spark {
+  position: absolute; left: 85%; top: 5%; width: 18px; height: 18px; border-radius: 50%;
+  background: radial-gradient(circle, var(--zap) 0 35%, var(--alert) 36% 60%, transparent 62%);
+  animation: spark .12s steps(2) infinite;
+}
+@keyframes spark { 50% { transform: scale(1.5) rotate(45deg); } }
+.bomb.beat { animation: beat .14s ease-out; }
+@keyframes beat { 40% { transform: scale(1.06); } }
+
+/* ---------- forehead quiz (full screen) ---------- */
+.quiz {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; grid-template-columns: minmax(70px, 22%) 1fr minmax(70px, 22%);
+  background: var(--paper);
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.quiz-pad {
+  font: inherit; font-family: var(--display); font-size: clamp(1.1rem, 4vw, 1.8rem); cursor: pointer;
+  border: 0; display: grid; place-items: center; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.quiz-pad span { writing-mode: vertical-rl; letter-spacing: .2em; }
+.quiz-pad.pass { background: var(--line); color: var(--ink); }
+.quiz-pad.ok { background: var(--go); color: var(--on-go); }
+.quiz-center { display: grid; grid-template-rows: auto 1fr auto; align-items: center; justify-items: center; padding: 12px; min-width: 0; text-align: center; }
+.quiz-top { display: flex; gap: 18px; font-weight: 900; font-variant-numeric: tabular-nums; font-size: 1.2rem; color: var(--muted); }
+.quiz-word { font-family: var(--display); font-size: clamp(2.6rem, min(14vw, 17vh), 7rem); line-height: 1.15; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere; }
+.quiz-word.long { font-size: clamp(2rem, min(10vw, 12vh), 5rem); }
+.quiz-quit { font: inherit; font-size: .85rem; color: var(--muted); background: none; border: 1.5px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.quiz.urgent .quiz-top { color: var(--alert); }
+.quiz.flash-ok .quiz-center { animation: flashOk .35s ease-out; }
+.quiz.flash-pass .quiz-center { animation: flashPass .35s ease-out; }
+@keyframes flashOk { from { background: var(--go); } }
+@keyframes flashPass { from { background: var(--line); } }
+
+/* ---------- result lists ---------- */
+.result-list { list-style: none; margin: 0; padding: 0; width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 6px; text-align: left; }
+.result-list li {
+  display: grid; grid-template-columns: auto 1fr auto auto; align-items: center; gap: 10px;
+  padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-variant-numeric: tabular-nums;
+}
+#aList li { grid-template-columns: auto 1fr; }
+.result-list li.ok { border-color: var(--go); }
+.result-list li.ng { border-color: var(--alert); }
+.result-list b { font-family: var(--display); font-weight: 400; }
+.result-list li.ok b, .result-list li.ok .mark { color: var(--go); }
+.result-list li.ng b:first-child, .result-list li.ng .mark { color: var(--alert); }
+.result-list .pos { font-size: .8rem; color: var(--muted); min-width: 2em; }
+.result-list .who { font-weight: 700; }
+.result-list .num { font-size: 1.3rem; }
+.result-list .mark { font-size: .85rem; font-weight: 700; }
+
+/* ---------- ordering (価値観ナンバー) ---------- */
+.order-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.order-slot {
+  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center;
+  border: 2px dashed var(--line); color: var(--muted); font-size: .85rem; font-variant-numeric: tabular-nums;
+}
+.order-slot.filled { border: 2.5px solid var(--accent); color: var(--accent); font-family: var(--display); font-size: 1.3rem; }
+.seat-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.seat-chip {
+  font: inherit; font-family: var(--display); font-size: 1.6rem; width: 60px; height: 60px; border-radius: 18px; cursor: pointer;
+  background: var(--card); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+}
+.seat-chip:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+
+/* ---------- stopwatch / number range ---------- */
+.stopwatch, .range {
+  font-family: var(--display); font-variant-numeric: tabular-nums; line-height: 1;
+  font-size: clamp(4rem, 24vw, 7rem);
+}
+.stopwatch.masked { color: var(--muted); }
+.range { font-size: clamp(2.6rem, 14vw, 4.4rem); }
+.range.urgent { color: var(--alert); }
+.btn.big-press { padding-block: 26px; font-size: 1.5rem; touch-action: manipulation; }
+
+/* ---------- effects ---------- */
+.fx-pop { animation: fxPop .42s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes fxPop { 0% { transform: scale(.7); opacity: .4; } 100% { transform: none; opacity: 1; } }
+.fx-shake { animation: shake .08s linear 8; }
+.fx-flash { position: fixed; inset: 0; z-index: 90; pointer-events: none; animation: fxFlash ease-out forwards; }
+@keyframes fxFlash { from { opacity: .85; } to { opacity: 0; } }
+.fx-confetti { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 80; pointer-events: none; }
+.fx-countdown {
+  position: fixed; inset: 0; z-index: 85; display: grid; place-items: center; pointer-events: none;
+  background: color-mix(in srgb, var(--paper) 70%, transparent);
+}
+.fx-countdown span { font-family: var(--display); font-size: clamp(6rem, 40vw, 14rem); color: var(--ink); line-height: 1; }
+.fx-countdown span.go { font-size: clamp(3rem, 16vw, 6rem); color: var(--accent); }
+.fx-count { animation: fxCount .7s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes fxCount { 0% { transform: scale(2.2); opacity: 0; } 30% { transform: scale(1); opacity: 1; } 85% { opacity: 1; } 100% { transform: scale(.85); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu-card, .fx-pop, .fx-count, .bomb.beat, .spark, .clock.urgent { animation: none; }
+  .fx-countdown span { opacity: 1; }
+}
+</style>
+
+<div class="app">
+  <header class="topbar">
+    <button class="icon-btn" id="homeBtn" type="button" aria-label="ゲーム一覧にもどる" hidden></button>
+    <div class="topbar-title"><span class="topbar-icon" id="topIcon" hidden></span><span id="topTitle">スマホ1台パーティー</span></div>
+    <button class="icon-btn sound-btn" id="soundBtn" type="button"></button>
+    <span class="sr-only" id="soundLabel" aria-live="polite"></span>
+  </header>
+
+  <!-- ===== ゲーム一覧 ===== -->
+  <div class="mode" id="modeMenu">
+    <div class="menu-hero">
+      <p class="menu-title">今日はなにして遊ぶ？</p>
+      <p class="menu-sub" id="menuCount"></p>
+    </div>
+    <div class="menu-sections" id="menuGrid"></div>
+  </div>
+
+  <!-- ===== 20秒おえかき ===== -->
+  <div class="mode" id="modeOekaki" hidden>
+    <div class="settings">
+      <div class="row"><span class="row-label">難易度</span><div class="chips" id="levelChips"></div></div>
+      <p class="level-note" id="levelNote"></p>
+      <div class="row"><span class="row-label">時間</span><div class="chips" id="timeChips"></div></div>
+      <div class="row"><span class="row-label">音楽</span><div class="chips" id="musicChips"></div><span class="round" id="round" style="margin-left:auto;padding-top:8px">0問おわり</span></div>
+    </div>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="pReady">
+        <p class="big" id="readyMsg">描く人だけ見てね</p>
+        <p class="hint">お題を見たら、スタートを押して描きはじめます</p>
+      </section>
+      <section class="panel" id="pTopic" hidden>
+        <span class="label">お題</span>
+        <p class="topic" id="topicText"></p>
+        <span class="tag" id="topicTag"></span>
+      </section>
+      <section class="panel" id="pDraw" hidden>
+        <div class="timer" id="timer">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="52"></circle>
+            <circle class="bar" id="bar" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="timer-num" id="timerNum">20</div>
+        </div>
+        <button class="peek" id="peek" type="button">長押しでお題を確認</button>
+      </section>
+      <section class="panel" id="pEnd" hidden>
+        <p class="big">そこまで！</p>
+        <p class="hint">みんなで答えを言ってみよう</p>
+      </section>
+      <section class="panel" id="pAnswer" hidden>
+        <span class="label">こたえ</span>
+        <p class="topic" id="answerText"></p>
+      </section>
+    </main>
+    <div class="actions" id="actions"></div>
+    <details id="customBox">
+      <summary>お題を自分で追加する</summary>
+      <textarea id="customInput" placeholder="1行に1つずつ（例：部長の顔）"></textarea>
+      <div>追加したお題はどの難易度にも混ざります。<span id="customCount"></span></div>
+    </details>
+  </div>
+
+  <!-- ===== 電気イスゲーム ===== -->
+  <div class="mode" id="modeDenki" hidden>
+    <div class="scores" id="scores" hidden></div>
+    <main class="stage" id="dStage" aria-live="polite">
+      <section class="panel" id="dSetup">
+        <div class="setup-form">
+          <label for="p1Name">1人目<input class="name-input" id="p1Name" maxlength="12" autocomplete="off"></label>
+          <label for="p2Name">2人目<input class="name-input" id="p2Name" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">イスの数</span><div class="chips" id="chairChips"></div></div>
+          <div class="opt"><span class="row-label">★ボーナスイス</span><div class="chips" id="bonusChips"></div></div>
+          <div class="opt"><span class="row-label">勝負の長さ</span><div class="chips" id="bestOfChips"></div></div>
+        </div>
+        <ul class="rules" id="dRules"></ul>
+      </section>
+      <section class="panel" id="dPlay" hidden>
+        <p class="d-title" id="dTitle"></p>
+        <div class="ring" id="ring"><div class="ring-center" id="ringCenter"></div></div>
+        <p class="hint" id="dHint"></p>
+        <p class="d-history" id="dHistory" hidden></p>
+      </section>
+    </main>
+    <div class="actions" id="dActions"></div>
+  </div>
+
+  <!-- ===== ワードウルフ ===== -->
+  <div class="mode" id="modeWordwolf" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="wSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="wPlayerChips"></div></div>
+          <div class="opt"><span class="row-label">ウルフの数</span><div class="chips" id="wWolfChips"></div></div>
+          <div class="opt"><span class="row-label">話し合い</span><div class="chips" id="wTalkChips"></div></div>
+        </div>
+        <ul class="rules" id="wRules"></ul>
+      </section>
+      <section class="panel" id="wPlay" hidden>
+        <span class="label" id="wLabel"></span>
+        <p class="d-title" id="wTitle"></p>
+        <div class="word-card" id="wCard"></div>
+        <div class="clock" id="wClock" hidden></div>
+        <p class="hint" id="wHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="wActions"></div>
+  </div>
+
+  <!-- ===== 爆弾ゲーム ===== -->
+  <div class="mode" id="modeBomb" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="bSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">爆発までの時間</span><div class="chips" id="bFuseChips"></div></div>
+          <div class="opt"><span class="row-label">お題の種類</span><div class="chips" id="bKindChips"></div></div>
+        </div>
+        <ul class="rules" id="bRules"></ul>
+      </section>
+      <section class="panel" id="bPlay" hidden>
+        <div class="bomb" id="bBomb" aria-hidden="true">
+          <svg viewBox="0 0 120 120">
+            <path class="bomb-fuse" d="M78 30 C 86 18, 98 16, 104 10"/>
+            <rect class="bomb-cap" x="66" y="24" width="20" height="14" rx="3" transform="rotate(35 76 31)"/>
+            <circle class="bomb-body" cx="56" cy="70" r="38"/>
+            <circle class="bomb-heat" cx="56" cy="70" r="38"/>
+            <ellipse class="bomb-shine" cx="42" cy="54" rx="9" ry="6" transform="rotate(-35 42 54)"/>
+          </svg>
+          <span class="spark"></span>
+        </div>
+        <span class="label" id="bLabel"></span>
+        <p class="d-title" id="bTitle"></p>
+        <div class="word-card" id="bCard"></div>
+        <p class="hint" id="bHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="bActions"></div>
+  </div>
+
+  <!-- ===== おでこ当て ===== -->
+  <div class="mode" id="modeAtekko" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="aSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">時間</span><div class="chips" id="aTimeChips"></div></div>
+          <div class="opt"><span class="row-label">お題の難しさ</span><div class="chips" id="aLevelChips"></div></div>
+        </div>
+        <ul class="rules" id="aRules"></ul>
+      </section>
+      <section class="panel" id="aPlay" hidden>
+        <span class="label" id="aLabel"></span>
+        <p class="d-title" id="aTitle"></p>
+        <div class="word-card" id="aCard"></div>
+        <ul class="result-list" id="aList" hidden></ul>
+        <p class="hint" id="aHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="aActions"></div>
+  </div>
+
+  <!-- ===== 価値観ナンバー ===== -->
+  <div class="mode" id="modeKachikan" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="kSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="kPlayerChips"></div></div>
+        </div>
+        <ul class="rules" id="kRules"></ul>
+      </section>
+      <section class="panel" id="kPlay" hidden>
+        <span class="label" id="kLabel"></span>
+        <p class="d-title" id="kTitle"></p>
+        <div class="word-card" id="kCard"></div>
+        <div class="order-row" id="kOrder" hidden></div>
+        <div class="seat-row" id="kSeats" hidden></div>
+        <ol class="result-list ranked" id="kList" hidden></ol>
+        <p class="hint" id="kHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="kActions"></div>
+  </div>
+
+  <!-- ===== ヒット&ブロー ===== -->
+  <div class="mode" id="modeHitblow" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="hSetup">
+        <div class="setup-form">
+          <label for="hName0">1人目<input class="name-input" id="hName0" maxlength="12" autocomplete="off"></label>
+          <label for="hName1">2人目<input class="name-input" id="hName1" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">けた数</span><div class="chips" id="hDigitChips"></div></div>
+        </div>
+        <ul class="rules" id="hRules"></ul>
+      </section>
+      <section class="panel" id="hPlay" hidden>
+        <p class="d-title" id="hTitle"></p>
+        <p class="hint" id="hHint"></p>
+        <div class="slots" id="hSlots"></div>
+        <div class="keypad" id="hKeypad"></div>
+        <div class="hb-logs" id="hLogs" hidden></div>
+      </section>
+    </main>
+    <div class="actions" id="hActions"></div>
+  </div>
+
+  <!-- ===== 早押しバトル ===== -->
+  <div class="mode" id="modeHayaoshi" hidden>
+    <main class="stage">
+      <section class="panel" id="qSetup">
+        <div class="setup-form">
+          <label for="qName0">1人目（下側）<input class="name-input" id="qName0" maxlength="12" autocomplete="off"></label>
+          <label for="qName1">2人目（上側）<input class="name-input" id="qName1" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">勝負の長さ</span><div class="chips" id="qTargetChips"></div></div>
+          <div class="opt"><span class="row-label">フェイント</span><div class="chips" id="qFeintChips"></div></div>
+        </div>
+        <ul class="rules" id="qRules"></ul>
+      </section>
+    </main>
+    <div class="actions" id="qActions"></div>
+  </div>
+
+  <!-- ===== 10秒ストップ ===== -->
+  <div class="mode" id="modeStop" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="tSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="tPlayerChips"></div></div>
+          <div class="opt"><span class="row-label">目標</span><div class="chips" id="tTargetChips"></div></div>
+          <div class="opt"><span class="row-label">時計</span><div class="chips" id="tHideChips"></div></div>
+        </div>
+        <ul class="rules" id="tRules"></ul>
+      </section>
+      <section class="panel" id="tPlay" hidden>
+        <span class="label" id="tLabel"></span>
+        <p class="d-title" id="tTitle"></p>
+        <div class="stopwatch" id="tDisplay">0.00</div>
+        <ol class="result-list ranked" id="tList" hidden></ol>
+        <p class="hint" id="tHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="tActions"></div>
+  </div>
+
+  <!-- ===== 数字爆弾 ===== -->
+  <div class="mode" id="modeNumbomb" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="nSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">数字の範囲</span><div class="chips" id="nMaxChips"></div></div>
+        </div>
+        <ul class="rules" id="nRules"></ul>
+      </section>
+      <section class="panel" id="nPlay" hidden>
+        <span class="label" id="nLabel"></span>
+        <p class="d-title" id="nTitle"></p>
+        <div class="range" id="nRange"></div>
+        <div class="word-card" id="nCard"></div>
+        <div class="slots" id="nSlots"></div>
+        <div class="keypad" id="nKeypad"></div>
+        <p class="d-history" id="nHistory" hidden></p>
+        <p class="hint" id="nHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="nActions"></div>
+  </div>
+</div>
+
+<!-- full-screen views -->
+<div class="arena" id="arena" data-state="idle" hidden>
+  <div class="pad top" id="pad1" role="button" aria-label="2人目のボタン"><span class="pad-name"></span><span class="pad-msg"></span><span class="pad-score"></span></div>
+  <div class="arena-mid"><span class="arena-info" id="arenaInfo"></span><div class="arena-buttons" id="arenaButtons"></div></div>
+  <div class="pad bottom" id="pad0" role="button" aria-label="1人目のボタン"><span class="pad-name"></span><span class="pad-msg"></span><span class="pad-score"></span></div>
+</div>
+
+<div class="quiz" id="quiz" hidden>
+  <button class="quiz-pad pass" id="quizPass" type="button"><span>パス</span></button>
+  <div class="quiz-center">
+    <div class="quiz-top"><span id="quizTime"></span><span id="quizScore"></span></div>
+    <div class="quiz-word" id="quizWord"></div>
+    <button class="quiz-quit" id="quizQuit" type="button">やめる</button>
+  </div>
+  <button class="quiz-pad ok" id="quizOk" type="button"><span>正解！</span></button>
+</div>
+
+<script>
+/* shared.js */
+/* Shared helpers: DOM lookup, local storage, wake lock, UI builders, player names. Sound lives in audio.js, music in music.js. */
+const $ = (id) => document.getElementById(id);
+
+const Store = {
+  load(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  },
+  save(key, value) {
+    try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) { /* storage unavailable: lasts for this visit only */ }
+  }
+};
+
+const Awake = (() => {
+  let lock = null;
+  async function keep() {
+    try { if ("wakeLock" in navigator && !lock) lock = await navigator.wakeLock.request("screen"); }
+    catch (e) { lock = null; }
+  }
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") { lock = null; keep(); }
+  });
+  return { keep };
+})();
+
+/* Small UI builders shared by the game screens. */
+function makeButton(label, onClick, cls = "", disabled = false) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = ("btn " + cls).trim();
+  b.textContent = label;
+  b.disabled = disabled;
+  b.addEventListener("click", onClick);
+  return b;
+}
+function makeChip(label, on, onClick, disabled = false) {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.className = "chip";
+  b.textContent = label;
+  b.disabled = disabled;
+  b.setAttribute("aria-pressed", on ? "true" : "false");
+  b.addEventListener("click", onClick);
+  return b;
+}
+
+/* Two-player names, shared by every 2-player game so they are typed once. */
+const Duo = (() => {
+  const KEY = "duo.names";
+  const LEGACY_KEY = "denki.names";
+  const DEFAULTS = Object.freeze(["プレイヤー1", "プレイヤー2"]);
+  const MAX_LEN = 12;
+
+  function load() {
+    const saved = Store.load(KEY, null) ?? Store.load(LEGACY_KEY, null);
+    const list = Array.isArray(saved) ? saved : [];
+    return DEFAULTS.map((d, i) => (typeof list[i] === "string" && list[i].trim() ? list[i].trim().slice(0, MAX_LEN) : d));
+  }
+  function fill(inputs) {
+    const names = load();
+    inputs.forEach((input, i) => { input.value = names[i]; });
+  }
+  function read(inputs) {
+    const names = inputs.map((input, i) => input.value.trim().slice(0, MAX_LEN) || DEFAULTS[i]);
+    Store.save(KEY, names);
+    return names;
+  }
+  return { load, fill, read, DEFAULTS, MAX_LEN };
+})();
+
+/* Common pieces for the game screens: text that hides when empty, rule lists, option chips, a word card. */
+const View = (() => {
+  const SEATS = Object.freeze(["A", "B", "C", "D", "E", "F", "G", "H"]);
+
+  function text(el, value) {
+    if (!el) return;
+    el.textContent = value ?? "";
+    el.hidden = value === null || value === undefined || value === "";
+  }
+  function list(el, lines) {
+    el.replaceChildren(...lines.map(t => {
+      const li = document.createElement("li");
+      li.textContent = t;
+      return li;
+    }));
+  }
+  function chips(el, options, current, onPick) {
+    el.replaceChildren(...options.map(o => makeChip(o.label, o.value === current, () => onPick(o.value))));
+  }
+  /* card: { main, sub, back, cls } or null */
+  function card(el, c) {
+    if (!el) return;
+    el.hidden = !c;
+    if (!c) return;
+    el.className = ["word-card", c.back ? "back" : "", c.cls || ""].filter(Boolean).join(" ");
+    const parts = [[c.main, "wc-main"], [c.sub, "wc-sub"]].filter(([t]) => t !== undefined && t !== null && t !== "");
+    el.replaceChildren(...parts.map(([t, cls]) => {
+      const s = document.createElement("span");
+      s.className = cls;
+      s.textContent = t;
+      return s;
+    }));
+  }
+  /* Renders the standard play view: { label, title, card, hint, actions }. */
+  function stage(el, v) {
+    text(el.label, v.label);
+    text(el.title, v.title);
+    card(el.card, v.card ?? null);
+    text(el.hint, v.hint);
+    el.actions.replaceChildren(...(v.actions || []));
+  }
+  const seat = (i) => SEATS[i];
+  const options = (values, label) => values.map(v => ({ value: v, label: label(v) }));
+  const clock = (sec) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, "0")}`;
+
+  return { SEATS, text, list, chips, card, stage, seat, options, clock };
+})();
+</script>
+<script>
+/* random.js */
+/* Random helpers. Every function takes the random source `r` (returns [0, 1)) so rules stay testable. */
+const Rand = (() => {
+  function shuffle(list, r = Math.random) {
+    const out = [...list];
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(r() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  }
+  const pick = (list, r = Math.random) => list[Math.floor(r() * list.length)];
+  const between = (min, max, r = Math.random) => Math.round(min + r() * (max - min));
+  return { shuffle, pick, between };
+})();
+
+if (typeof module !== "undefined") module.exports = Rand;
+</script>
+<script>
+/* audio.js */
+/* Sound engine: one AudioContext, a master chain (compressor + room reverb), separate buses for music and effects,
+ * and a library of synthesized sound effects. Everything is generated live; no audio files. */
+const Sound = (() => {
+  const MODE_KEY = "audio.mode";
+  const MODES = ["all", "sfx", "off"];
+  const MUSIC_LEVEL = 0.55;
+
+  let ctx = null;
+  let out = null;
+  let sfxBus = null;
+  let musicBus = null;
+  let verb = null;
+  let noise = null;
+  let mode = MODES.includes(Store.load(MODE_KEY, "all")) ? Store.load(MODE_KEY, "all") : "all";
+
+  /* ---------- graph ---------- */
+  function impulse(seconds, decay) {
+    const len = Math.floor(ctx.sampleRate * seconds);
+    const buf = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) {
+      const data = buf.getChannelData(ch);
+      for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+    }
+    return buf;
+  }
+  function buildGraph() {
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -16;
+    comp.knee.value = 12;
+    comp.ratio.value = 4;
+    comp.attack.value = 0.003;
+    comp.release.value = 0.2;
+    out = ctx.createGain();
+    out.connect(comp).connect(ctx.destination);
+    sfxBus = ctx.createGain();
+    sfxBus.connect(out);
+    musicBus = ctx.createGain();
+    musicBus.connect(out);
+    verb = ctx.createConvolver();
+    verb.buffer = impulse(2.2, 2.8);
+    const verbLevel = ctx.createGain();
+    verbLevel.gain.value = 0.32;
+    verb.connect(verbLevel).connect(out);
+    noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
+    const data = noise.getChannelData(0);
+    for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    applyMode();
+  }
+  function applyMode() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    out.gain.setTargetAtTime(mode === "off" ? 0 : 0.9, t, 0.02);
+    musicBus.gain.setTargetAtTime(mode === "all" ? MUSIC_LEVEL : 0, t, 0.05);
+  }
+  function ensure() {
+    try {
+      if (!ctx) {
+        ctx = new (window.AudioContext || window.webkitAudioContext)();
+        buildGraph();
+      }
+      if (ctx.state === "suspended") ctx.resume();
+    } catch (e) {
+      ctx = null;
+    }
+    return ctx;
+  }
+  function setMode(next) {
+    if (!MODES.includes(next)) return;
+    mode = next;
+    Store.save(MODE_KEY, mode);
+    applyMode();
+  }
+
+  /* ---------- primitives ---------- */
+  const hz = (midi) => 440 * Math.pow(2, (midi - 69) / 12);
+
+  /* One oscillator voice with an envelope. Optional filter, pitch glide, vibrato and reverb send. */
+  function tone(o) {
+    if (!ctx) return;
+    const t = o.t ?? ctx.currentTime;
+    const dur = o.dur ?? 0.2;
+    const attack = o.attack ?? 0.005;
+    const vol = o.vol ?? 0.2;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = o.type || "sine";
+    osc.frequency.setValueAtTime(o.freq, t);
+    if (o.glide) osc.frequency.exponentialRampToValueAtTime(o.glide, t + (o.glideTime ?? dur));
+    if (o.detune) osc.detune.value = o.detune;
+    if (o.vibrato) {
+      const lfo = ctx.createOscillator();
+      const depth = ctx.createGain();
+      lfo.frequency.value = o.vibrato.rate;
+      depth.gain.value = o.vibrato.depth;
+      lfo.connect(depth).connect(osc.frequency);
+      lfo.start(t + (o.vibrato.delay ?? 0));
+      lfo.stop(t + dur + 0.1);
+    }
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(vol, t + attack);
+    if (o.hold) g.gain.setValueAtTime(vol, t + attack + o.hold);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    let head = osc;
+    if (o.filter) {
+      const f = ctx.createBiquadFilter();
+      f.type = o.filter.type || "lowpass";
+      f.frequency.setValueAtTime(o.filter.freq, t);
+      if (o.filter.to) f.frequency.exponentialRampToValueAtTime(o.filter.to, t + dur);
+      f.Q.value = o.filter.q ?? 0.8;
+      head.connect(f);
+      head = f;
+    }
+    head.connect(g);
+    g.connect(o.dest || sfxBus);
+    if (o.send) {
+      const s = ctx.createGain();
+      s.gain.value = o.send;
+      g.connect(s).connect(verb);
+    }
+    osc.start(t);
+    osc.stop(t + dur + 0.05);
+  }
+
+  /* Filtered noise burst, optionally sweeping its filter. */
+  function hiss(o) {
+    if (!ctx) return;
+    const t = o.t ?? ctx.currentTime;
+    const dur = o.dur ?? 0.1;
+    const src = ctx.createBufferSource();
+    const f = ctx.createBiquadFilter();
+    const g = ctx.createGain();
+    src.buffer = noise;
+    f.type = o.type || "highpass";
+    f.frequency.setValueAtTime(o.freq ?? 1000, t);
+    if (o.to) f.frequency.exponentialRampToValueAtTime(o.to, t + dur);
+    f.Q.value = o.q ?? 0.7;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(o.vol ?? 0.2, t + (o.attack ?? 0.002));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    src.connect(f).connect(g).connect(o.dest || sfxBus);
+    if (o.send) {
+      const s = ctx.createGain();
+      s.gain.value = o.send;
+      g.connect(s).connect(verb);
+    }
+    src.start(t);
+    src.stop(t + dur + 0.05);
+  }
+
+  function vibrate(pattern) {
+    try { if (mode !== "off" && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ }
+  }
+
+  /* ---------- sound effects ---------- */
+  const now = () => ctx.currentTime;
+  const brass = (midi, t, dur, vol = 0.09) => {
+    [-7, 7].forEach(d => tone({ freq: hz(midi), type: "sawtooth", t, dur, vol, attack: 0.025, detune: d, filter: { freq: 2600, to: 1400 }, send: 0.18 }));
+  };
+  const bell = (midi, t, dur, vol = 0.18) => {
+    tone({ freq: hz(midi), t, dur, vol, send: 0.3 });
+    tone({ freq: hz(midi) * 2.01, t, dur: dur * 0.5, vol: vol * 0.35, send: 0.3 });
+    tone({ freq: hz(midi) * 3.98, t, dur: dur * 0.25, vol: vol * 0.12 });
+  };
+  const cymbal = (t, dur = 1.4, vol = 0.12) => hiss({ t, dur, vol, freq: 6000, send: 0.3 });
+
+  const SFX = {
+    tap: () => tone({ freq: 1250, glide: 900, type: "triangle", dur: 0.05, vol: 0.07 }),
+    select: () => { const t = now(); tone({ freq: hz(81), type: "triangle", t, dur: 0.07, vol: 0.1 }); tone({ freq: hz(88), type: "triangle", t: t + 0.05, dur: 0.1, vol: 0.1 }); },
+    confirm: () => { const t = now(); bell(84, t, 0.18, 0.12); bell(91, t + 0.07, 0.3, 0.12); },
+    back: () => { const t = now(); tone({ freq: hz(79), type: "triangle", t, dur: 0.07, vol: 0.09 }); tone({ freq: hz(72), type: "triangle", t: t + 0.05, dur: 0.12, vol: 0.09 }); },
+    correct: () => { const t = now(); bell(88, t, 0.25, 0.22); bell(84, t + 0.16, 0.9, 0.22); },
+    wrong: () => { const t = now(); [0, 0.28].forEach(d => tone({ freq: 140, type: "square", t: t + d, dur: 0.24, vol: 0.12, hold: 0.18, filter: { freq: 900 } })); },
+    pop: () => tone({ freq: 380, glide: 980, glideTime: 0.07, type: "sine", dur: 0.12, vol: 0.22 }),
+    coin: () => { const t = now(); tone({ freq: hz(83), type: "square", t, dur: 0.07, vol: 0.07 }); tone({ freq: hz(88), type: "square", t: t + 0.07, dur: 0.35, vol: 0.07, send: 0.15 }); },
+    flip: () => { const t = now(); hiss({ t, dur: 0.09, vol: 0.12, type: "bandpass", freq: 1800, to: 4200 }); tone({ freq: 660, glide: 990, type: "triangle", t: t + 0.03, dur: 0.08, vol: 0.06 }); },
+    whoosh: () => hiss({ dur: 0.32, vol: 0.2, type: "bandpass", freq: 350, to: 3800, q: 1.2, attack: 0.08 }),
+    count: () => tone({ freq: hz(81), type: "square", dur: 0.14, vol: 0.08, filter: { freq: 3000 } }),
+    go: () => { const t = now(); tone({ freq: hz(93), type: "square", t, dur: 0.45, vol: 0.09, hold: 0.25, filter: { freq: 4000 }, send: 0.2 }); },
+    tick: (alt = false) => { tone({ freq: alt ? 1450 : 1900, type: "sine", dur: 0.035, vol: 0.22 }); tone({ freq: alt ? 720 : 950, type: "triangle", dur: 0.03, vol: 0.08 }); },
+    heartbeat: () => { const t = now(); [0, 0.2].forEach((d, i) => tone({ freq: 70, glide: 42, type: "sine", t: t + d, dur: 0.18, vol: i ? 0.35 : 0.5 })); },
+    buzz: () => {
+      const t = now();
+      [220, 233].forEach(f => tone({ freq: f, type: "sawtooth", t, dur: 0.9, vol: 0.1, hold: 0.6, filter: { freq: 1600 } }));
+      vibrate([200, 100, 300]);
+    },
+    fanfare: () => {
+      const t = now();
+      [[72, 0], [76, 0.1], [79, 0.2]].forEach(([m, d]) => brass(m, t + d, 0.14));
+      [72, 76, 79, 84].forEach(m => brass(m, t + 0.32, 0.7, 0.06));
+      cymbal(t + 0.32, 1.0, 0.08);
+    },
+    victory: () => {
+      const t = now();
+      const line = [[67, 0, 0.12], [67, 0.14, 0.12], [67, 0.28, 0.12], [72, 0.42, 0.5], [70, 0.98, 0.16], [72, 1.16, 0.16]];
+      line.forEach(([m, d, len]) => brass(m, t + d, len + 0.06, 0.1));
+      [60, 64, 67, 72, 76].forEach(m => brass(m, t + 1.36, 1.3, 0.05));
+      tone({ freq: hz(36), type: "sine", t: t + 1.36, dur: 1.2, vol: 0.4 });
+      cymbal(t + 1.36, 1.8, 0.14);
+      vibrate([80, 60, 80, 60, 240]);
+    },
+    lose: () => {
+      const t = now();
+      [[62, 0, 0.32], [61, 0.36, 0.32], [60, 0.72, 0.32]].forEach(([m, d, len]) =>
+        tone({ freq: hz(m), type: "sawtooth", t: t + d, dur: len, vol: 0.11, attack: 0.04, filter: { freq: 1100 }, send: 0.15 }));
+      tone({ freq: hz(59), type: "sawtooth", t: t + 1.08, dur: 1.2, vol: 0.11, attack: 0.04, hold: 0.7, filter: { freq: 1100 }, vibrato: { rate: 6, depth: 9, delay: 0.25 }, send: 0.15 });
+    },
+    reveal: () => {
+      const t = now();
+      [60, 63, 67].forEach(m => brass(m, t, 0.16, 0.08));
+      [60, 63, 67, 72].forEach(m => brass(m, t + 0.22, 1.0, 0.07));
+      tone({ freq: hz(36), type: "sine", t: t + 0.22, dur: 0.8, vol: 0.45 });
+      cymbal(t + 0.22, 1.4, 0.1);
+    },
+    boom: () => {
+      const t = now();
+      tone({ freq: 140, glide: 28, glideTime: 0.9, type: "sine", t, dur: 1.2, vol: 0.9 });
+      tone({ freq: 70, glide: 25, glideTime: 1.2, type: "triangle", t, dur: 1.4, vol: 0.5 });
+      hiss({ t, dur: 2.2, vol: 0.85, type: "lowpass", freq: 2400, to: 90, send: 0.4 });
+      hiss({ t, dur: 0.25, vol: 0.5, type: "highpass", freq: 2500 });
+      vibrate([600, 100, 300]);
+    },
+    zap: () => {
+      const t = now();
+      const osc = ctx.createOscillator();
+      const lfo = ctx.createOscillator();
+      const lfoGain = ctx.createGain();
+      const g = ctx.createGain();
+      osc.type = "sawtooth";
+      osc.frequency.value = 95;
+      lfo.type = "square";
+      lfo.frequency.value = 42;
+      lfoGain.gain.value = 70;
+      lfo.connect(lfoGain).connect(osc.frequency);
+      g.gain.setValueAtTime(0.001, t);
+      g.gain.exponentialRampToValueAtTime(0.32, t + 0.02);
+      g.gain.setValueAtTime(0.32, t + 1.0);
+      g.gain.exponentialRampToValueAtTime(0.001, t + 1.3);
+      osc.connect(g).connect(sfxBus);
+      [osc, lfo].forEach(o => { o.start(t); o.stop(t + 1.35); });
+      for (let i = 0; i < 16; i++) hiss({ t: t + i * 0.075 + Math.random() * 0.04, dur: 0.05, vol: 0.28, freq: 3000 });
+      vibrate([400, 80, 400, 80, 500]);
+    },
+    drumroll: (seconds = 1.8) => {
+      const t0 = now();
+      let t = 0;
+      while (t < seconds) {
+        const p = t / seconds;
+        hiss({ t: t0 + t, dur: 0.07, vol: 0.06 + p * 0.2, type: "bandpass", freq: 1800, q: 0.6 });
+        t += 0.065 - p * 0.03;
+      }
+      tone({ freq: 80, glide: 45, type: "sine", t: t0 + seconds, dur: 0.4, vol: 0.5 });
+      cymbal(t0 + seconds, 1.2, 0.12);
+    }
+  };
+
+  function sfx(name, ...args) {
+    if (!ensure() || !SFX[name]) return;
+    SFX[name](...args);
+  }
+
+  /* ---------- older call style kept for the drawing game ---------- */
+  function beep(freq, dur, delay = 0, type = "sine", vol = 0.25) {
+    if (!ctx) return;
+    tone({ freq, type, t: ctx.currentTime + delay, dur, vol: Math.max(vol, 0.001) });
+  }
+  function hit(t, dur, cutoff, vol, dest) {
+    hiss({ t, dur, freq: cutoff, vol, dest });
+  }
+
+  return {
+    ensure, setMode, mode: () => mode, MODES,
+    ctx: () => ctx, musicBus: () => musicBus, verb: () => verb, hz,
+    tone, hiss, sfx, beep, hit, vibrate,
+    buzz: () => sfx("buzz"), fanfare: () => sfx("fanfare"), chime: () => sfx("correct"),
+    drumroll: (s) => sfx("drumroll", s), zap: () => sfx("zap")
+  };
+})();
+</script>
+<script>
+/* music.js */
+/* Background music: a 16th-note step sequencer and five generated tracks.
+ * Each track picks a key and pattern variation when it starts, so it sounds a little different each time. */
+const Music = (() => {
+  const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
+  const hz = (m) => Sound.hz(m);
+
+  let ctx = null;
+  let bus = null;
+  let current = null;
+  let timerId = 0;
+  let pos = { next: 0, step: 0, intense: false, vars: {} };
+
+  /* ---------- instruments (all play into the track bus) ---------- */
+  const I = {
+    lead: (m, t, dur, vol = 0.05, type = "square") => Sound.tone({ freq: hz(m), type, t, dur, vol, dest: bus, filter: { freq: 3800 } }),
+    pluck: (m, t, vol = 0.09, send = 0.25) => Sound.tone({ freq: hz(m), type: "triangle", t, dur: 0.35, vol, dest: bus, send }),
+    marimba: (m, t, vol = 0.14) => {
+      Sound.tone({ freq: hz(m), type: "sine", t, dur: 0.32, vol, dest: bus, send: 0.15 });
+      Sound.tone({ freq: hz(m) * 3.9, type: "sine", t, dur: 0.05, vol: vol * 0.25, dest: bus });
+    },
+    keys: (notes, t, dur, vol = 0.05) => notes.forEach(m => {
+      Sound.tone({ freq: hz(m), type: "sine", t, dur, vol, attack: 0.01, dest: bus, send: 0.22 });
+      Sound.tone({ freq: hz(m) * 2, type: "sine", t, dur: dur * 0.4, vol: vol * 0.3, dest: bus });
+    }),
+    pad: (notes, t, dur, vol = 0.025, cutoff = 1100) => notes.forEach(m => [-8, 8].forEach(d =>
+      Sound.tone({ freq: hz(m), type: "sawtooth", t, dur, vol, attack: dur * 0.3, detune: d, dest: bus, filter: { freq: cutoff }, send: 0.3 }))),
+    bass: (m, t, dur, vol = 0.24) => {
+      Sound.tone({ freq: hz(m), type: "triangle", t, dur, vol, dest: bus });
+      Sound.tone({ freq: hz(m - 12), type: "sine", t, dur, vol: vol * 0.6, dest: bus });
+    },
+    kick: (t, vol = 0.6) => Sound.tone({ freq: 160, glide: 42, glideTime: 0.12, type: "sine", t, dur: 0.18, vol, dest: bus }),
+    thump: (t, vol = 0.45) => Sound.tone({ freq: 72, glide: 40, glideTime: 0.14, type: "sine", t, dur: 0.2, vol, dest: bus }),
+    snare: (t, vol = 0.16) => {
+      Sound.hiss({ t, dur: 0.13, vol, type: "bandpass", freq: 1900, q: 0.5, dest: bus });
+      Sound.tone({ freq: 210, glide: 160, type: "triangle", t, dur: 0.08, vol: vol * 0.7, dest: bus });
+    },
+    clap: (t, vol = 0.14) => [0, 0.012, 0.024].forEach(d => Sound.hiss({ t: t + d, dur: 0.09, vol, type: "bandpass", freq: 1400, q: 0.9, dest: bus })),
+    hat: (t, vol = 0.04, open = false) => Sound.hiss({ t, dur: open ? 0.16 : 0.035, vol, freq: 7500, dest: bus }),
+    shaker: (t, vol = 0.025) => Sound.hiss({ t, dur: 0.05, vol, type: "bandpass", freq: 6000, q: 1.5, dest: bus })
+  };
+
+  /* chord tones: quality "M" major, "m" minor, "M7", "m7" */
+  const SHAPES = { M: [0, 4, 7], m: [0, 3, 7], M7: [0, 4, 7, 11], m7: [0, 3, 7, 10] };
+  const chord = (root, q) => SHAPES[q].map(i => root + i);
+
+  /* ---------- tracks ---------- */
+  const TRACKS = {
+    /* Upbeat chiptune for the 20-second drawing timer. */
+    draw: {
+      bpm: 140, boost: 30, gain: 1,
+      init: () => ({
+        prog: pickOne([
+          [[60, "M"], [57, "m"], [53, "M"], [55, "M"]],
+          [[57, "m"], [53, "M"], [60, "M"], [55, "M"]],
+          [[60, "M"], [55, "M"], [57, "m"], [53, "M"]],
+          [[62, "m"], [58, "M"], [60, "M"], [57, "M"]]
+        ]),
+        arp: pickOne([[0, 1, 2, 3, 4, 3, 2, 1], [0, 2, 3, 2, 4, 3, 2, 3], [3, 2, 1, 2, 3, 4, 5, 4]]),
+        key: pickOne([0, 2, -2, 3, 5, -3])
+      }),
+      step: (t, s, v, intense, sixteenth) => {
+        const half = s % 2 === 1;
+        if (half) {
+          if (intense) I.hat(t, 0.04);
+          return;
+        }
+        const i = (s / 2) % 8;
+        const [root, q] = v.prog[Math.floor(s / 16) % 4];
+        const r = root + v.key + (intense ? 1 : 0);
+        const tones = [...chord(r, q), ...chord(r + 12, q)];
+        I.lead(tones[v.arp[i]] + 12, t, sixteenth * 1.7, 0.045);
+        I.bass(r - 12 + (i % 2 ? 12 : 0), t, sixteenth * 1.8, 0.2);
+        if (i % 4 === 0) I.kick(t);
+        if (i % 4 === 2) I.snare(t);
+        I.hat(t, 0.04);
+        if (intense && i % 2 === 1) I.kick(t, 0.4);
+      }
+    },
+
+    /* Suspense: heartbeat, low pad, sparse plucks. Used while people read each other. */
+    tension: {
+      bpm: 92, boost: 26, gain: 0.95,
+      init: () => ({
+        key: pickOne([0, -2, 2, -3]),
+        prog: pickOne([[[57, "m"], [53, "M"], [50, "m"], [52, "M"]], [[57, "m"], [55, "M"], [53, "M"], [52, "M"]]]),
+        motif: pickOne([[0, 6, 10, 12], [0, 3, 8, 14], [2, 6, 10, 13]])
+      }),
+      step: (t, s, v, intense, sixteenth) => {
+        const bar = Math.floor(s / 16) % 4;
+        const i = s % 16;
+        const [root, q] = v.prog[bar];
+        const r = root + v.key;
+        if (i === 0) {
+          I.pad(chord(r, q), t, sixteenth * 16, 0.02, intense ? 1500 : 900);
+          I.bass(r - 12, t, sixteenth * 7, 0.18);
+        }
+        if (i === 0 || i === 8) I.thump(t, 0.5);
+        if (i === 3 || i === 11) I.thump(t, 0.3);
+        const motifIdx = v.motif.indexOf(i);
+        if (motifIdx !== -1) I.pluck(chord(r + 12, q)[motifIdx % 3] + (motifIdx === 3 ? 12 : 0), t, 0.07);
+        if (intense) {
+          I.hat(t, i % 2 ? 0.02 : 0.035);
+          if (i % 4 === 2) I.bass(r - 12, t, sixteenth, 0.12);
+        }
+      }
+    },
+
+    /* Thinking: mellow lo-fi with electric-piano chords and a lazy swing. */
+    think: {
+      bpm: 84, boost: 0, gain: 1,
+      init: () => {
+        const key = pickOne([0, 2, -3, 5]);
+        const scale = [0, 2, 4, 7, 9];
+        const melody = Array.from({ length: 64 }, (_, k) => (k % 4 === 2 && Math.random() < 0.35)
+          ? 72 + scale[Math.floor(Math.random() * scale.length)] : null);
+        return { key, melody, prog: [[65, "M7"], [64, "m7"], [62, "m7"], [60, "M7"]] };
+      },
+      step: (t, s, v, intense, sixteenth) => {
+        const i = s % 16;
+        const [root, q] = v.prog[Math.floor(s / 16) % 4];
+        const r = root + v.key;
+        const swing = (i % 4 === 2) ? sixteenth * 0.25 : 0;
+        if (i === 0) I.keys(chord(r - 12, q), t, sixteenth * 9, 0.04);
+        if (i === 10) I.keys(chord(r - 12, q).slice(1), t + swing, sixteenth * 6, 0.03);
+        if (i === 0) I.bass(r - 24, t, sixteenth * 6, 0.2);
+        if (i === 7) I.bass(r - 24 + 7, t, sixteenth * 3, 0.14);
+        if (i === 0 || i === 10) I.kick(t + (i === 10 ? swing : 0), 0.45);
+        if (i === 4 || i === 12) I.snare(t, 0.08);
+        if (i % 2 === 0) I.hat(t + swing, 0.025);
+        const note = v.melody[s % 64];
+        if (note) I.pluck(note + v.key, t + swing, 0.05, 0.35);
+      }
+    },
+
+    /* Game-show rush for the forehead quiz. */
+    rush: {
+      bpm: 150, boost: 20, gain: 0.9,
+      init: () => ({
+        key: pickOne([0, 2, 5, -2]),
+        riff: pickOne([[0, 2, 4, 2, 5, 4, 2, 4], [4, 2, 0, 2, 4, 5, 4, 2], [0, 0, 4, 2, 5, 5, 4, 2]])
+      }),
+      step: (t, s, v, intense, sixteenth) => {
+        if (s % 2 === 1) return;
+        const i = (s / 2) % 8;
+        const prog = [[60, "M"], [57, "m"], [53, "M"], [55, "M"]];
+        const [root, q] = prog[Math.floor(s / 16) % 4];
+        const r = root + v.key + (intense ? 1 : 0);
+        const tones = [...chord(r + 12, q), ...chord(r + 24, q)];
+        I.lead(tones[v.riff[i]], t, sixteenth * 1.6, 0.04, "square");
+        I.bass(r - 12 + (i % 2 ? 12 : 0), t, sixteenth * 1.6, 0.2);
+        I.kick(t, 0.5);
+        if (i % 4 === 2) I.clap(t);
+        I.hat(t + sixteenth, 0.05, true);
+        if (intense) I.hat(t, 0.03);
+      }
+    },
+
+    /* Light, bouncy loop for the game list. */
+    menu: {
+      bpm: 108, boost: 0, gain: 0.55,
+      init: () => ({
+        key: pickOne([0, 2, 5]),
+        pattern: pickOne([[0, 2, 1, 2, 3, 2, 1, 2], [0, 1, 2, 3, 2, 1, 2, 4], [2, 1, 0, 1, 2, 3, 4, 3]])
+      }),
+      step: (t, s, v, intense, sixteenth) => {
+        const prog = [[60, "M"], [55, "M"], [57, "m"], [53, "M"]];
+        const [root, q] = prog[Math.floor(s / 16) % 4];
+        const r = root + v.key;
+        I.shaker(t, s % 2 ? 0.015 : 0.025);
+        if (s % 2 === 1) return;
+        const i = (s / 2) % 8;
+        const tones = [...chord(r + 12, q), ...chord(r + 24, q)];
+        I.marimba(tones[v.pattern[i]], t, 0.12);
+        if (i === 0 || i === 4) I.bass(r - 12, t, sixteenth * 3, 0.14);
+        if (i === 0) I.kick(t, 0.3);
+      }
+    }
+  };
+
+  /* ---------- sequencer ---------- */
+  function pump() {
+    const track = TRACKS[current];
+    while (pos.next < ctx.currentTime + 0.15) {
+      const bpm = track.bpm + (pos.intense ? track.boost : 0);
+      const sixteenth = 60 / bpm / 4;
+      track.step(pos.next, pos.step, pos.vars, pos.intense, sixteenth);
+      pos = { ...pos, next: pos.next + sixteenth, step: pos.step + 1 };
+    }
+  }
+
+  function play(name) {
+    if (!TRACKS[name]) return;
+    if (current === name && timerId) return;
+    stop();
+    ctx = Sound.ensure();
+    if (!ctx || !Sound.musicBus()) return;
+    bus = ctx.createGain();
+    bus.gain.setValueAtTime(0.0001, ctx.currentTime);
+    bus.gain.exponentialRampToValueAtTime(TRACKS[name].gain, ctx.currentTime + 0.4);
+    bus.connect(Sound.musicBus());
+    current = name;
+    pos = { next: ctx.currentTime + 0.08, step: 0, intense: false, vars: TRACKS[name].init() };
+    timerId = setInterval(pump, 25);
+    pump();
+  }
+
+  function stop(fade = 0.12) {
+    clearInterval(timerId);
+    timerId = 0;
+    current = null;
+    if (!bus) return;
+    const g = bus;
+    g.gain.setTargetAtTime(0.0001, ctx.currentTime, fade / 3);
+    setTimeout(() => g.disconnect(), fade * 1000 + 400);
+    bus = null;
+  }
+
+  function intensify() {
+    if (!timerId || pos.intense) return;
+    pos = { ...pos, intense: true };
+  }
+
+  return { play, stop, intensify, playing: () => current, start: () => play("draw"), TRACKS: Object.keys(TRACKS) };
+})();
+</script>
+<script>
+/* fx.js */
+/* Visual effects: confetti, 3-2-1 countdown, full-screen flash, shake, pop-in. All respect reduced motion. */
+const Fx = (() => {
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+  /* Restarts a CSS animation class on an element. */
+  function replay(el, cls) {
+    if (!el) return;
+    el.classList.remove(cls);
+    void el.offsetWidth;
+    el.classList.add(cls);
+  }
+  const pop = (el) => replay(el, "fx-pop");
+  const shake = (el = document.querySelector(".app")) => { if (!reduced()) replay(el, "fx-shake"); };
+
+  function flash(colorToken = "--alert", ms = 450) {
+    const layer = document.createElement("div");
+    layer.className = "fx-flash";
+    layer.style.background = token(colorToken) || "#fff";
+    layer.style.animationDuration = `${ms}ms`;
+    document.body.appendChild(layer);
+    setTimeout(() => layer.remove(), ms + 50);
+  }
+
+  function confetti(ms = 2600) {
+    if (reduced()) return;
+    const canvas = document.createElement("canvas");
+    canvas.className = "fx-confetti";
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = innerWidth * dpr;
+    canvas.height = innerHeight * dpr;
+    document.body.appendChild(canvas);
+    const g = canvas.getContext("2d");
+    g.scale(dpr, dpr);
+    const colors = ["--accent", "--alert", "--zap", "--go", "--c-purple", "--c-pink"].map(token).filter(Boolean);
+    const parts = Array.from({ length: 140 }, () => ({
+      x: innerWidth / 2 + (Math.random() - 0.5) * innerWidth * 0.3,
+      y: innerHeight * 0.35,
+      vx: (Math.random() - 0.5) * 13,
+      vy: -Math.random() * 13 - 4,
+      size: 6 + Math.random() * 7,
+      rot: Math.random() * Math.PI,
+      vr: (Math.random() - 0.5) * 0.35,
+      color: colors[Math.floor(Math.random() * colors.length)]
+    }));
+    const start = performance.now();
+    let frame = 0;
+    const draw = (now) => {
+      const age = now - start;
+      g.clearRect(0, 0, innerWidth, innerHeight);
+      g.globalAlpha = Math.max(0, 1 - Math.max(0, age - ms * 0.6) / (ms * 0.4));
+      parts.forEach(p => {
+        p.vy += 0.32;
+        p.vx *= 0.99;
+        p.x += p.vx;
+        p.y += p.vy;
+        p.rot += p.vr;
+        g.save();
+        g.translate(p.x, p.y);
+        g.rotate(p.rot);
+        g.fillStyle = p.color;
+        g.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+        g.restore();
+      });
+      if (age < ms) frame = requestAnimationFrame(draw);
+      else canvas.remove();
+    };
+    frame = requestAnimationFrame(draw);
+    return () => { cancelAnimationFrame(frame); canvas.remove(); };
+  }
+
+  /* Big 3-2-1-GO over the whole screen. Resolves when it finishes. */
+  function countdown(goText = "スタート！", from = 3) {
+    return new Promise(resolve => {
+      const layer = document.createElement("div");
+      layer.className = "fx-countdown";
+      const label = document.createElement("span");
+      layer.appendChild(label);
+      document.body.appendChild(layer);
+      const steps = [...Array.from({ length: from }, (_, i) => String(from - i)), goText];
+      steps.forEach((text, i) => setTimeout(() => {
+        label.textContent = text;
+        label.classList.toggle("go", i === steps.length - 1);
+        replay(label, "fx-count");
+        Sound.sfx(i === steps.length - 1 ? "go" : "count");
+      }, i * 700));
+      setTimeout(() => { layer.remove(); resolve(); }, steps.length * 700 - 150);
+    });
+  }
+
+  return { pop, shake, flash, confetti, countdown, replay };
+})();
+</script>
+<script>
+/* icons.js */
+/* Line icons for the game list (24x24, drawn with currentColor). */
+const Icons = (() => {
+  const svg = (body) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+  return {
+    oekaki: svg('<path d="M4 20l1.2-4.6L15.5 5.1a2 2 0 0 1 2.8 0l.6.6a2 2 0 0 1 0 2.8L8.6 18.8 4 20z"/><path d="M13.5 7l3.5 3.5"/>'),
+    denki: svg('<path d="M7 3v9h10V3"/><path d="M5 12h14"/><path d="M7 12v9M17 12v9"/><path d="M12.5 4.5L10.5 8h3l-2 3.5" stroke-width="1.6"/>'),
+    hitblow: svg('<rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M7.5 10v4M11 10h2.2v2H11v2h2.2M16 10h2v4h-2M16 12h2"/>'),
+    hayaoshi: svg('<ellipse cx="12" cy="16" rx="8" ry="3"/><path d="M4 16v-2.5c0-1.7 3.6-3 8-3s8 1.3 8 3V16"/><path d="M12 7V3M8.5 8 7 5M15.5 8 17 5"/>'),
+    wordwolf: svg('<path d="M5 4l3 4h8l3-4v9a7 7 0 0 1-14 0V4z"/><path d="M9.5 12.5h.01M14.5 12.5h.01"/><path d="M10.5 16l1.5 1 1.5-1"/>'),
+    bomb: svg('<circle cx="10.5" cy="14" r="6.5"/><path d="M15 9.5l2-2"/><path d="M17 7.5c.5-1.5 1.7-2.4 3-2.5"/><path d="M20.5 2.5v1M22 4h-1M21.6 2.9l-.7.7"/>'),
+    atekko: svg('<circle cx="12" cy="15" r="5.5"/><rect x="6.5" y="2.5" width="11" height="6" rx="1.2"/><path d="M10 15h.01M14 15h.01M10.5 17.5h3"/>'),
+    kachikan: svg('<path d="M4 20h16"/><rect x="5" y="13" width="3" height="5" rx=".8"/><rect x="10.5" y="9" width="3" height="9" rx=".8"/><rect x="16" y="4" width="3" height="14" rx=".8"/>'),
+    stop: svg('<circle cx="12" cy="13.5" r="7.5"/><path d="M12 13.5V9.5M10 2.5h4M12 2.5V6M18.5 6.5l1.5-1.5"/>'),
+    numbomb: svg('<circle cx="12" cy="13" r="7.5"/><path d="M9.5 10.5c0-1.4 1.1-2.3 2.5-2.3s2.5.9 2.5 2.2c0 1.8-2.5 2-2.5 3.6M12 17h.01"/><path d="M16.5 6.5L18 5"/>'),
+    sound: {
+      all: svg('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11"/>'),
+      sfx: svg('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/>'),
+      off: svg('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>')
+    },
+    back: svg('<path d="M14.5 5.5L8 12l6.5 6.5"/>')
+  };
+})();
+</script>
+<script>
+/* topics.js */
+/* Drawing topics by difficulty. */
+const TOPICS = {
+  kids: ["ボール","りんご","太陽","月","星","ハート","おうち","木","チューリップ","さかな","くも","かさ","雪だるま","ちょうちょ","てんとう虫","おにぎり","ソフトクリーム","くるま","ふね","風船","めがね","手","にこにこ顔","えんぴつ","コップ","たまご","バナナ","いちご","さくらんぼ","きのこ","にじ","あめ","やま","はた","ぼうし","くつ","は","へび","ねずみ","かめ","ひよこ","はっぱ","ろうそく","すず","ドア","まど","かいだん","ふうせんガム","ぶどう","ねこ","いぬ","ぶた","アヒル","クレヨン","つみき","すいか","みかん","パン","くつした","かぎ"],
+  easy: ["自転車","電車","飛行機","ケーキ","アイスクリーム","ラーメン","うさぎ","ぞう","キリン","かたつむり","鳥","本","テレビ","スマホ","王冠","ロケット","信号機","ペンギン","カエル","クジラ","タコ","カニ","目玉焼き","ハンバーガー","ピザ","おすし","ドーナツ","ハサミ","手紙","時計","にんじん","だいこん","トマト","とうもろこし","パイナップル","レモン","ブロッコリー","フライパン","やかん","スプーン","フォーク","カブトムシ","クワガタ","トンボ","セミ","アリ","クモ","バス","トラック","ヘリコプター","新幹線","パトカー","ヨット","テント","いす","つくえ","ベッド","まくら","電球","はぶらし","ソファ","メロンパン","ホットドッグ","ポップコーン","プリン","エビフライ","ゆうれい","ひまわり","サボテン","雪の結晶","リュック","かばん","ネクタイ","ワンピース","手袋","マフラー","長ぐつ","トイレ","おふろ","ジャングルジム","ハチ","ネズミ","ブタ","ウシ","ウマ","ヒツジ","サル","ゴリラ","ワニ","カバ"],
+  normal: ["消防車","救急車","観覧車","灯台","富士山","東京タワー","神社","学校","病院","ドライヤー","掃除機","冷蔵庫","洗濯機","エレベーター","すべり台","ブランコ","恐竜","ライオン","パンダ","コアラ","カンガルー","ハリネズミ","フクロウ","宇宙人","忍者","サンタクロース","鬼","雷","台風","火山","噴水","花火","鯉のぼり","カメラ","ギター","ピアノ","太鼓","サッカー","野球","水泳","スキー","温泉","お弁当","焼き鳥","たこ焼き","天ぷら","おでん","かき氷","流れ星","ハロウィン","結婚式","誕生日会","釣り","キャンプ","宝箱","ピラミッド","人魚","魔法使い","ロボット","自動販売機","郵便ポスト","交番","コンビニ","駅","空港","遊園地","水族館","動物園","図書館","美容院","歯医者","銭湯","回転寿司","牛丼","カレーライス","餃子","パフェ","わたあめ","焼きそば","浴衣","着物","相撲","柔道","ボウリング","ゴルフ","テニス","バスケットボール","スケートボード","サーフィン","登山","雪合戦","鉄棒","跳び箱","なわとび","書道","折り紙","けん玉","こま","たこあげ","ひな人形","豆まき","お月見","クリスマスツリー","お年玉","宇宙飛行士","警察官","消防士","お医者さん","コック","大工","魔女","ドラゴン","ユニコーン","かっぱ","ミイラ","ゾンビ","天使","海賊","騎士","王様","お姫様","マトリョーシカ","自由の女神","万里の長城","エッフェル塔","大仏","招き猫","だるま","こけし"],
+  hard: ["筋肉痛","寝坊","満員電車","二度寝","渋滞","迷子","静電気","しゃっくり","一目惚れ","反抗期","夏休みの宿題","月曜日の朝","給料日","締め切り","残業","筋トレ","自撮り","既読スルー","停電","失恋","合格発表","腹ペコ","猫舌","時差ボケ","雨宿り","ダイエット","宝くじ","引っ越し","充電切れ","寝ぐせ","肩こり","かくれんぼ","鬼ごっこ","綱引き","運動会","授業参観","給食","忘れ物","花粉症","サプライズ","居眠り","値引きシール","行列のできる店","ドミノ倒し","親知らず","貧乏ゆすり","猫背","鼻歌","早口言葉","寝言","いびき","二日酔い","乗り過ごし","終電","寝落ち","夜ふかし","体重計","健康診断","予防接種","自動ドアが開かない","エレベーターで二人きり","名前を忘れる","緊張","拍手","握手","ハイタッチ","乾杯","バンザイ","土下座","ガッツポーズ","あくび","くしゃみ","鼻血","冷や汗","耳打ち","じゃんけん","にらめっこ","ウインク","投げキッス","ため息","一発ギャグ","カラオケ","福引き","大掃除","ゴミの分別","落とし穴","ナンパ","プロポーズ","面接","入学式","卒業式","お見合い","迷子のお知らせ","ストレッチ","昼寝","足がしびれる"],
+  oni: ["猫に小判","豚に真珠","猿も木から落ちる","犬も歩けば棒に当たる","花より団子","二兎を追う者は一兎をも得ず","棚からぼたもち","目からうろこ","石の上にも三年","井の中の蛙","馬の耳に念仏","鬼に金棒","泣きっ面に蜂","雨降って地固まる","急がば回れ","七転び八起き","一石二鳥","弱肉強食","自画自賛","以心伝心","一期一会","十人十色","油断大敵","絶体絶命","喜怒哀楽","温故知新","春夏秋冬","灯台下暗し","覆水盆に返らず","果報は寝て待て","三人寄れば文殊の知恵","能ある鷹は爪を隠す","蛙の子は蛙","鶴の一声","寝耳に水","笑う門には福来る","早起きは三文の徳","捕らぬ狸の皮算用","焼け石に水","猫の手も借りたい","顔から火が出る","腹が立つ","手を焼く","首を長くして待つ","足を洗う","口が軽い","耳が痛い","鼻が高い","自由","平和","重力","インターネット","時間","未来","思い出","青春","友情","嫉妬","後悔","秘密","運命","地球温暖化","少子高齢化","確定申告","円安","人工知能","リモートワーク","推し活","根回し","忖度","朝令暮改","デジャヴ","ストレス","やる気","二刀流","インフルエンサー","サブスク","断捨離","ワンオペ","マウントを取る","伏線回収","空気を読む","沼にハマる"]
+};
+</script>
+<script>
+/* oekaki.js */
+/* 20-second drawing game: random topic, timer with music, answer reveal. */
+const Oekaki = (() => {
+  const LEVELS = [
+    { id: "kids", label: "こども", note: "形がかんたんなもの。小さい子といっしょに。" },
+    { id: "easy", label: "かんたん", note: "身のまわりの物や動物、食べ物。" },
+    { id: "normal", label: "ふつう", note: "場所、乗り物、行事、職業など。少し考える。" },
+    { id: "hard", label: "むずかしい", note: "動作やあるある。どう描くかが勝負。" },
+    { id: "oni", label: "激ムズ", note: "ことわざ、四字熟語、目に見えないもの。" },
+    { id: "all", label: "ぜんぶ", note: "全部の難易度からランダム。" }
+  ];
+  const LEVEL_NAME = { kids: "こども", easy: "かんたん", normal: "ふつう", hard: "むずかしい", oni: "激ムズ", custom: "追加したお題" };
+  const TIMES = [10, 20, 30, 60];
+  const STORE_KEY = "oekaki20.settings";
+  const CIRC = 2 * Math.PI * 52;
+  const INTENSE_FROM = 5;
+  const FALLBACK = { level: "all", seconds: 20, music: true, custom: "" };
+
+  const panels = { ready: $("pReady"), topic: $("pTopic"), draw: $("pDraw"), end: $("pEnd"), answer: $("pAnswer") };
+  const peek = $("peek");
+  const customInput = $("customInput");
+
+  let settings = FALLBACK;
+  let state = { phase: "ready", topic: null, rounds: 0, used: new Set() };
+  let timer = { raf: 0, endAt: 0, shown: null };
+
+  function loadSettings() {
+    const s = Store.load(STORE_KEY, {}) || {};
+    return {
+      level: LEVELS.some(l => l.id === s.level) ? s.level : FALLBACK.level,
+      seconds: TIMES.includes(s.seconds) ? s.seconds : FALLBACK.seconds,
+      music: typeof s.music === "boolean" ? s.music : FALLBACK.music,
+      custom: typeof s.custom === "string" ? s.custom : FALLBACK.custom
+    };
+  }
+
+  /* ---------- topics ---------- */
+  function customTopics() {
+    return settings.custom.split("\n").map(t => t.trim()).filter(Boolean);
+  }
+  function pool() {
+    const ids = settings.level === "all" ? Object.keys(TOPICS) : [settings.level];
+    const base = ids.flatMap(id => TOPICS[id].map(word => ({ word, level: id })));
+    const extra = customTopics().map(word => ({ word, level: "custom" }));
+    return [...base, ...extra];
+  }
+  function drawTopic() {
+    const all = pool();
+    let fresh = all.filter(t => !state.used.has(t.word) && t.word !== state.topic?.word);
+    if (fresh.length === 0) {
+      state = { ...state, used: new Set() };
+      fresh = all.filter(t => t.word !== state.topic?.word);
+    }
+    const pick = fresh[Math.floor(Math.random() * fresh.length)] || all[0];
+    state = { ...state, topic: pick, used: new Set([...state.used, pick.word]) };
+  }
+
+  /* ---------- timer ---------- */
+  function setRing(fraction) {
+    $("bar").style.strokeDasharray = CIRC;
+    $("bar").style.strokeDashoffset = CIRC * (1 - fraction);
+  }
+  function tick() {
+    const total = settings.seconds * 1000;
+    const left = Math.max(0, timer.endAt - performance.now());
+    const sec = Math.ceil(left / 1000);
+    setRing(left / total);
+    if (sec !== timer.shown) {
+      timer = { ...timer, shown: sec };
+      $("timerNum").textContent = sec;
+      $("timer").classList.toggle("urgent", sec <= INTENSE_FROM && sec > 0);
+      if (sec <= INTENSE_FROM) Music.intensify();
+      if (sec <= 3 && sec > 0) Sound.beep(1175, 0.1, 0, "sine", 0.3);
+    }
+    if (left <= 0) { finish(); return; }
+    timer = { ...timer, raf: requestAnimationFrame(tick) };
+  }
+  function startTimer() {
+    Sound.ensure();
+    Awake.keep();
+    timer = { raf: 0, endAt: performance.now() + settings.seconds * 1000, shown: null };
+    if (settings.music) Music.start(); else Sound.beep(660, 0.15);
+    go("draw");
+    tick();
+  }
+  function stopTimer() {
+    cancelAnimationFrame(timer.raf);
+    timer = { ...timer, raf: 0 };
+    Music.stop();
+    $("timer").classList.remove("urgent");
+  }
+  function finish() {
+    stopTimer();
+    Sound.buzz();
+    go("end");
+  }
+
+  /* ---------- screens ---------- */
+  function button(label, onClick, cls = "") {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn " + cls;
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  const ACTIONS = {
+    ready: () => [button("お題を引く", () => { Sound.ensure(); drawTopic(); go("topic"); }, "primary")],
+    topic: () => [
+      button("引き直す", () => { drawTopic(); go("topic"); }, "small"),
+      button(`スタート（${settings.seconds}秒）`, startTimer, "primary")
+    ],
+    draw: () => [button("中断する", () => { stopTimer(); go("topic"); })],
+    end: () => [button("答えを見る", () => { state = { ...state, rounds: state.rounds + 1 }; Sound.sfx("reveal"); go("answer"); Fx.pop($("answerText")); }, "primary")],
+    answer: () => [button("次の人へ", () => go("ready"), "primary")]
+  };
+
+  function showWord(el, word) {
+    el.textContent = word;
+    el.classList.toggle("long", word.length >= 8);
+  }
+  function go(phase) {
+    state = { ...state, phase };
+    Object.entries(panels).forEach(([k, el]) => { el.hidden = k !== phase; });
+    if (phase === "topic") {
+      showWord($("topicText"), state.topic.word);
+      $("topicTag").textContent = LEVEL_NAME[state.topic.level];
+    }
+    if (phase === "draw") {
+      $("timerNum").textContent = settings.seconds;
+      setRing(1);
+      hidePeek();
+    }
+    if (phase === "answer") showWord($("answerText"), state.topic.word);
+    if (phase === "ready") $("readyMsg").textContent = state.rounds > 0 ? "次の描く人だけ見てね" : "描く人だけ見てね";
+    $("round").textContent = `${state.rounds}問おわり`;
+    $("actions").replaceChildren(...ACTIONS[phase]());
+    const locked = phase === "draw";
+    document.querySelectorAll("#modeOekaki .chip").forEach(c => { c.disabled = locked; });
+  }
+
+  /* ---------- settings UI ---------- */
+  function chip(label, on, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip";
+    b.textContent = label;
+    b.setAttribute("aria-pressed", on ? "true" : "false");
+    b.disabled = state.phase === "draw";
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function renderChips() {
+    $("levelChips").replaceChildren(...LEVELS.map(l => chip(l.label, settings.level === l.id, () => update({ level: l.id }))));
+    $("timeChips").replaceChildren(...TIMES.map(t => chip(`${t}秒`, settings.seconds === t, () => update({ seconds: t }))));
+    $("musicChips").replaceChildren(
+      chip("あり", settings.music, () => update({ music: true })),
+      chip("なし", !settings.music, () => update({ music: false }))
+    );
+    const level = LEVELS.find(l => l.id === settings.level);
+    $("levelNote").textContent = `${level.note}（${pool().length}個）`;
+  }
+  function update(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(STORE_KEY, settings);
+    renderChips();
+    if ("level" in patch && state.phase === "topic") drawTopic();
+    if (state.phase !== "draw") go(state.phase);
+  }
+
+  /* ---------- peek (hold to see the topic while drawing) ---------- */
+  function showPeek() { peek.textContent = state.topic ? state.topic.word : ""; peek.classList.add("on"); }
+  function hidePeek() { peek.textContent = "長押しでお題を確認"; peek.classList.remove("on"); }
+
+  function renderCustomCount() {
+    const n = customTopics().length;
+    $("customCount").textContent = n ? `いま${n}個` : "";
+  }
+
+  function init() {
+    settings = loadSettings();
+    peek.addEventListener("pointerdown", (e) => { e.preventDefault(); showPeek(); });
+    ["pointerup", "pointerleave", "pointercancel"].forEach(ev => peek.addEventListener(ev, hidePeek));
+    peek.addEventListener("contextmenu", (e) => e.preventDefault());
+    peek.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); showPeek(); } });
+    peek.addEventListener("keyup", hidePeek);
+
+    customInput.value = settings.custom;
+    customInput.addEventListener("input", () => {
+      settings = { ...settings, custom: customInput.value };
+      Store.save(STORE_KEY, settings);
+      renderCustomCount();
+      renderChips();
+    });
+
+    renderChips();
+    renderCustomCount();
+    go("ready");
+  }
+
+  /* Called when the player switches to another game mid-round. */
+  function leave() {
+    if (state.phase === "draw") { stopTimer(); go("topic"); }
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* denki-rules.js */
+/* Electric chair game rules. Pure functions, no DOM: every move returns a new game object. */
+const DenkiRules = (() => {
+  const RULES = Object.freeze({ minChairs: 5, maxChairs: 12, defaultChairs: 12, bonusMultiplier: 2 });
+  const range = (n) => Array.from({ length: n }, (_, i) => i + 1);
+
+  /* Win target and shock limit per chair count, chosen with tools/denki-sim.js:
+   * longest games where fewer than ~20% end by running out of chairs. 2 shocks lose when chairs are few. */
+  const CONFIG = Object.freeze({
+    5: { target: 7, maxShocks: 2 },
+    6: { target: 10, maxShocks: 2 },
+    7: { target: 13, maxShocks: 2 },
+    8: { target: 15, maxShocks: 3 },
+    9: { target: 20, maxShocks: 3 },
+    10: { target: 24, maxShocks: 3 },
+    11: { target: 28, maxShocks: 3 },
+    12: { target: 34, maxShocks: 3 }
+  });
+  const configFor = (chairs) => CONFIG[chairs];
+  const targetFor = (chairs) => CONFIG[chairs].target;
+  const shocksFor = (chairs) => CONFIG[chairs].maxShocks;
+
+  /* options.bonus: chair number worth double (null = no bonus chair). options.target / maxShocks override the table (used by the simulator). */
+  function newGame(names, first, chairs = RULES.defaultChairs, options = {}) {
+    if (!Number.isInteger(chairs) || chairs < RULES.minChairs || chairs > RULES.maxChairs) {
+      throw new Error(`イスの数は${RULES.minChairs}〜${RULES.maxChairs}脚で選んでください`);
+    }
+    const bonus = options.bonus ?? null;
+    if (bonus !== null && !(Number.isInteger(bonus) && bonus >= 1 && bonus <= chairs)) {
+      throw new Error("ボーナスイスの番号が正しくありません");
+    }
+    return {
+      names: [...names],
+      first,
+      chairs,
+      target: options.target ?? targetFor(chairs),
+      maxShocks: options.maxShocks ?? shocksFor(chairs),
+      bonus,
+      turn: 0,
+      scores: [0, 0],
+      shocks: [0, 0],
+      remaining: range(chairs),
+      history: [],
+      trap: null,
+      last: null,
+      outcome: null
+    };
+  }
+  const attacker = (g) => (g.first + g.turn) % 2;
+  const defender = (g) => 1 - attacker(g);
+  const valueOf = (g, chair) => (chair === g.bonus ? chair * RULES.bonusMultiplier : chair);
+
+  function setTrap(g, chair) {
+    if (!g.remaining.includes(chair)) throw new Error(`${chair}番のイスはもうありません`);
+    return { ...g, trap: chair };
+  }
+
+  function judge(g) {
+    const d = g.last.player;
+    if (g.scores[d] >= g.target) return { winner: d, reason: "target" };
+    if (g.shocks[d] >= g.maxShocks) return { winner: 1 - d, reason: "shocks" };
+    if (g.remaining.length <= 1) {
+      const [a, b] = g.scores;
+      return { winner: a === b ? null : (a > b ? 0 : 1), reason: "lastChair" };
+    }
+    return null;
+  }
+
+  /* A shocked player drops to 0 points and the chair stays; a safe sit scores the chair's value and removes it. */
+  function sit(g, chair) {
+    if (g.trap === null) throw new Error("まだ電流が仕掛けられていません");
+    if (!g.remaining.includes(chair)) throw new Error(`${chair}番のイスはもうありません`);
+    const d = defender(g);
+    const hit = chair === g.trap;
+    const gained = hit ? 0 : valueOf(g, chair);
+    const scores = g.scores.map((s, i) => (i !== d ? s : hit ? 0 : s + gained));
+    const shocks = g.shocks.map((s, i) => (i === d && hit ? s + 1 : s));
+    const remaining = hit ? g.remaining : g.remaining.filter(c => c !== chair);
+    const last = { hit, chair, trap: g.trap, player: d, gained, lost: hit ? g.scores[d] : 0 };
+    const history = [...g.history, { attacker: attacker(g), trap: g.trap, chair, hit }];
+    const next = { ...g, scores, shocks, remaining, history, last };
+    return { ...next, outcome: judge(next) };
+  }
+
+  function nextTurn(g) {
+    return { ...g, turn: g.turn + 1, trap: null, last: null };
+  }
+
+  /* ---------- match (several games, first to win `need` games) ---------- */
+  function newMatch(bestOf) {
+    if (![1, 3, 5].includes(bestOf)) throw new Error("セット数は1・3・5のどれかです");
+    return { bestOf, need: Math.ceil(bestOf / 2), wins: [0, 0], draws: 0, played: 0 };
+  }
+  function recordGame(match, outcome) {
+    const wins = match.wins.map((w, i) => (outcome.winner === i ? w + 1 : w));
+    const draws = match.draws + (outcome.winner === null ? 1 : 0);
+    return { ...match, wins, draws, played: match.played + 1 };
+  }
+  const matchWinner = (match) => {
+    const i = match.wins.findIndex(w => w >= match.need);
+    return i === -1 ? null : i;
+  };
+
+  return {
+    RULES, CONFIG, configFor, targetFor, shocksFor, valueOf,
+    newGame, attacker, defender, setTrap, sit, nextTurn,
+    newMatch, recordGame, matchWinner
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = DenkiRules;
+</script>
+<script>
+/* denki.js */
+/* Electric chair game screen: pass one phone between two players. */
+const Denki = (() => {
+  const R = DenkiRules;
+  const SETTINGS_KEY = "denki.settings";
+  const LEGACY_CHAIRS_KEY = "denki.chairs";
+  const BEST_OF = [{ n: 1, label: "1回勝負" }, { n: 3, label: "3本勝負" }, { n: 5, label: "5本勝負" }];
+  const DEFAULTS = Object.freeze({ chairs: R.RULES.defaultChairs, bonus: true, bestOf: 3 });
+  const SUSPENSE_MS = 1800;
+  const ZAP_MS = 1300;
+  const HISTORY_SHOWN = 8;
+
+  const el = {
+    setup: $("dSetup"), play: $("dPlay"), scores: $("scores"),
+    ring: $("ring"), center: $("ringCenter"), title: $("dTitle"), hint: $("dHint"), history: $("dHistory"),
+    actions: $("dActions"), names: [$("p1Name"), $("p2Name")]
+  };
+
+  let settings = DEFAULTS;
+  let match = null;
+  let game = null;
+  let ui = { phase: "setup", selected: null };
+  let chairs = new Map();
+
+  const names = () => game.names;
+  const att = () => names()[R.attacker(game)];
+  const def = () => names()[R.defender(game)];
+  const isMatch = () => match && match.bestOf > 1;
+
+  /* ---------- settings ---------- */
+  function validChairs(n) {
+    return Number.isInteger(n) && n >= R.RULES.minChairs && n <= R.RULES.maxChairs;
+  }
+  function loadSettings() {
+    const s = Store.load(SETTINGS_KEY, {}) || {};
+    const legacyChairs = Store.load(LEGACY_CHAIRS_KEY, null);
+    const chairsPick = validChairs(s.chairs) ? s.chairs : validChairs(legacyChairs) ? legacyChairs : DEFAULTS.chairs;
+    return {
+      chairs: chairsPick,
+      bonus: typeof s.bonus === "boolean" ? s.bonus : DEFAULTS.bonus,
+      bestOf: BEST_OF.some(b => b.n === s.bestOf) ? s.bestOf : DEFAULTS.bestOf
+    };
+  }
+  function updateSettings(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(SETTINGS_KEY, settings);
+    renderSetup();
+  }
+
+  /* ---------- game flow ---------- */
+  function newSetGame(playerNames, first) {
+    const bonus = settings.bonus ? 1 + Math.floor(Math.random() * settings.chairs) : null;
+    game = R.newGame(playerNames, first, settings.chairs, { bonus });
+    buildRing(game.chairs);
+  }
+  function startMatch() {
+    Sound.ensure();
+    Awake.keep();
+    match = R.newMatch(settings.bestOf);
+    newSetGame(Duo.read(el.names), Math.random() < 0.5 ? 0 : 1);
+    setUi("intro");
+  }
+  function setUi(phase, selected = null) {
+    ui = { phase, selected };
+    if (["intro", "set", "pass", "sit"].includes(phase)) Music.play("tension");
+    if (["reveal", "setup", "over"].includes(phase)) Music.stop();
+    render();
+  }
+  function onChair(n) {
+    if (!["set", "sit"].includes(ui.phase) || !game.remaining.includes(n)) return;
+    Sound.beep(520 + n * 20, 0.06, 0, "triangle", 0.2);
+    setUi(ui.phase, n);
+  }
+  function confirmTrap() {
+    game = R.setTrap(game, ui.selected);
+    setUi("pass");
+  }
+  function confirmSit() {
+    game = R.sit(game, ui.selected);
+    setUi("reveal");
+    Sound.drumroll(SUSPENSE_MS / 1000);
+    setTimeout(revealResult, SUSPENSE_MS);
+  }
+  function revealResult() {
+    if (ui.phase !== "reveal") return;
+    if (game.last.hit) {
+      Sound.zap();
+      Fx.flash("--zap", 500);
+      document.body.classList.add("zapping");
+      setTimeout(() => document.body.classList.remove("zapping"), ZAP_MS);
+    } else {
+      Sound.chime();
+    }
+    setUi("result");
+  }
+  function nextTurn() {
+    game = R.nextTurn(game);
+    setUi("set");
+  }
+  function finishSet() {
+    match = R.recordGame(match, game.outcome);
+    const done = !isMatch() || R.matchWinner(match) !== null;
+    if (done && game.outcome.winner !== null) { Sound.sfx("victory"); Fx.confetti(); } else Sound.sfx("fanfare");
+    setUi("over");
+  }
+  function nextSet() {
+    newSetGame(game.names, 1 - game.first);
+    setUi("intro");
+  }
+  function rematch() {
+    match = R.newMatch(settings.bestOf);
+    newSetGame(game.names, 1 - game.first);
+    setUi("intro");
+  }
+
+  /* ---------- text for each screen ---------- */
+  function rulesLine(g) {
+    const bonus = g.bonus ? `　★${g.bonus}番は点数${R.RULES.bonusMultiplier}倍` : "";
+    return `${g.target}点で勝ち・${g.maxShocks}回シビれたら負け${bonus}`;
+  }
+  function setLabel() {
+    return isMatch() ? `第${match.played + 1}セット　` : "";
+  }
+  function outcomeText() {
+    const o = game.outcome;
+    const reasons = {
+      target: () => `${game.target}点に届きました（${game.scores[o.winner]}点）。`,
+      shocks: () => `${names()[1 - o.winner]}さんが${game.maxShocks}回シビれました。`,
+      lastChair: () => o.winner === null
+        ? `イスが残り1脚。${game.scores[0]}点で同点です。`
+        : `イスが残り1脚。${game.scores[o.winner]}点 対 ${game.scores[1 - o.winner]}点。`
+    };
+    const reason = reasons[o.reason]();
+    const champion = R.matchWinner(match);
+    if (!isMatch()) {
+      return { title: o.winner === null ? "引き分け！" : `${names()[o.winner]}さんの勝ち！`, hint: reason, done: true };
+    }
+    const tally = `セット ${match.wins[0]}-${match.wins[1]}`;
+    if (champion !== null) {
+      return { title: `${names()[champion]}さんの優勝！`, hint: `${reason}　${tally}`, done: true };
+    }
+    const setTitle = o.winner === null ? "このセットは引き分け" : `${names()[o.winner]}さんがセットを取った！`;
+    return { title: setTitle, hint: `${reason}　${tally}（${match.need}セット先取）`, done: false };
+  }
+
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", startMatch, "primary")] }),
+    intro: () => ({
+      title: `${setLabel()}先に仕掛けるのは${att()}さん`,
+      hint: `${rulesLine(game)}。${def()}さんは画面を見ないでね。`,
+      center: game.bonus ? `★${game.bonus}番が2倍` : "電気イス",
+      actions: [makeButton(`${att()}さんが仕掛ける`, () => setUi("set"), "primary")]
+    }),
+    set: () => ({
+      title: `${att()}さん、電流を仕掛けるイスを選んで`,
+      hint: `${def()}さんは見ないでね`,
+      center: ui.selected ? `${ui.selected}番` : "仕掛ける",
+      actions: [makeButton(ui.selected ? `${ui.selected}番に仕掛ける` : "イスを選んでね", confirmTrap, "primary", !ui.selected)]
+    }),
+    pass: () => ({
+      title: `${def()}さんに渡してね`,
+      hint: "仕掛けたイスは画面から消えています",
+      center: "？",
+      actions: [makeButton(`${def()}です、受け取った`, () => setUi("sit"), "primary")]
+    }),
+    sit: () => {
+      const d = R.defender(game);
+      const need = game.target - game.scores[d];
+      return {
+        title: `${def()}さん、座るイスを選んで`,
+        hint: `あと${need}点で勝ち。シビれたら0点に戻ります。${att()}さんの顔をよく見て。`,
+        center: ui.selected ? `${ui.selected}番` : "座る",
+        actions: [makeButton(ui.selected ? `${ui.selected}番に座る` : "イスを選んでね", confirmSit, "primary danger", !ui.selected)]
+      };
+    },
+    reveal: () => ({
+      title: `${def()}さんが${game.last.chair}番に座った…`,
+      hint: "",
+      center: "……",
+      actions: []
+    }),
+    result: () => {
+      const l = game.last;
+      const next = game.outcome
+        ? makeButton("結果を見る", finishSet, "primary")
+        : makeButton(`次へ（${def()}さんが仕掛ける）`, nextTurn, "primary");
+      if (l.hit) {
+        return {
+          title: `ビリビリ！ ${def()}さんは0点に`,
+          hint: `${l.lost > 0 ? `${l.lost}点を失いました。` : ""}シビれ${game.shocks[l.player]}回目（${game.maxShocks}回で負け）。${l.chair}番のイスは残ります。`,
+          center: "ビリビリ!",
+          actions: [next]
+        };
+      }
+      const bonus = l.chair === game.bonus ? "（ボーナス2倍）" : "";
+      return {
+        title: `セーフ！ ${def()}さんに+${l.gained}点${bonus}`,
+        hint: `電流は${l.trap}番でした。`,
+        center: `+${l.gained}`,
+        actions: [next]
+      };
+    },
+    over: () => {
+      const text = outcomeText();
+      const actions = text.done
+        ? [makeButton("設定を変える", () => setUi("setup"), "small"), makeButton("もう一回", rematch, "primary")]
+        : [makeButton("次のセットへ", nextSet, "primary")];
+      return { title: text.title, hint: text.hint, center: text.done ? "勝負あり" : "セット終了", actions };
+    }
+  };
+
+  /* ---------- rendering ---------- */
+  function renderSetup() {
+    const counts = Array.from({ length: R.RULES.maxChairs - R.RULES.minChairs + 1 }, (_, i) => R.RULES.minChairs + i);
+    $("chairChips").replaceChildren(...counts.map(n => makeChip(`${n}脚`, n === settings.chairs, () => updateSettings({ chairs: n }))));
+    $("bonusChips").replaceChildren(
+      makeChip("あり", settings.bonus, () => updateSettings({ bonus: true })),
+      makeChip("なし", !settings.bonus, () => updateSettings({ bonus: false }))
+    );
+    $("bestOfChips").replaceChildren(...BEST_OF.map(b => makeChip(b.label, b.n === settings.bestOf, () => updateSettings({ bestOf: b.n }))));
+
+    const c = R.configFor(settings.chairs);
+    const lines = [
+      `イスは1〜${settings.chairs}番の${settings.chairs}脚。スマホ1台を2人で回します`,
+      "仕掛ける人がこっそり1脚に電流を仕掛け、座る人が1脚選ぶ",
+      "セーフならイスの番号が点数に。そのイスはなくなる",
+      "電流に当たると点数が0点に戻る。イスは残る",
+      `先に${c.target}点で勝ち。${c.maxShocks}回シビれたら負け`,
+      "イスが残り1脚になったら、点数が多い方の勝ち",
+      ...(settings.bonus ? [`毎セット1脚が★ボーナスイス。座れたら点数${R.RULES.bonusMultiplier}倍`] : []),
+      ...(settings.bestOf > 1 ? [`${Math.ceil(settings.bestOf / 2)}セット先に取った方が優勝。先攻はセットごとに交代`] : [])
+    ];
+    $("dRules").replaceChildren(...lines.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
+
+  function renderScores() {
+    el.scores.hidden = ui.phase === "setup" || !game;
+    if (!game) return;
+    const roleOn = !["setup", "over"].includes(ui.phase);
+    const champion = match ? R.matchWinner(match) : null;
+    const cards = game.names.map((name, i) => {
+      const card = document.createElement("div");
+      const isDef = R.defender(game) === i;
+      const won = ui.phase === "over" && (champion === i || (!isMatch() && game.outcome?.winner === i));
+      card.className = "score" + (roleOn && isDef ? " sitting" : "") + (won ? " won" : "");
+      const pips = Array.from({ length: game.maxShocks }, (_, k) => `<span class="${k < game.shocks[i] ? "on" : ""}"></span>`).join("");
+      const sets = isMatch() ? `<span class="sets">${match.wins[i]}セット</span>` : "";
+      card.innerHTML = `
+        <div class="score-head"><span class="score-name"></span>${roleOn ? `<span class="role">${isDef ? "座る" : "仕掛ける"}</span>` : ""}</div>
+        <div class="pts">${game.scores[i]}<small>/${game.target}点</small></div>
+        <div class="score-foot"><div class="pips" aria-label="シビれ${game.shocks[i]}回">${pips}</div>${sets}</div>`;
+      card.querySelector(".score-name").textContent = name;
+      return card;
+    });
+    el.scores.replaceChildren(...cards);
+  }
+
+  function renderHistory() {
+    const lines = game.names.map((name, i) => {
+      const traps = game.history.filter(h => h.attacker === i).map(h => h.trap).slice(-HISTORY_SHOWN);
+      return traps.length ? `${name}の仕掛け：${traps.join("→")}` : "";
+    }).filter(Boolean);
+    el.history.textContent = lines.join("　／　");
+    el.history.hidden = lines.length === 0;
+  }
+
+  function renderRing() {
+    const showReveal = ["result", "over"].includes(ui.phase) && game.last;
+    const choosing = ["set", "sit"].includes(ui.phase);
+    chairs.forEach((b, n) => {
+      const gone = !game.remaining.includes(n);
+      b.disabled = !choosing || gone;
+      b.className = "chair"
+        + (gone ? " gone" : "")
+        + (n === game.bonus ? " bonus" : "")
+        + (choosing && ui.selected === n ? " selected" : "")
+        + (ui.phase === "reveal" && game.last?.chair === n ? " selected" : "")
+        + (showReveal && game.last.trap === n ? " trap" : "")
+        + (showReveal && game.last.chair === n ? " picked" : "");
+    });
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    const screen = SCREENS[ui.phase]();
+    renderScores();
+    if (ui.phase === "setup") {
+      renderSetup();
+    } else {
+      renderRing();
+      renderHistory();
+      el.title.textContent = screen.title;
+      el.hint.textContent = screen.hint;
+      el.center.textContent = screen.center;
+      el.center.className = "ring-center" + (ui.phase === "result" && game.last.hit ? " shocked" : "");
+    }
+    el.actions.replaceChildren(...screen.actions);
+  }
+
+  function buildRing(n) {
+    chairs.forEach(b => b.remove());
+    chairs = new Map();
+    for (let i = 1; i <= n; i++) {
+      const angle = -Math.PI / 2 + ((i - 1) / n) * 2 * Math.PI;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "chair";
+      b.textContent = i;
+      b.setAttribute("aria-label", `${i}番のイス`);
+      b.style.left = `${50 + 40 * Math.cos(angle)}%`;
+      b.style.top = `${50 + 40 * Math.sin(angle)}%`;
+      b.addEventListener("click", () => onChair(i));
+      chairs.set(i, b);
+      el.ring.appendChild(b);
+    }
+  }
+
+  function init() {
+    settings = loadSettings();
+    Duo.fill(el.names);
+    render();
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.names);
+  }
+
+  return { init, onShow };
+})();
+</script>
+<script>
+/* hitblow-rules.js */
+/* Hit & Blow rules. Each player hides a number with no repeated digits; players take turns guessing the other's.
+ * Hit = right digit in the right place. Blow = right digit in the wrong place.
+ * Rounds are even: if the first guesser solves it, the second guesser still gets that round's guess (a draw is possible). */
+const HitBlowRules = (() => {
+  const DIGIT_OPTIONS = Object.freeze([3, 4]);
+
+  function codeError(code, digits) {
+    if (typeof code !== "string" || !/^[0-9]+$/.test(code)) return "数字だけで入力してください";
+    if (code.length !== digits) return `${digits}けたで入力してください`;
+    if (new Set(code).size !== code.length) return "同じ数字は使えません";
+    return null;
+  }
+  function assertCode(code, digits) {
+    const err = codeError(code, digits);
+    if (err) throw new Error(err);
+  }
+
+  function judge(secret, guess) {
+    let hit = 0;
+    let blow = 0;
+    [...guess].forEach((d, i) => {
+      if (secret[i] === d) hit += 1;
+      else if (secret.includes(d)) blow += 1;
+    });
+    return { hit, blow };
+  }
+
+  function newGame(names, digits, first) {
+    if (!DIGIT_OPTIONS.includes(digits)) throw new Error("けた数は3か4です");
+    return {
+      names: [...names],
+      digits,
+      first,
+      secrets: [null, null],
+      turn: 0,
+      history: [[], []],
+      solved: [false, false],
+      outcome: null
+    };
+  }
+
+  const guesser = (g) => (g.first + g.turn) % 2;
+  const ready = (g) => g.secrets.every(s => s !== null);
+
+  function setSecret(g, player, code) {
+    assertCode(code, g.digits);
+    const secrets = g.secrets.map((s, i) => (i === player ? code : s));
+    return { ...g, secrets };
+  }
+
+  function guess(g, code) {
+    if (!ready(g)) throw new Error("まだ2人とも数字を決めていません");
+    if (g.outcome) throw new Error("勝負はもう終わっています");
+    assertCode(code, g.digits);
+    const p = guesser(g);
+    const result = judge(g.secrets[1 - p], code);
+    const history = g.history.map((h, i) => (i === p ? [...h, { code, ...result }] : h));
+    const solved = g.solved.map((s, i) => (i === p ? s || result.hit === g.digits : s));
+    const roundDone = p !== g.first;
+    const outcome = roundDone && solved.some(Boolean)
+      ? { winner: solved[0] && solved[1] ? null : solved[0] ? 0 : 1, guesses: history[p].length }
+      : null;
+    return { ...g, history, solved, outcome, turn: g.turn + 1, last: { player: p, code, ...result } };
+  }
+
+  /* True when the first guesser already solved it and the second guesser is taking the last chance. */
+  const lastChance = (g) => !g.outcome && g.solved[g.first] && guesser(g) !== g.first;
+
+  return { DIGIT_OPTIONS, codeError, judge, newGame, guesser, ready, setSecret, guess, lastChance };
+})();
+
+if (typeof module !== "undefined") module.exports = HitBlowRules;
+</script>
+<script>
+/* hitblow.js */
+/* Hit & Blow screen: each player hides a number, then they take turns guessing on one phone. */
+const HitBlow = (() => {
+  const H = HitBlowRules;
+  const SETTINGS_KEY = "hitblow.settings";
+  const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+
+  const el = {
+    setup: $("hSetup"), play: $("hPlay"), title: $("hTitle"), hint: $("hHint"),
+    slots: $("hSlots"), keypad: $("hKeypad"), logs: $("hLogs"), actions: $("hActions"),
+    names: [$("hName0"), $("hName1")]
+  };
+
+  let settings = { digits: 3 };
+  let game = null;
+  let ui = { phase: "setup", entry: "", secretFor: 0 };
+  const keys = new Map();
+
+  function setUi(patch) {
+    ui = { ...ui, ...patch };
+    if (ui.phase === "turn") Music.play("think");
+    if (["over", "setup"].includes(ui.phase)) Music.stop();
+    render();
+  }
+  const name = (i) => game.names[i];
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    game = H.newGame(Duo.read(el.names), settings.digits, Math.random() < 0.5 ? 0 : 1);
+    setUi({ phase: "secret", entry: "", secretFor: 0 });
+  }
+  function press(key) {
+    if (!["secret", "turn"].includes(ui.phase)) return;
+    if (ui.entry.length >= game.digits || ui.entry.includes(key)) return;
+    Sound.beep(440 + Number(key) * 40, 0.05, 0, "triangle", 0.18);
+    setUi({ entry: ui.entry + key });
+  }
+  function backspace() {
+    setUi({ entry: ui.entry.slice(0, -1) });
+  }
+  function confirmSecret() {
+    game = H.setSecret(game, ui.secretFor, ui.entry);
+    if (ui.secretFor === 0) setUi({ phase: "pass", entry: "" });
+    else setUi({ phase: "ready", entry: "" });
+  }
+  function call() {
+    game = H.guess(game, ui.entry);
+    const l = game.last;
+    if (game.outcome) {
+      setUi({ phase: "over", entry: "" });
+      Sound.sfx(game.outcome.winner === null ? "fanfare" : "victory");
+      if (game.outcome.winner !== null) Fx.confetti();
+      return;
+    }
+    if (l.hit === game.digits) Sound.sfx("correct");
+    else if (l.hit > 0) Sound.sfx("coin");
+    else if (l.blow > 0) Sound.sfx("pop");
+    else Sound.sfx("wrong");
+    setUi({ phase: "turn", entry: "" });
+  }
+
+  /* ---------- text ---------- */
+  const resultText = (r) => (r.hit === game.digits ? "正解！" : `${r.hit}ヒット ${r.blow}ブロー`);
+
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    secret: () => ({
+      title: `${name(ui.secretFor)}さん、秘密の${game.digits}けたを決めて`,
+      hint: `${name(1 - ui.secretFor)}さんは見ないでね。同じ数字は使えません。`,
+      keypad: true,
+      actions: [
+        makeButton("消す", backspace, "small", ui.entry.length === 0),
+        makeButton("この数字に決める", confirmSecret, "primary", ui.entry.length !== game.digits)
+      ]
+    }),
+    pass: () => ({
+      title: `${name(1)}さんに渡してね`,
+      hint: `${name(0)}さんの数字は隠れました。`,
+      actions: [makeButton(`${name(1)}です、受け取った`, () => setUi({ phase: "secret", secretFor: 1 }), "primary")]
+    }),
+    ready: () => ({
+      title: `準備OK！ 先攻は${name(game.first)}さん`,
+      hint: "ここからは2人で画面を見てOK。交代で相手の数字を予想します。",
+      actions: [makeButton("スタート", () => setUi({ phase: "turn" }), "primary")]
+    }),
+    turn: () => {
+      const g = H.guesser(game);
+      const l = game.last;
+      const lastLine = l ? `${name(l.player)}さん：${l.code} → ${resultText(l)}。` : "";
+      const chance = H.lastChance(game) ? `${name(game.first)}さんが当てました！ 当てれば引き分け。` : "";
+      return {
+        title: `${name(g)}さんの番`,
+        hint: chance || lastLine || `${name(1 - g)}さんの数字を予想して入力`,
+        keypad: true,
+        actions: [
+          makeButton("消す", backspace, "small", ui.entry.length === 0),
+          makeButton(ui.entry.length === game.digits ? `${ui.entry}でコール` : "数字を入れてね", call, "primary", ui.entry.length !== game.digits)
+        ]
+      };
+    },
+    over: () => {
+      const o = game.outcome;
+      return {
+        title: o.winner === null ? "引き分け！" : `${name(o.winner)}さんの勝ち！`,
+        hint: `${name(0)}さんの数字は${game.secrets[0]}、${name(1)}さんの数字は${game.secrets[1]}。${o.guesses}回目で決着。`,
+        actions: [makeButton("設定を変える", () => setUi({ phase: "setup" }), "small"), makeButton("もう一回", start, "primary")]
+      };
+    }
+  };
+
+  /* ---------- rendering ---------- */
+  function renderSetup() {
+    $("hDigitChips").replaceChildren(...H.DIGIT_OPTIONS.map(d => makeChip(`${d}けた`, d === settings.digits, () => {
+      settings = { ...settings, digits: d };
+      Store.save(SETTINGS_KEY, settings);
+      renderSetup();
+    })));
+    const lines = [
+      `それぞれ、同じ数字を使わない${settings.digits}けたの数字をこっそり決める（例：${settings.digits === 3 ? "382" : "3820"}）`,
+      "交代で相手の数字を予想してコールする",
+      "ヒット＝数字も場所も合っている。ブロー＝数字は合っているが場所が違う",
+      "先に全部ヒットした方の勝ち。後攻にも同じ回数のチャンスがあり、両方当てたら引き分け"
+    ];
+    $("hRules").replaceChildren(...lines.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+  }
+
+  function renderSlots(show) {
+    const cells = Array.from({ length: game.digits }, (_, i) => {
+      const s = document.createElement("span");
+      s.className = "slot" + (i === ui.entry.length ? " cur" : "");
+      s.textContent = show ? (ui.entry[i] || "") : "";
+      return s;
+    });
+    el.slots.replaceChildren(...cells);
+    el.slots.hidden = !show;
+  }
+
+  function renderKeypad(active) {
+    el.keypad.hidden = !active;
+    keys.forEach((b, k) => {
+      b.disabled = !active || ui.entry.includes(k) || ui.entry.length >= game.digits;
+    });
+  }
+
+  function renderLogs() {
+    const show = ["turn", "over"].includes(ui.phase);
+    el.logs.hidden = !show;
+    if (!show) return;
+    const g = H.guesser(game);
+    const cols = [0, 1].map(i => {
+      const col = document.createElement("div");
+      col.className = "hb-col" + (ui.phase === "turn" && g === i ? " active" : "");
+      const head = document.createElement("div");
+      head.className = "hb-head";
+      head.textContent = `${name(i)}の予想`;
+      const rows = game.history[i].map(r => {
+        const row = document.createElement("div");
+        row.className = "hb-row" + (r.hit === game.digits ? " solved" : "");
+        row.innerHTML = `<span class="hb-code"></span><span class="hb-res"><b class="h">${r.hit}</b>H <b class="b">${r.blow}</b>B</span>`;
+        row.querySelector(".hb-code").textContent = r.code;
+        return row;
+      }).reverse();
+      col.replaceChildren(head, ...rows);
+      return col;
+    });
+    el.logs.replaceChildren(...cols);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    const screen = SCREENS[ui.phase]();
+    if (ui.phase === "setup") {
+      renderSetup();
+    } else {
+      el.title.textContent = screen.title;
+      el.hint.textContent = screen.hint;
+      renderSlots(Boolean(screen.keypad));
+      renderKeypad(Boolean(screen.keypad));
+      renderLogs();
+    }
+    el.actions.replaceChildren(...screen.actions);
+  }
+
+  function buildKeypad() {
+    KEYS.forEach(k => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "key";
+      b.textContent = k;
+      b.addEventListener("click", () => press(k));
+      keys.set(k, b);
+      el.keypad.appendChild(b);
+    });
+  }
+
+  function init() {
+    const s = Store.load(SETTINGS_KEY, {}) || {};
+    settings = { digits: H.DIGIT_OPTIONS.includes(s.digits) ? s.digits : 3 };
+    Duo.fill(el.names);
+    buildKeypad();
+    render();
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.names);
+  }
+
+  return { init, onShow };
+})();
+</script>
+<script>
+/* hayaoshi-rules.js */
+/* Quick-press duel rules. Each round: wait for the signal, first tap wins the point.
+ * Tapping before the signal (or on a fake signal) is a false start and gives the point to the other player. */
+const HayaoshiRules = (() => {
+  const TARGET_OPTIONS = Object.freeze([3, 5, 7]);
+  const WAIT_MS = Object.freeze({ min: 1500, max: 5000 });
+  const FAKE_CHANCE = 0.35;
+
+  function newMatch(names, target, feints) {
+    if (!TARGET_OPTIONS.includes(target)) throw new Error("先取数は3・5・7のどれかです");
+    return { names: [...names], target, feints: Boolean(feints), scores: [0, 0], log: [], winner: null };
+  }
+
+  /* reason: "fast" (pressed first after the signal, ms = reaction time) or "foul" (player pressed too early). */
+  function award(m, player, reason, ms = null) {
+    if (m.winner !== null) throw new Error("勝負はもう終わっています");
+    if (![0, 1].includes(player)) throw new Error("プレイヤーの指定が正しくありません");
+    const scorer = reason === "foul" ? 1 - player : player;
+    const scores = m.scores.map((s, i) => (i === scorer ? s + 1 : s));
+    const log = [...m.log, { scorer, presser: player, reason, ms }];
+    const winner = scores[scorer] >= m.target ? scorer : null;
+    return { ...m, scores, log, winner };
+  }
+
+  /* Plans one round from random numbers in [0, 1): when the real signal comes and whether a fake comes first. */
+  function planRound(feints, r1, r2, r3) {
+    const span = WAIT_MS.max - WAIT_MS.min;
+    const signalAt = WAIT_MS.min + Math.round(r1 * span);
+    const hasFake = feints && r2 < FAKE_CHANCE && signalAt > 2200;
+    const fakeAt = hasFake ? Math.round(800 + r3 * (signalAt - 1800)) : null;
+    return { signalAt, fakeAt };
+  }
+
+  const bestTime = (m, player) => {
+    const times = m.log.filter(l => l.reason === "fast" && l.scorer === player).map(l => l.ms);
+    return times.length ? Math.min(...times) : null;
+  };
+
+  return { TARGET_OPTIONS, WAIT_MS, newMatch, award, planRound, bestTime };
+})();
+
+if (typeof module !== "undefined") module.exports = HayaoshiRules;
+</script>
+<script>
+/* hayaoshi.js */
+/* Quick-press duel: phone lies flat between two players, each taps their own half when the signal appears. */
+const Hayaoshi = (() => {
+  const Q = HayaoshiRules;
+  const SETTINGS_KEY = "hayaoshi.settings";
+  const FAKE_SHOW_MS = 650;
+  const RESULT_MS = 2000;
+  const OVER_DELAY_MS = 1200;
+  const KEY_FOR = { f: 0, j: 1 };
+
+  const el = {
+    setup: $("qSetup"), actions: $("qActions"), arena: $("arena"), info: $("arenaInfo"),
+    mid: $("arenaButtons"), names: [$("qName0"), $("qName1")],
+    pads: [$("pad0"), $("pad1")]
+  };
+
+  let settings = { target: 5, feints: true };
+  let match = null;
+  let round = { state: "idle", goAt: 0, timers: [], text: ["", ""] };
+
+  /* ---------- timers ---------- */
+  function clearTimers() {
+    round.timers.forEach(clearTimeout);
+    round = { ...round, timers: [] };
+  }
+  function later(fn, ms) {
+    const id = setTimeout(fn, ms);
+    round = { ...round, timers: [...round.timers, id] };
+  }
+  function setRound(patch) {
+    round = { ...round, ...patch };
+    renderArena();
+  }
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    clearTimers();
+    match = Q.newMatch(Duo.read(el.names), settings.target, settings.feints);
+    el.arena.hidden = false;
+    document.body.classList.add("arena-open");
+    setRound({ state: "ready", text: ["かまえて！", "かまえて！"] });
+    Fx.countdown("勝負！").then(() => { if (round.state === "ready") startRound(); });
+  }
+  function startRound() {
+    clearTimers();
+    const plan = Q.planRound(match.feints, Math.random(), Math.random(), Math.random());
+    setRound({ state: "wait", text: ["まだ…", "まだ…"] });
+    if (plan.fakeAt !== null) later(showFake, plan.fakeAt);
+    later(go, plan.signalAt);
+  }
+  function showFake() {
+    if (round.state !== "wait") return;
+    Sound.sfx("wrong");
+    setRound({ state: "fake", text: ["まだ！", "まだ！"] });
+    later(() => { if (round.state === "fake") setRound({ state: "wait", text: ["まだ…", "まだ…"] }); }, FAKE_SHOW_MS);
+  }
+  function go() {
+    if (round.state !== "wait") return;
+    setRound({ state: "go", goAt: performance.now(), text: ["押せ！", "押せ！"] });
+    Sound.sfx("go");
+  }
+  function press(player) {
+    if (!["wait", "fake", "go"].includes(round.state)) return;
+    const early = round.state !== "go";
+    const ms = early ? null : Math.round(performance.now() - round.goAt);
+    clearTimers();
+    match = Q.award(match, player, early ? "foul" : "fast", ms);
+    const other = 1 - player;
+    const text = early
+      ? (player === 0 ? ["フライング！", "ラッキー +1"] : ["ラッキー +1", "フライング！"])
+      : (player === 0 ? [`+1　${(ms / 1000).toFixed(3)}秒`, "おそい！"] : ["おそい！", `+1　${(ms / 1000).toFixed(3)}秒`]);
+    if (early) Sound.sfx("wrong"); else Sound.sfx("correct");
+    setRound({ state: "result", text, scorer: early ? other : player });
+    if (match.winner !== null) later(showOver, OVER_DELAY_MS);
+    else later(startRound, RESULT_MS);
+  }
+  function showOver() {
+    Sound.sfx("victory");
+    Fx.confetti();
+    const w = match.winner;
+    const best = (i) => {
+      const t = Q.bestTime(match, i);
+      return t === null ? "" : `　最速 ${(t / 1000).toFixed(3)}秒`;
+    };
+    const text = [0, 1].map(i => (i === w ? "勝ち！" : "負け…") + best(i));
+    setRound({ state: "over", text });
+  }
+  function quit() {
+    clearTimers();
+    setRound({ state: "idle" });
+    el.arena.hidden = true;
+    document.body.classList.remove("arena-open");
+  }
+
+  /* ---------- rendering ---------- */
+  function renderArena() {
+    el.arena.dataset.state = round.state;
+    if (!match) return;
+    el.pads.forEach((pad, i) => {
+      pad.querySelector(".pad-name").textContent = match.names[i];
+      pad.querySelector(".pad-msg").textContent = round.text[i] || "";
+      pad.querySelector(".pad-score").textContent = `${match.scores[i]} / ${match.target}`;
+      const lead = round.state === "result" ? round.scorer === i : round.state === "over" ? match.winner === i : false;
+      pad.classList.toggle("lead", lead);
+    });
+    el.info.textContent = `${match.names[0]} ${match.scores[0]} - ${match.scores[1]} ${match.names[1]}　（${match.target}点先取${match.feints ? "・フェイントあり" : ""}）`;
+    const buttons = round.state === "over"
+      ? [makeButton("もう一回", start, "primary"), makeButton("やめる", quit, "small")]
+      : [makeButton("やめる", quit, "small")];
+    el.mid.replaceChildren(...buttons);
+  }
+
+  function renderSetup() {
+    $("qTargetChips").replaceChildren(...Q.TARGET_OPTIONS.map(t => makeChip(`${t}点先取`, t === settings.target, () => update({ target: t }))));
+    $("qFeintChips").replaceChildren(
+      makeChip("あり", settings.feints, () => update({ feints: true })),
+      makeChip("なし", !settings.feints, () => update({ feints: false }))
+    );
+    const lines = [
+      "スマホを2人の間に平らに置く。画面の下半分が1人目、上半分が2人目",
+      "「まだ…」の間は待つ。「押せ！」が出たら自分の側を先にタップした方が1点",
+      "合図の前に押したらフライング。相手に1点",
+      ...(settings.feints ? ["赤い「まだ！」はフェイント。つられて押すとフライング"] : []),
+      `先に${settings.target}点取った方の勝ち`
+    ];
+    $("qRules").replaceChildren(...lines.map(t => { const li = document.createElement("li"); li.textContent = t; return li; }));
+    el.actions.replaceChildren(makeButton("はじめる", start, "primary"));
+  }
+  function update(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(SETTINGS_KEY, settings);
+    renderSetup();
+  }
+
+  function init() {
+    const s = Store.load(SETTINGS_KEY, {}) || {};
+    settings = {
+      target: Q.TARGET_OPTIONS.includes(s.target) ? s.target : 5,
+      feints: typeof s.feints === "boolean" ? s.feints : true
+    };
+    Duo.fill(el.names);
+    el.pads.forEach((pad, i) => {
+      pad.addEventListener("pointerdown", (e) => { e.preventDefault(); press(i); });
+      pad.addEventListener("contextmenu", (e) => e.preventDefault());
+    });
+    document.addEventListener("keydown", (e) => {
+      if (el.arena.hidden || e.repeat) return;
+      if (e.key === "Escape") { quit(); return; }
+      const p = KEY_FOR[e.key.toLowerCase()];
+      if (p !== undefined) press(p);
+    });
+    renderSetup();
+  }
+  function onShow() {
+    Duo.fill(el.names);
+  }
+  function leave() {
+    if (!el.arena.hidden) quit();
+  }
+
+  return { init, onShow, leave };
+})();
+</script>
+<script>
+/* wordwolf-rules.js */
+/* Word wolf rules. Everyone gets a word; the wolves get a slightly different one. Talk, then vote. */
+const WordWolfRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const PLAYERS = Object.freeze({ min: 3, max: 8 });
+  const TALK_MINUTES = Object.freeze([2, 3, 5]);
+
+  const PAIRS = Object.freeze([
+    ["犬", "猫"], ["うどん", "そば"], ["海", "プール"], ["コーヒー", "紅茶"], ["春", "秋"],
+    ["電車", "バス"], ["映画館", "カラオケ"], ["ラーメン", "カレー"], ["寿司", "焼肉"], ["野球", "サッカー"],
+    ["遊園地", "水族館"], ["東京", "大阪"], ["朝ごはん", "夜ごはん"], ["誕生日", "クリスマス"], ["温泉", "サウナ"],
+    ["スマホ", "パソコン"], ["歯医者", "美容院"], ["図書館", "本屋"], ["コンビニ", "スーパー"], ["雨", "雪"],
+    ["山", "川"], ["枕", "布団"], ["鉛筆", "ボールペン"], ["メガネ", "コンタクト"], ["自転車", "バイク"],
+    ["新幹線", "飛行機"], ["キャンプ", "バーベキュー"], ["ケーキ", "アイス"], ["チョコ", "グミ"], ["運動会", "文化祭"],
+    ["修学旅行", "遠足"], ["先生", "上司"], ["初デート", "合コン"], ["遅刻", "寝坊"], ["筋トレ", "ジョギング"],
+    ["ゲーム", "漫画"], ["YouTube", "テレビ"], ["ピアノ", "ギター"], ["歌手", "俳優"], ["警察官", "消防士"],
+    ["花火大会", "夏祭り"], ["大みそか", "お正月"], ["夏休み", "冬休み"], ["引っ越し", "大掃除"], ["炊飯器", "電子レンジ"],
+    ["シャンプー", "ボディソープ"], ["傘", "レインコート"], ["牛乳", "豆乳"], ["パン", "ごはん"], ["たこ焼き", "お好み焼き"],
+    ["餃子", "シュウマイ"], ["味噌汁", "スープ"], ["焼き鳥", "唐揚げ"], ["回転寿司", "ファミレス"], ["ハンバーガー", "サンドイッチ"],
+    ["ビール", "ハイボール"], ["動物園", "牧場"], ["ドラマ", "アニメ"], ["Tシャツ", "パジャマ"], ["目覚まし時計", "腕時計"],
+    ["ハンカチ", "ティッシュ"], ["ホテル", "旅館"], ["お化け屋敷", "ジェットコースター"], ["ペンギン", "アザラシ"], ["トマト", "いちご"],
+    ["りんご", "梨"], ["みかん", "レモン"], ["納豆", "豆腐"], ["焼きそば", "ナポリタン"], ["おにぎり", "サンドイッチ"]
+  ]);
+
+  const maxWolves = (players) => (players >= 6 ? 2 : 1);
+
+  /* `pair` is [wordA, wordB]; which one the wolves get is random. */
+  function newRound(players, wolves, pair, r = Math.random) {
+    if (!Number.isInteger(players) || players < PLAYERS.min || players > PLAYERS.max) {
+      throw new Error(`人数は${PLAYERS.min}〜${PLAYERS.max}人です`);
+    }
+    if (!Number.isInteger(wolves) || wolves < 1 || wolves > maxWolves(players)) {
+      throw new Error(`${players}人ならウルフは1〜${maxWolves(players)}人です`);
+    }
+    const [majority, minority] = r() < 0.5 ? [pair[0], pair[1]] : [pair[1], pair[0]];
+    const wolfSeats = R.shuffle(Array.from({ length: players }, (_, i) => i), r).slice(0, wolves).sort((a, b) => a - b);
+    const words = Array.from({ length: players }, (_, i) => (wolfSeats.includes(i) ? minority : majority));
+    return { players, wolves: wolfSeats, majority, minority, words };
+  }
+
+  /* Picks a pair not used yet this session; starts over once every pair was used. */
+  function nextPair(used, r = Math.random) {
+    const fresh = PAIRS.map((_, i) => i).filter(i => !used.includes(i));
+    const pool = fresh.length ? fresh : PAIRS.map((_, i) => i);
+    const index = R.pick(pool, r);
+    return { pair: PAIRS[index], used: fresh.length ? [...used, index] : [index] };
+  }
+
+  return { PLAYERS, TALK_MINUTES, PAIRS, maxWolves, newRound, nextPair };
+})();
+
+if (typeof module !== "undefined") module.exports = WordWolfRules;
+</script>
+<script>
+/* wordwolf.js */
+/* Word wolf screen: deal words by passing the phone, talk with a timer, point, reveal. */
+const WordWolf = (() => {
+  const W = WordWolfRules;
+  const KEY = "wordwolf.settings";
+  const DRUM_MS = 1800;
+  const URGENT_SEC = 30;
+
+  const el = {
+    setup: $("wSetup"), play: $("wPlay"), label: $("wLabel"), title: $("wTitle"),
+    card: $("wCard"), clock: $("wClock"), hint: $("wHint"), actions: $("wActions")
+  };
+
+  let settings = { players: 4, wolves: 1, minutes: 3 };
+  let ui = { phase: "setup", seat: 0, shown: false };
+  let round = null;
+  let used = [];
+  let talk = { endAt: 0, timer: 0, lastSec: null };
+
+  const S = (i) => View.seat(i);
+
+  function normalize(s) {
+    const players = Number.isInteger(s.players) && s.players >= W.PLAYERS.min && s.players <= W.PLAYERS.max ? s.players : 4;
+    const wolves = Math.min(Math.max(1, Number.isInteger(s.wolves) ? s.wolves : 1), W.maxWolves(players));
+    const minutes = W.TALK_MINUTES.includes(s.minutes) ? s.minutes : 3;
+    return { players, wolves, minutes };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    const next = W.nextPair(used);
+    used = next.used;
+    round = W.newRound(settings.players, settings.wolves, next.pair);
+    Sound.sfx("confirm");
+    go({ phase: "deal", seat: 0, shown: false });
+  }
+  function showWord() {
+    Sound.sfx("flip");
+    go({ shown: true });
+    Fx.pop(el.card);
+  }
+  function nextSeat() {
+    Sound.sfx("whoosh");
+    if (ui.seat + 1 < round.players) go({ seat: ui.seat + 1, shown: false });
+    else startTalk();
+  }
+  function startTalk() {
+    clearInterval(talk.timer);
+    talk = { endAt: performance.now() + settings.minutes * 60000, timer: setInterval(tick, 200), lastSec: null };
+    Music.play("tension");
+    go({ phase: "talk" });
+    tick();
+  }
+  function tick() {
+    const left = Math.max(0, talk.endAt - performance.now());
+    const sec = Math.ceil(left / 1000);
+    el.clock.textContent = View.clock(sec);
+    el.clock.classList.toggle("urgent", sec <= URGENT_SEC);
+    if (sec <= URGENT_SEC) Music.intensify();
+    if (sec !== talk.lastSec && sec <= 5 && sec > 0) Sound.sfx("count");
+    talk = { ...talk, lastSec: sec };
+    if (left <= 0) endTalk();
+  }
+  function addMinute() {
+    talk = { ...talk, endAt: talk.endAt + 60000 };
+    tick();
+  }
+  function endTalk() {
+    clearInterval(talk.timer);
+    talk = { ...talk, timer: 0 };
+    Music.stop();
+    Sound.sfx("buzz");
+    go({ phase: "vote" });
+  }
+  function check() {
+    go({ phase: "drum" });
+    Sound.sfx("drumroll", DRUM_MS / 1000);
+    setTimeout(() => {
+      if (ui.phase !== "drum") return;
+      Sound.sfx("reveal");
+      go({ phase: "reveal" });
+      Fx.pop(el.card);
+    }, DRUM_MS);
+  }
+
+  /* ---------- screens ---------- */
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    deal: () => {
+      const last = ui.seat + 1 >= round.players;
+      if (!ui.shown) {
+        return {
+          label: `${ui.seat + 1} / ${round.players}人目`,
+          title: `${S(ui.seat)}さんだけ見てね`,
+          card: { main: "？", back: true },
+          hint: "ほかの人は画面を見ないで",
+          actions: [makeButton("お題を見る", showWord, "primary")]
+        };
+      }
+      return {
+        label: `${S(ui.seat)}さんのお題`,
+        title: "",
+        card: { main: round.words[ui.seat] },
+        hint: "覚えたら画面を戻して次の人へ。自分がウルフかどうかは、まだ分かりません。",
+        actions: [makeButton(last ? "覚えた！ 話し合いへ" : `覚えた！ ${S(ui.seat + 1)}さんへ`, nextSeat, "primary")]
+      };
+    },
+    talk: () => ({
+      label: "話し合い",
+      title: "ウルフは誰だ？",
+      hint: `お題について話そう。ウルフは${round.wolves.length}人。ウルフはばれないように話を合わせて。`,
+      actions: [makeButton("+1分", addMinute, "small"), makeButton("話し合いを終える", endTalk, "primary")]
+    }),
+    vote: () => ({
+      label: "投票",
+      title: "せーので、ウルフだと思う人を指差して！",
+      hint: "いちばん多く指された人が、ウルフかどうか…",
+      actions: [makeButton("答え合わせ", check, "primary")]
+    }),
+    drum: () => ({ label: "答え合わせ", title: "ウルフは…", card: { main: "？", back: true }, actions: [] }),
+    reveal: () => ({
+      label: "結果",
+      title: `ウルフは ${round.wolves.map(S).join("・")}さん！`,
+      card: { main: `みんな「${round.majority}」`, sub: `ウルフ「${round.minority}」`, cls: "pair" },
+      hint: "ウルフを指せたら、みんなの勝ち。ウルフは、みんなのお題を言い当てられたら逆転勝ち！",
+      actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("次のお題で遊ぶ", start, "primary")]
+    })
+  };
+
+  function renderSetup() {
+    View.chips($("wPlayerChips"), View.options(Array.from({ length: W.PLAYERS.max - W.PLAYERS.min + 1 }, (_, i) => W.PLAYERS.min + i), n => `${n}人`), settings.players, n => update({ players: n }));
+    View.chips($("wWolfChips"), View.options(Array.from({ length: W.maxWolves(settings.players) }, (_, i) => i + 1), n => `${n}人`), settings.wolves, n => update({ wolves: n }));
+    View.chips($("wTalkChips"), View.options(W.TALK_MINUTES, n => `${n}分`), settings.minutes, n => update({ minutes: n }));
+    View.list($("wRules"), [
+      "スマホを回して、1人ずつこっそりお題を見る",
+      `${settings.wolves}人だけ、少し違うお題（ウルフ）。誰がウルフかは本人も知らない`,
+      `${settings.minutes}分間、お題について話す。お題そのものは言わないこと`,
+      "時間が来たら、せーのでウルフだと思う人を指差す",
+      "ウルフが指されたらみんなの勝ち。ただしウルフが、みんなのお題を当てたら逆転勝ち"
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    el.clock.hidden = ui.phase !== "talk";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function init() {
+    settings = normalize(Store.load(KEY, {}) || {});
+    render();
+  }
+  function leave() {
+    if (ui.phase === "talk") {
+      clearInterval(talk.timer);
+      talk = { ...talk, timer: 0 };
+      go({ phase: "vote" });
+    }
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* bomb-rules.js */
+/* Bomb game rules: a hidden fuse, a prompt everyone answers in turn, and a tick that speeds up. */
+const BombRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+
+  const FUSES = Object.freeze({
+    short: { label: "短め", min: 10000, max: 25000 },
+    normal: { label: "ふつう", min: 20000, max: 45000 },
+    long: { label: "長め", min: 35000, max: 70000 }
+  });
+  const KINDS = Object.freeze({
+    mix: "いろいろ",
+    genre: "ジャンル",
+    kana: "頭文字"
+  });
+
+  const GENRES = Object.freeze([
+    "赤いもの", "丸いもの", "冷蔵庫に入っているもの", "コンビニで売っているもの", "動物", "国の名前", "果物", "野菜",
+    "スポーツ", "楽器", "乗り物", "体の部分", "学校にあるもの", "台所にあるもの", "甘いもの", "夏といえば", "冬といえば",
+    "海の生き物", "虫", "鳥", "花", "色", "仕事", "家電", "文房具", "お寿司のネタ", "鍋に入れるもの", "都道府県",
+    "魚", "飲み物", "お菓子", "調味料", "四字熟語", "アニメのキャラクター", "歌手・グループ", "お笑い芸人", "有名な建物",
+    "痛いもの", "やわらかいもの", "光るもの", "四角いもの", "音が出るもの", "空を飛ぶもの", "足が4本の生き物",
+    "カタカナの食べ物", "白いもの", "お弁当のおかず", "遊園地にあるもの", "公園にあるもの", "朝にすること"
+  ]);
+  const KANA = Object.freeze([
+    "あ", "い", "う", "え", "お", "か", "き", "く", "け", "こ", "さ", "し", "す", "せ", "そ",
+    "た", "ち", "つ", "て", "と", "な", "に", "は", "ひ", "ふ", "ほ", "ま", "み", "も", "や", "よ", "ら", "わ"
+  ]);
+
+  function makePrompt(kind, r = Math.random) {
+    if (!KINDS[kind]) throw new Error("お題の種類が正しくありません");
+    const useKana = kind === "kana" || (kind === "mix" && r() < 0.3);
+    return useKana
+      ? { text: `「${R.pick(KANA, r)}」で始まる言葉`, kind: "kana" }
+      : { text: R.pick(GENRES, r), kind: "genre" };
+  }
+
+  function fuseMs(length, r = Math.random) {
+    const f = FUSES[length];
+    if (!f) throw new Error("時間の長さが正しくありません");
+    return R.between(f.min, f.max, r);
+  }
+
+  /* progress 0 (just lit) -> 1 (about to blow): ticks go from 700ms apart down to 150ms. */
+  function tickInterval(progress) {
+    const p = Math.min(1, Math.max(0, progress));
+    return Math.round(700 - 550 * p * p);
+  }
+
+  return { FUSES, KINDS, GENRES, KANA, makePrompt, fuseMs, tickInterval };
+})();
+
+if (typeof module !== "undefined") module.exports = BombRules;
+</script>
+<script>
+/* bomb.js */
+/* Bomb game screen: answer the prompt and pass the phone before the hidden fuse runs out. */
+const Bomb = (() => {
+  const B = BombRules;
+  const KEY = "bomb.settings";
+
+  const el = {
+    setup: $("bSetup"), play: $("bPlay"), label: $("bLabel"), title: $("bTitle"),
+    card: $("bCard"), bomb: $("bBomb"), hint: $("bHint"), actions: $("bActions")
+  };
+
+  let settings = { fuse: "normal", kind: "mix" };
+  let ui = { phase: "setup" };
+  let prompt = null;
+  let fuse = { start: 0, end: 0, passes: 0, alt: false, timer: 0 };
+
+  function update(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(phase) {
+    ui = { phase };
+    render();
+  }
+
+  /* ---------- flow ---------- */
+  function arm() {
+    Sound.ensure();
+    Awake.keep();
+    clearTimeout(fuse.timer);
+    prompt = B.makePrompt(settings.kind);
+    const t = performance.now();
+    fuse = { start: t, end: t + B.fuseMs(settings.fuse), passes: 0, alt: false, timer: 0 };
+    Sound.sfx("confirm");
+    go("armed");
+    Fx.pop(el.card);
+    tick();
+  }
+  function tick() {
+    const t = performance.now();
+    if (t >= fuse.end) { explode(); return; }
+    const progress = (t - fuse.start) / (fuse.end - fuse.start);
+    Sound.sfx("tick", fuse.alt);
+    el.bomb.style.setProperty("--heat", progress.toFixed(3));
+    Fx.replay(el.bomb, "beat");
+    const wait = Math.min(B.tickInterval(progress), fuse.end - t);
+    fuse = { ...fuse, alt: !fuse.alt, timer: setTimeout(tick, wait) };
+  }
+  function pass() {
+    fuse = { ...fuse, passes: fuse.passes + 1 };
+    Sound.sfx("whoosh");
+    render();
+  }
+  function changePrompt() {
+    prompt = B.makePrompt(settings.kind);
+    Sound.sfx("flip");
+    render();
+    Fx.pop(el.card);
+  }
+  function explode() {
+    clearTimeout(fuse.timer);
+    Sound.sfx("boom");
+    Fx.flash("--alert", 700);
+    Fx.shake();
+    go("boom");
+  }
+
+  /* ---------- screens ---------- */
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("点火！", arm, "primary danger")] }),
+    armed: () => ({
+      label: fuse.passes ? `${fuse.passes}回つながった` : "お題",
+      title: "",
+      card: { main: prompt.text, cls: prompt.kind === "kana" ? "kana" : "" },
+      hint: "1つ答えたら、すぐ次の人に渡そう。同じ答えはダメ！",
+      actions: [makeButton("お題を変える", changePrompt, "small"), makeButton("答えた！ 次の人へ", pass, "primary")]
+    }),
+    boom: () => ({
+      label: "",
+      title: "ドカーン！",
+      card: { main: "持っていた人の負け", sub: `お題「${prompt.text}」・${fuse.passes}回つながった` , cls: "boom" },
+      hint: "",
+      actions: [makeButton("設定", () => go("setup"), "small"), makeButton("次のお題で点火", arm, "primary danger")]
+    })
+  };
+
+  function renderSetup() {
+    View.chips($("bFuseChips"), Object.entries(B.FUSES).map(([value, f]) => ({ value, label: f.label })), settings.fuse, v => update({ fuse: v }));
+    View.chips($("bKindChips"), Object.entries(B.KINDS).map(([value, label]) => ({ value, label })), settings.kind, v => update({ kind: v }));
+    const f = B.FUSES[settings.fuse];
+    View.list($("bRules"), [
+      "点火するとお題が出る。持っている人がお題に合う言葉を1つ言って、次の人へ渡す",
+      `爆弾は${Math.round(f.min / 1000)}〜${Math.round(f.max / 1000)}秒のどこかで爆発。いつかは誰にも分からない`,
+      "カチカチ音がだんだん速くなる",
+      "爆発したとき持っていた人の負け。答えに詰まったら、それまで！"
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    el.bomb.hidden = ui.phase !== "armed";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function init() {
+    const s = Store.load(KEY, {}) || {};
+    settings = {
+      fuse: B.FUSES[s.fuse] ? s.fuse : "normal",
+      kind: B.KINDS[s.kind] ? s.kind : "mix"
+    };
+    render();
+  }
+  function leave() {
+    if (ui.phase === "armed") {
+      clearTimeout(fuse.timer);
+      go("setup");
+    }
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* atekko-rules.js */
+/* Forehead guessing rules: one player holds the phone to their forehead, the others give hints.
+ * Each word is either guessed (correct) or skipped (pass); the score is the number of correct words. */
+const AtekkoRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const TIMES = Object.freeze([60, 90, 120]);
+
+  function newRound(pool, r = Math.random) {
+    const words = [...new Set(pool)];
+    if (words.length === 0) throw new Error("お題がありません");
+    return { deck: R.shuffle(words, r), index: 0, results: [] };
+  }
+  const current = (s) => s.deck[s.index % s.deck.length];
+  function answer(s, correct) {
+    return { ...s, index: s.index + 1, results: [...s.results, { word: current(s), correct: Boolean(correct) }] };
+  }
+  const score = (s) => s.results.filter(x => x.correct).length;
+
+  return { TIMES, newRound, current, answer, score };
+})();
+
+if (typeof module !== "undefined") module.exports = AtekkoRules;
+</script>
+<script>
+/* atekko.js */
+/* Forehead quiz screen: the answerer holds the phone to their forehead; the others give hints.
+ * Full-screen view with a pass pad on the left and a correct pad on the right. */
+const Atekko = (() => {
+  const A = AtekkoRules;
+  const KEY = "atekko.settings";
+  const LEVELS = [
+    { value: "kids", label: "こども" }, { value: "easy", label: "かんたん" },
+    { value: "normal", label: "ふつう" }, { value: "hard", label: "むずかしい" }, { value: "all", label: "ぜんぶ" }
+  ];
+  const URGENT_SEC = 10;
+
+  const el = {
+    setup: $("aSetup"), play: $("aPlay"), label: $("aLabel"), title: $("aTitle"),
+    card: $("aCard"), list: $("aList"), hint: $("aHint"), actions: $("aActions"),
+    quiz: $("quiz"), word: $("quizWord"), time: $("quizTime"), score: $("quizScore"),
+    pass: $("quizPass"), ok: $("quizOk")
+  };
+
+  let settings = { seconds: 60, level: "easy" };
+  let ui = { phase: "setup" };
+  let round = null;
+  let clock = { endAt: 0, timer: 0, lastSec: null, running: false };
+
+  function update(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(phase) {
+    ui = { phase };
+    render();
+  }
+  function pool() {
+    const ids = settings.level === "all" ? ["kids", "easy", "normal", "hard"] : [settings.level];
+    return ids.flatMap(id => TOPICS[id]);
+  }
+
+  /* ---------- flow ---------- */
+  async function start() {
+    Sound.ensure();
+    Awake.keep();
+    round = A.newRound(pool());
+    go("ready");
+    await Fx.countdown("スタート！");
+    if (ui.phase !== "ready") return;
+    clock = { endAt: performance.now() + settings.seconds * 1000, timer: setInterval(tick, 150), lastSec: null, running: true };
+    el.quiz.hidden = false;
+    document.body.classList.add("arena-open");
+    Music.play("rush");
+    go("play");
+    showWord();
+    tick();
+  }
+  function showWord() {
+    el.word.textContent = A.current(round);
+    el.word.classList.toggle("long", A.current(round).length >= 7);
+    el.score.textContent = `${A.score(round)}問正解`;
+    Fx.pop(el.word);
+  }
+  function tick() {
+    const left = Math.max(0, clock.endAt - performance.now());
+    const sec = Math.ceil(left / 1000);
+    el.time.textContent = View.clock(sec);
+    el.quiz.classList.toggle("urgent", sec <= URGENT_SEC);
+    if (sec <= URGENT_SEC) Music.intensify();
+    if (sec !== clock.lastSec && sec <= 3 && sec > 0) Sound.sfx("count");
+    clock = { ...clock, lastSec: sec };
+    if (left <= 0) finish();
+  }
+  function answer(correct) {
+    if (ui.phase !== "play") return;
+    round = A.answer(round, correct);
+    Sound.sfx(correct ? "correct" : "whoosh");
+    Fx.replay(el.quiz, correct ? "flash-ok" : "flash-pass");
+    showWord();
+  }
+  function finish() {
+    clearInterval(clock.timer);
+    clock = { ...clock, timer: 0, running: false };
+    Music.stop();
+    Sound.sfx("buzz");
+    el.quiz.hidden = true;
+    document.body.classList.remove("arena-open");
+    go("result");
+    const s = A.score(round);
+    setTimeout(() => {
+      if (s >= 5) Sound.sfx("victory"); else Sound.sfx("fanfare");
+      if (s >= 8) Fx.confetti();
+    }, 900);
+  }
+  function quit() {
+    clearInterval(clock.timer);
+    clock = { ...clock, timer: 0, running: false };
+    Music.stop();
+    el.quiz.hidden = true;
+    document.body.classList.remove("arena-open");
+    go("setup");
+  }
+
+  /* ---------- screens ---------- */
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    ready: () => ({ label: "準備", title: "スマホをおでこに！", hint: "画面をみんなに向けてね", actions: [] }),
+    play: () => ({ label: "プレイ中", title: "", actions: [] }),
+    result: () => {
+      const s = A.score(round);
+      return {
+        label: "結果",
+        title: s >= 8 ? "すごい！" : s >= 5 ? "ナイス！" : "おつかれさま！",
+        card: { main: `${s}問正解`, sub: `${settings.seconds}秒で${round.results.length}問` },
+        hint: "",
+        actions: [makeButton("設定", () => go("setup"), "small"), makeButton("次の人が挑戦", start, "primary")]
+      };
+    }
+  };
+
+  function renderList() {
+    const show = ui.phase === "result";
+    el.list.hidden = !show || round.results.length === 0;
+    if (!show) return;
+    el.list.replaceChildren(...round.results.map(r => {
+      const li = document.createElement("li");
+      li.className = r.correct ? "ok" : "ng";
+      const mark = document.createElement("b");
+      mark.textContent = r.correct ? "○" : "パス";
+      const word = document.createElement("span");
+      word.textContent = r.word;
+      li.append(mark, word);
+      return li;
+    }));
+  }
+
+  function renderSetup() {
+    View.chips($("aTimeChips"), View.options(A.TIMES, n => `${n}秒`), settings.seconds, n => update({ seconds: n }));
+    View.chips($("aLevelChips"), LEVELS, settings.level, v => update({ level: v }));
+    View.list($("aRules"), [
+      "答える人は、スマホを横向きにしておでこに当てる（画面はみんなの方へ）",
+      "ほかの人は、言葉やジェスチャーでヒントを出す。お題そのものを言うのはダメ",
+      "当たったら画面の右側「正解」、分からなければ左側「パス」をタップ",
+      `${settings.seconds}秒で何問当てられるか勝負。交代して最高記録をねらおう`
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    renderList();
+  }
+
+  function init() {
+    const s = Store.load(KEY, {}) || {};
+    settings = {
+      seconds: A.TIMES.includes(s.seconds) ? s.seconds : 60,
+      level: LEVELS.some(l => l.value === s.level) ? s.level : "easy"
+    };
+    el.pass.addEventListener("pointerdown", (e) => { e.preventDefault(); answer(false); });
+    el.ok.addEventListener("pointerdown", (e) => { e.preventDefault(); answer(true); });
+    $("quizQuit").addEventListener("click", quit);
+    document.addEventListener("keydown", (e) => {
+      if (el.quiz.hidden) return;
+      if (e.key === "ArrowRight") answer(true);
+      if (e.key === "ArrowLeft") answer(false);
+      if (e.key === "Escape") quit();
+    });
+    render();
+  }
+  function leave() {
+    if (clock.running || ui.phase === "ready") quit();
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* kachikan-rules.js */
+/* Value-number rules (cooperative). Everyone gets a secret number 1-100 and describes it through the theme;
+ * the group then puts everyone in order from smallest to largest. */
+const KachikanRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const PLAYERS = Object.freeze({ min: 2, max: 8 });
+  const MAX_NUMBER = 100;
+  const SEATS = Object.freeze(["A", "B", "C", "D", "E", "F", "G", "H"]);
+
+  /* low = what 1 means, high = what 100 means. */
+  const THEMES = Object.freeze([
+    { text: "食べ物", low: "苦手", high: "大好き" },
+    { text: "怖いもの", low: "ぜんぜん平気", high: "めちゃくちゃ怖い" },
+    { text: "強そうな動物", low: "弱そう", high: "最強" },
+    { text: "便利な道具", low: "なくてもいい", high: "ないと生きていけない" },
+    { text: "値段が高そうなもの", low: "安い", high: "超高い" },
+    { text: "旅行で行きたい場所", low: "行きたくない", high: "今すぐ行きたい" },
+    { text: "モテそうな仕事", low: "モテなそう", high: "超モテそう" },
+    { text: "もらってうれしいプレゼント", low: "いらない", high: "最高にうれしい" },
+    { text: "痛いこと", low: "ちょっと痛い", high: "激痛" },
+    { text: "大きいもの", low: "小さい", high: "巨大" },
+    { text: "言われてうれしい言葉", low: "うれしくない", high: "泣くほどうれしい" },
+    { text: "朝ごはんに食べたいもの", low: "朝は無理", high: "毎朝食べたい" },
+    { text: "有名人", low: "知る人ぞ知る", high: "日本中が知っている" },
+    { text: "夏にほしいもの", low: "いらない", high: "絶対ほしい" },
+    { text: "子どもが好きそうなもの", low: "子どもは興味なし", high: "子どもが大喜び" },
+    { text: "無人島に持っていきたいもの", low: "役に立たない", high: "命綱" },
+    { text: "テンションが上がること", low: "下がる", high: "最高に上がる" },
+    { text: "恥ずかしいこと", low: "平気", high: "消えたい" },
+    { text: "においが強いもの", low: "ほぼ無臭", high: "強烈" },
+    { text: "速いもの", low: "遅い", high: "超速い" },
+    { text: "給料が高そうな仕事", low: "安そう", high: "大金持ち" },
+    { text: "休みの日にしたいこと", low: "したくない", high: "ずっとしたい" },
+    { text: "コンビニで買うもの", low: "買わない", high: "毎回買う" },
+    { text: "おじいちゃんおばあちゃんが喜ぶもの", low: "困る", high: "大喜び" },
+    { text: "長生きしそうな生き物", low: "すぐ死にそう", high: "何百年も生きそう" },
+    { text: "冬に食べたいもの", low: "冬はいらない", high: "冬はこれ" },
+    { text: "重いもの", low: "軽い", high: "持てない" },
+    { text: "眠くなること", low: "目がさえる", high: "一瞬で寝る" },
+    { text: "子どもの頃の夢", low: "なりたくない", high: "絶対なりたい" },
+    { text: "人気のスポーツ", low: "マイナー", high: "国民的" }
+  ]);
+
+  function deal(players, r = Math.random) {
+    if (!Number.isInteger(players) || players < PLAYERS.min || players > PLAYERS.max) {
+      throw new Error(`人数は${PLAYERS.min}〜${PLAYERS.max}人です`);
+    }
+    const numbers = R.shuffle(Array.from({ length: MAX_NUMBER }, (_, i) => i + 1), r).slice(0, players);
+    return { players, numbers, seats: SEATS.slice(0, players) };
+  }
+
+  /* order: seat indexes from the smallest guess to the largest. Each row is ok when its number is bigger than the one before. */
+  function judgeOrder(numbers, order) {
+    const complete = order.length === numbers.length && new Set(order).size === order.length
+      && order.every(i => Number.isInteger(i) && i >= 0 && i < numbers.length);
+    if (!complete) throw new Error("全員を1回ずつ並べてください");
+    const rows = order.map((seat, k) => ({
+      seat,
+      number: numbers[seat],
+      ok: k === 0 || numbers[seat] > numbers[order[k - 1]]
+    }));
+    return { rows, perfect: rows.every(x => x.ok), misses: rows.filter(x => !x.ok).length };
+  }
+
+  return { PLAYERS, MAX_NUMBER, SEATS, THEMES, deal, judgeOrder };
+})();
+
+if (typeof module !== "undefined") module.exports = KachikanRules;
+</script>
+<script>
+/* kachikan.js */
+/* Value-number screen (cooperative): deal secret numbers, describe them through a theme, line everyone up. */
+const Kachikan = (() => {
+  const K = KachikanRules;
+  const KEY = "kachikan.settings";
+  const REVEAL_STEP_MS = 650;
+
+  const el = {
+    setup: $("kSetup"), play: $("kPlay"), label: $("kLabel"), title: $("kTitle"),
+    card: $("kCard"), order: $("kOrder"), seats: $("kSeats"), list: $("kList"), hint: $("kHint"), actions: $("kActions")
+  };
+
+  let settings = { players: 4 };
+  let ui = { phase: "setup", seat: 0, shown: false, order: [], revealed: 0 };
+  let theme = null;
+  let deal = null;
+  let result = null;
+  let usedThemes = [];
+
+  const S = (i) => View.seat(i);
+  const scale = () => `1＝${theme.low}　100＝${theme.high}`;
+
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function pickTheme() {
+    const fresh = K.THEMES.filter(t => !usedThemes.includes(t.text));
+    const pool = fresh.length ? fresh : K.THEMES;
+    theme = Rand.pick(pool);
+    usedThemes = fresh.length ? [...usedThemes, theme.text] : [theme.text];
+  }
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    pickTheme();
+    Sound.sfx("confirm");
+    go({ phase: "theme" });
+    Fx.pop(el.card);
+  }
+  function changeTheme() {
+    pickTheme();
+    Sound.sfx("flip");
+    render();
+    Fx.pop(el.card);
+  }
+  function startDeal() {
+    deal = K.deal(settings.players);
+    Sound.sfx("whoosh");
+    go({ phase: "deal", seat: 0, shown: false });
+  }
+  function showNumber() {
+    Sound.sfx("flip");
+    go({ shown: true });
+    Fx.pop(el.card);
+  }
+  function nextSeat() {
+    Sound.sfx("whoosh");
+    if (ui.seat + 1 < deal.players) go({ seat: ui.seat + 1, shown: false });
+    else {
+      Music.play("think");
+      go({ phase: "talk" });
+    }
+  }
+  function addToOrder(i) {
+    Sound.sfx("pop");
+    go({ order: [...ui.order, i] });
+  }
+  function check() {
+    result = K.judgeOrder(deal.numbers, ui.order);
+    Music.stop();
+    go({ phase: "check", revealed: 0 });
+    revealNext();
+  }
+  function revealNext() {
+    if (ui.phase !== "check") return;
+    if (ui.revealed >= result.rows.length) {
+      setTimeout(() => {
+        if (ui.phase !== "check") return;
+        if (result.perfect) { Sound.sfx("victory"); Fx.confetti(); } else Sound.sfx("lose");
+        go({ phase: "done" });
+      }, 400);
+      return;
+    }
+    const row = result.rows[ui.revealed];
+    Sound.sfx(row.ok ? "coin" : "wrong");
+    go({ revealed: ui.revealed + 1 });
+    setTimeout(revealNext, REVEAL_STEP_MS);
+  }
+
+  /* ---------- screens ---------- */
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    theme: () => ({
+      label: "今回のお題",
+      title: "",
+      card: { main: theme.text, sub: scale() },
+      hint: "このお題を使って、自分の数字の大きさを表します",
+      actions: [makeButton("お題を変える", changeTheme, "small"), makeButton("数字を配る", startDeal, "primary")]
+    }),
+    deal: () => {
+      if (!ui.shown) {
+        return {
+          label: `${ui.seat + 1} / ${deal.players}人目`,
+          title: `${S(ui.seat)}さんだけ見てね`,
+          card: { main: "？", back: true },
+          hint: "ほかの人は画面を見ないで",
+          actions: [makeButton("数字を見る", showNumber, "primary")]
+        };
+      }
+      const last = ui.seat + 1 >= deal.players;
+      return {
+        label: `${S(ui.seat)}さんの数字`,
+        title: "",
+        card: { main: String(deal.numbers[ui.seat]), sub: `${theme.text}（${scale()}）`, cls: "number" },
+        hint: "数字は口に出さないで！",
+        actions: [makeButton(last ? "覚えた！ スタート" : `覚えた！ ${S(ui.seat + 1)}さんへ`, nextSeat, "primary")]
+      };
+    },
+    talk: () => ({
+      label: "表現タイム",
+      title: "",
+      card: { main: theme.text, sub: scale() },
+      hint: `自分の数字くらいの「${theme.text}」を、1人ずつ言っていこう。全員言ったら、相談して小さい順に並べる。`,
+      actions: [makeButton("並べる", () => go({ phase: "order", order: [] }), "primary")]
+    }),
+    order: () => ({
+      label: "並べる",
+      title: "数字が小さいと思う人から順にタップ",
+      hint: "",
+      actions: [
+        makeButton("やり直す", () => go({ order: [] }), "small", ui.order.length === 0),
+        makeButton("答え合わせ", check, "primary", ui.order.length !== deal.players)
+      ]
+    }),
+    check: () => ({ label: "答え合わせ", title: "", hint: "", actions: [] }),
+    done: () => ({
+      label: "結果",
+      title: result.perfect ? "パーフェクト！" : `${result.misses}か所ちがった！`,
+      hint: result.perfect ? "全員の気持ちがそろいました" : "×の人は、前の人より数字が小さかった人です",
+      actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("次のお題", start, "primary")]
+    })
+  };
+
+  /* ---------- rendering ---------- */
+  function seatChip(i, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "seat-chip";
+    b.textContent = S(i);
+    if (onClick) b.addEventListener("click", onClick);
+    else b.disabled = true;
+    return b;
+  }
+  function renderOrder() {
+    const ordering = ui.phase === "order";
+    el.order.hidden = !ordering;
+    el.seats.hidden = !ordering;
+    if (!ordering) return;
+    const slots = Array.from({ length: deal.players }, (_, k) => {
+      const s = document.createElement("span");
+      s.className = "order-slot" + (k < ui.order.length ? " filled" : "");
+      s.textContent = k < ui.order.length ? S(ui.order[k]) : String(k + 1);
+      return s;
+    });
+    el.order.replaceChildren(...slots);
+    const left = Array.from({ length: deal.players }, (_, i) => i).filter(i => !ui.order.includes(i));
+    el.seats.replaceChildren(...left.map(i => seatChip(i, () => addToOrder(i))));
+  }
+  function renderList() {
+    const show = ["check", "done"].includes(ui.phase);
+    el.list.hidden = !show;
+    if (!show) return;
+    el.list.replaceChildren(...result.rows.slice(0, ui.revealed).map((row, k) => {
+      const li = document.createElement("li");
+      li.className = (row.ok ? "ok" : "ng") + (k === ui.revealed - 1 && ui.phase === "check" ? " fx-pop" : "");
+      li.innerHTML = `<span class="pos">${k + 1}</span><span class="who"></span><b class="num">${row.number}</b><span class="mark">${row.ok ? "○" : "×"}</span>`;
+      li.querySelector(".who").textContent = `${S(row.seat)}さん`;
+      return li;
+    }));
+  }
+  function renderSetup() {
+    View.chips($("kPlayerChips"), View.options(Array.from({ length: K.PLAYERS.max - K.PLAYERS.min + 1 }, (_, i) => K.PLAYERS.min + i), n => `${n}人`), settings.players, n => {
+      settings = { players: n };
+      Store.save(KEY, settings);
+      render();
+    });
+    View.list($("kRules"), [
+      "みんなで協力するゲーム。お題が1つ出る（例：食べ物　1＝苦手、100＝大好き）",
+      "スマホを回して、1人ずつ1〜100の秘密の数字を見る",
+      "自分の数字くらいのものを、お題に沿って言う（例：78なら「焼肉」）",
+      "全員言ったら、相談して数字が小さい順に並べる。全員正しく並べばパーフェクト！"
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (ui.phase !== "setup") {
+      renderOrder();
+      renderList();
+    }
+  }
+
+  function init() {
+    const s = Store.load(KEY, {}) || {};
+    settings = { players: Number.isInteger(s.players) && s.players >= K.PLAYERS.min && s.players <= K.PLAYERS.max ? s.players : 4 };
+    render();
+  }
+  function leave() {
+    if (ui.phase === "check") go({ phase: "done", revealed: result.rows.length });
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* stop-rules.js */
+/* Stop-at-10 rules: each player starts and stops a stopwatch, aiming for the target time exactly.
+ * The display disappears after a few seconds, so players have to count in their heads. */
+const StopRules = (() => {
+  const TARGETS = Object.freeze([5, 10, 30]);
+  const HIDE_AFTER_MS = 3000;
+  const PLAYERS = Object.freeze({ min: 1, max: 8 });
+  const SEATS = Object.freeze(["A", "B", "C", "D", "E", "F", "G", "H"]);
+
+  function newGame(players, target) {
+    if (!Number.isInteger(players) || players < PLAYERS.min || players > PLAYERS.max) {
+      throw new Error(`人数は${PLAYERS.min}〜${PLAYERS.max}人です`);
+    }
+    if (!TARGETS.includes(target)) throw new Error("目標の秒数が正しくありません");
+    return { players, target, seats: SEATS.slice(0, players), results: [] };
+  }
+  const currentSeat = (g) => g.results.length;
+  const finished = (g) => g.results.length >= g.players;
+
+  function record(g, elapsedMs) {
+    if (finished(g)) throw new Error("全員終わっています");
+    if (!Number.isFinite(elapsedMs) || elapsedMs < 0) throw new Error("時間が正しくありません");
+    const ms = Math.round(elapsedMs);
+    const diff = ms - g.target * 1000;
+    return { ...g, results: [...g.results, { seat: currentSeat(g), ms, diff }] };
+  }
+
+  /* Closest to the target first. Ties share the same rank. */
+  function ranking(g) {
+    const sorted = [...g.results].sort((a, b) => Math.abs(a.diff) - Math.abs(b.diff));
+    return sorted.map((x, i) => {
+      const rank = i > 0 && Math.abs(x.diff) === Math.abs(sorted[i - 1].diff)
+        ? null : i + 1;
+      return { ...x, rank };
+    }).reduce((acc, x) => [...acc, { ...x, rank: x.rank ?? acc[acc.length - 1].rank }], []);
+  }
+
+  return { TARGETS, HIDE_AFTER_MS, PLAYERS, SEATS, newGame, currentSeat, finished, record, ranking };
+})();
+
+if (typeof module !== "undefined") module.exports = StopRules;
+</script>
+<script>
+/* stop.js */
+/* Stop-at-10 screen: a stopwatch that hides itself; closest to the target wins. */
+const Stop = (() => {
+  const T = StopRules;
+  const KEY = "stop.settings";
+  const RATINGS = [
+    { within: 30, title: "ぴったり！！", sfx: "victory", confetti: true },
+    { within: 150, title: "おしい！", sfx: "correct" },
+    { within: 500, title: "なかなか！", sfx: "pop" },
+    { within: Infinity, title: "ざんねん…", sfx: "lose" }
+  ];
+
+  const el = {
+    setup: $("tSetup"), play: $("tPlay"), label: $("tLabel"), title: $("tTitle"),
+    display: $("tDisplay"), card: null, list: $("tList"), hint: $("tHint"), actions: $("tActions")
+  };
+
+  let settings = { players: 3, target: 10, hide: true };
+  let game = null;
+  let ui = { phase: "setup" };
+  let watch = { start: 0, raf: 0 };
+
+  const S = (i) => View.seat(i);
+  const secText = (ms) => (ms / 1000).toFixed(2);
+  const diffText = (d) => `${d >= 0 ? "+" : "−"}${(Math.abs(d) / 1000).toFixed(2)}秒`;
+  const rating = (diff) => RATINGS.find(r => Math.abs(diff) <= r.within);
+
+  function update(patch) {
+    settings = { ...settings, ...patch };
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(phase) {
+    ui = { phase };
+    render();
+  }
+
+  /* ---------- flow ---------- */
+  function newGame() {
+    Sound.ensure();
+    Awake.keep();
+    game = T.newGame(settings.players, settings.target);
+    Sound.sfx("confirm");
+    go("turn");
+  }
+  function startWatch() {
+    if (ui.phase !== "turn") return;
+    watch = { start: performance.now(), raf: 0 };
+    Sound.sfx("go");
+    go("running");
+    frame();
+  }
+  function frame() {
+    const ms = performance.now() - watch.start;
+    const hidden = settings.hide && ms >= T.HIDE_AFTER_MS;
+    el.display.textContent = hidden ? "?.??" : secText(ms);
+    el.display.classList.toggle("masked", hidden);
+    watch = { ...watch, raf: requestAnimationFrame(frame) };
+  }
+  function stopWatch() {
+    if (ui.phase !== "running") return;
+    const ms = performance.now() - watch.start;
+    cancelAnimationFrame(watch.raf);
+    game = T.record(game, ms);
+    const last = game.results[game.results.length - 1];
+    const r = rating(last.diff);
+    Sound.sfx(r.sfx);
+    if (r.confetti) Fx.confetti();
+    go("result");
+    Fx.pop(el.display);
+  }
+  function next() {
+    if (T.finished(game)) {
+      Sound.sfx("reveal");
+      go("ranking");
+      if (game.players > 1) setTimeout(() => { Sound.sfx("victory"); Fx.confetti(); }, 700);
+    } else {
+      Sound.sfx("whoosh");
+      go("turn");
+    }
+  }
+
+  /* ---------- screens ---------- */
+  function bigButton(label, handler, cls) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = `btn primary big-press ${cls}`;
+    b.textContent = label;
+    b.addEventListener("pointerdown", (e) => { e.preventDefault(); handler(); });
+    b.addEventListener("keydown", (e) => { if (e.key === " " || e.key === "Enter") { e.preventDefault(); handler(); } });
+    return b;
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", newGame, "primary")] }),
+    turn: () => ({
+      label: `${T.currentSeat(game) + 1} / ${game.players}人目`,
+      title: `${S(T.currentSeat(game))}さんの番`,
+      hint: `ぴったり${game.target}秒で止めよう。${settings.hide ? `数字は${T.HIDE_AFTER_MS / 1000}秒で消えます。` : ""}`,
+      actions: [bigButton("スタート", startWatch, "")]
+    }),
+    running: () => ({
+      label: `${S(T.currentSeat(game))}さん`,
+      title: "",
+      hint: "心の中で数えて…",
+      actions: [bigButton("ストップ！", stopWatch, "danger")]
+    }),
+    result: () => {
+      const last = game.results[game.results.length - 1];
+      return {
+        label: `${S(last.seat)}さんの記録`,
+        title: rating(last.diff).title,
+        hint: `目標${game.target}秒から ${diffText(last.diff)}`,
+        actions: [makeButton(T.finished(game) ? "結果発表" : `${S(T.currentSeat(game))}さんへ`, next, "primary")]
+      };
+    },
+    ranking: () => {
+      const top = T.ranking(game)[0];
+      return {
+        label: "結果発表",
+        title: game.players > 1 ? `${S(top.seat)}さんの優勝！` : rating(top.diff).title,
+        hint: "",
+        actions: [makeButton("設定", () => go("setup"), "small"), makeButton("もう一回", newGame, "primary")]
+      };
+    }
+  };
+
+  function renderDisplay() {
+    const show = ["turn", "running", "result"].includes(ui.phase);
+    el.display.hidden = !show;
+    if (!show) return;
+    if (ui.phase === "turn") {
+      el.display.textContent = "0.00";
+      el.display.classList.remove("masked");
+    }
+    if (ui.phase === "result") {
+      el.display.textContent = secText(game.results[game.results.length - 1].ms);
+      el.display.classList.remove("masked");
+    }
+  }
+  function renderList() {
+    const show = ui.phase === "ranking";
+    el.list.hidden = !show;
+    if (!show) return;
+    el.list.replaceChildren(...T.ranking(game).map(r => {
+      const li = document.createElement("li");
+      li.className = r.rank === 1 ? "ok" : "";
+      li.innerHTML = `<span class="pos">${r.rank}位</span><span class="who"></span><b class="num">${secText(r.ms)}</b><span class="mark">${diffText(r.diff)}</span>`;
+      li.querySelector(".who").textContent = `${S(r.seat)}さん`;
+      return li;
+    }));
+  }
+  function renderSetup() {
+    View.chips($("tPlayerChips"), View.options(Array.from({ length: T.PLAYERS.max }, (_, i) => i + 1), n => `${n}人`), settings.players, n => update({ players: n }));
+    View.chips($("tTargetChips"), View.options(T.TARGETS, n => `${n}秒`), settings.target, n => update({ target: n }));
+    View.chips($("tHideChips"), [{ value: true, label: "途中で消える" }, { value: false, label: "ずっと見える" }], settings.hide, v => update({ hide: v }));
+    View.list($("tRules"), [
+      "1人ずつ、スタートを押して心の中で数える",
+      `ぴったり${settings.target}秒だと思ったらストップ`,
+      settings.hide ? `画面の数字は${T.HIDE_AFTER_MS / 1000}秒で消える` : "画面の数字はずっと見える（練習向け）",
+      "全員終わったら、目標にいちばん近い人の優勝"
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (ui.phase !== "setup") {
+      renderDisplay();
+      renderList();
+    }
+  }
+
+  function init() {
+    const s = Store.load(KEY, {}) || {};
+    settings = {
+      players: Number.isInteger(s.players) && s.players >= T.PLAYERS.min && s.players <= T.PLAYERS.max ? s.players : 3,
+      target: T.TARGETS.includes(s.target) ? s.target : 10,
+      hide: typeof s.hide === "boolean" ? s.hide : true
+    };
+    render();
+  }
+  function leave() {
+    if (ui.phase === "running") {
+      cancelAnimationFrame(watch.raf);
+      go("turn");
+    }
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* numbomb-rules.js */
+/* Number bomb rules: a secret number hides between 1 and the max. Players take turns calling a number inside
+ * the remaining range; the range shrinks around the bomb. Whoever calls the bomb's number loses. */
+const NumBombRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const MAXES = Object.freeze([30, 50, 100]);
+
+  function newGame(max, r = Math.random) {
+    if (!MAXES.includes(max)) throw new Error("数字の範囲が正しくありません");
+    return { max, low: 1, high: max, secret: R.between(1, max, r), calls: [], exploded: false };
+  }
+
+  function callError(g, n) {
+    if (g.exploded) return "もう爆発しています";
+    if (!Number.isInteger(n)) return "数字を入れてください";
+    if (n < g.low || n > g.high) return `${g.low}〜${g.high}の中で選んでください`;
+    return null;
+  }
+
+  function call(g, n) {
+    const err = callError(g, n);
+    if (err) throw new Error(err);
+    const hit = n === g.secret;
+    const low = !hit && n < g.secret ? n + 1 : g.low;
+    const high = !hit && n > g.secret ? n - 1 : g.high;
+    return { ...g, low, high, exploded: hit, calls: [...g.calls, { n, hit, low, high }] };
+  }
+
+  /* Only the bomb is left: the next caller has no safe choice. */
+  const cornered = (g) => !g.exploded && g.low === g.high;
+
+  return { MAXES, newGame, callError, call, cornered };
+})();
+
+if (typeof module !== "undefined") module.exports = NumBombRules;
+</script>
+<script>
+/* numbomb.js */
+/* Number bomb screen: call numbers inside the shrinking range; whoever hits the bomb loses. */
+const NumBomb = (() => {
+  const N = NumBombRules;
+  const KEY = "numbomb.settings";
+  const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"];
+  const URGENT_LEFT = 10;
+
+  const el = {
+    setup: $("nSetup"), play: $("nPlay"), label: $("nLabel"), title: $("nTitle"),
+    range: $("nRange"), card: $("nCard"), slots: $("nSlots"), keypad: $("nKeypad"),
+    history: $("nHistory"), hint: $("nHint"), actions: $("nActions")
+  };
+
+  let settings = { max: 100 };
+  let game = null;
+  let ui = { phase: "setup", entry: "", error: "" };
+  const keys = new Map();
+
+  const left = () => game.high - game.low + 1;
+  const maxDigits = () => String(game.max).length;
+
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    game = N.newGame(settings.max);
+    Sound.sfx("confirm");
+    Music.play("tension");
+    go({ phase: "play", entry: "", error: "" });
+  }
+  function press(k) {
+    if (ui.phase !== "play" || ui.entry.length >= maxDigits()) return;
+    if (ui.entry === "" && k === "0") return;
+    Sound.beep(440 + Number(k) * 40, 0.05, 0, "triangle", 0.15);
+    go({ entry: ui.entry + k, error: "" });
+  }
+  function backspace() {
+    go({ entry: ui.entry.slice(0, -1), error: "" });
+  }
+  function call() {
+    const n = Number(ui.entry);
+    const err = N.callError(game, n);
+    if (err) {
+      Sound.sfx("wrong");
+      go({ error: err, entry: "" });
+      return;
+    }
+    game = N.call(game, n);
+    if (game.exploded) {
+      Music.stop();
+      Sound.sfx("boom");
+      Fx.flash("--alert", 700);
+      Fx.shake();
+      go({ phase: "boom", entry: "" });
+      return;
+    }
+    if (left() <= URGENT_LEFT) Music.intensify();
+    Sound.sfx(N.cornered(game) ? "heartbeat" : "pop");
+    go({ entry: "", error: "" });
+    Fx.pop(el.range);
+  }
+
+  /* ---------- screens ---------- */
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary danger")] }),
+    play: () => ({
+      label: `残り${left()}個`,
+      title: "",
+      hint: ui.error || (N.cornered(game) ? "もう爆弾しか残っていない…！" : "順番に、範囲の中の数字を1つ言おう"),
+      actions: [
+        makeButton("消す", backspace, "small", ui.entry.length === 0),
+        makeButton(ui.entry ? `${ui.entry}をコール` : "数字を入れてね", call, "primary", ui.entry.length === 0)
+      ]
+    }),
+    boom: () => ({
+      label: "",
+      title: "ドカーン！",
+      card: { main: String(game.secret), sub: "を言った人の負け", cls: "boom" },
+      hint: "",
+      actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("もう一回", start, "primary danger")]
+    })
+  };
+
+  function renderPlay() {
+    const playing = ui.phase === "play";
+    el.range.hidden = !playing;
+    el.slots.hidden = !playing;
+    el.keypad.hidden = !playing;
+    el.history.hidden = !game || game.calls.length === 0;
+    if (game) el.history.textContent = `コール：${game.calls.map(c => c.n).join(" → ")}`;
+    if (!playing) return;
+    el.range.textContent = `${game.low} 〜 ${game.high}`;
+    el.range.classList.toggle("urgent", left() <= URGENT_LEFT);
+    el.slots.replaceChildren(...Array.from({ length: maxDigits() }, (_, i) => {
+      const s = document.createElement("span");
+      s.className = "slot" + (i === ui.entry.length ? " cur" : "");
+      s.textContent = ui.entry[i] || "";
+      return s;
+    }));
+    keys.forEach((b, k) => { b.disabled = ui.entry.length >= maxDigits() || (ui.entry === "" && k === "0"); });
+  }
+  function renderSetup() {
+    View.chips($("nMaxChips"), View.options(N.MAXES, n => `1〜${n}`), settings.max, n => {
+      settings = { max: n };
+      Store.save(KEY, settings);
+      render();
+    });
+    View.list($("nRules"), [
+      `1〜${settings.max}のどこかに、爆弾の数字が1つかくれている`,
+      "順番に、残っている範囲の中から数字を1つコールする",
+      "爆弾より小さければ下が、大きければ上がせまくなる",
+      "爆弾の数字を言った人の負け。追いつめられる前に、うまく範囲を削ろう"
+    ]);
+  }
+
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (ui.phase !== "setup") renderPlay();
+  }
+
+  function init() {
+    const s = Store.load(KEY, {}) || {};
+    settings = { max: N.MAXES.includes(s.max) ? s.max : 100 };
+    KEYS.forEach(k => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "key";
+      b.textContent = k;
+      b.addEventListener("click", () => press(k));
+      keys.set(k, b);
+      el.keypad.appendChild(b);
+    });
+    render();
+  }
+  function leave() {
+    if (ui.phase === "play") Music.stop();
+  }
+
+  return { init, leave };
+})();
+</script>
+<script>
+/* main.js */
+/* App shell: game list, top bar (back, title, sound), switching games, menu music, UI click sounds. */
+(() => {
+  const MODE_KEY = "party.mode";
+  const GAMES = [
+    { id: "oekaki", title: "20秒おえかき", players: "3人〜", desc: "お題を20秒で描いて、絵だけで当てる", color: "--c-blue", el: "modeOekaki", game: Oekaki },
+    { id: "denki", title: "電気イス", players: "2人", desc: "電流のイスはどれ？ 座るか、読むか", color: "--c-amber", el: "modeDenki", game: Denki },
+    { id: "wordwolf", title: "ワードウルフ", players: "3〜8人", desc: "1人だけ違うお題。話して見つけ出せ", color: "--c-purple", el: "modeWordwolf", game: WordWolf },
+    { id: "bomb", title: "爆弾ゲーム", players: "2人〜", desc: "お題に答えて回す。爆発したら負け", color: "--c-red", el: "modeBomb", game: Bomb },
+    { id: "atekko", title: "おでこ当て", players: "2人〜", desc: "おでこのお題を、みんなのヒントで当てる", color: "--c-orange", el: "modeAtekko", game: Atekko },
+    { id: "kachikan", title: "価値観ナンバー", players: "2〜8人", desc: "数字を言葉で表して、みんなで並べる", color: "--c-pink", el: "modeKachikan", game: Kachikan },
+    { id: "hitblow", title: "数当て", players: "2人", desc: "ヒット&ブローで相手の数字を推理", color: "--c-teal", el: "modeHitblow", game: HitBlow },
+    { id: "hayaoshi", title: "早押しバトル", players: "2人", desc: "合図の瞬間にタップ。フェイントに注意", color: "--c-green", el: "modeHayaoshi", game: Hayaoshi },
+    { id: "stop", title: "10秒ストップ", players: "1〜8人", desc: "消える時計で、ぴったり10秒をねらう", color: "--c-indigo", el: "modeStop", game: Stop },
+    { id: "numbomb", title: "数字爆弾", players: "2人〜", desc: "かくれた爆弾の数字を言ったら負け", color: "--c-slate", el: "modeNumbomb", game: NumBomb }
+  ];
+  const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };
+
+  const menu = $("modeMenu");
+  const homeBtn = $("homeBtn");
+  const soundBtn = $("soundBtn");
+  let current = "menu";
+
+  const byId = (id) => GAMES.find(g => g.id === id);
+
+  const GROUPS = [
+    { id: "party", title: "みんなで盛り上がる", sub: "スマホを回して遊ぶパーティーゲーム" },
+    { id: "classic", title: "定番ゲーム", sub: "遊び大全でおなじみ。2人対戦もCPU対戦も" }
+  ];
+
+  function menuCard(g) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "menu-card";
+    b.style.setProperty("--tile", `var(${g.color})`);
+    b.innerHTML = `<span class="menu-icon">${Icons[g.id]}</span><span class="menu-text"><span class="menu-name"></span><span class="menu-players"></span><span class="menu-desc"></span></span>`;
+    b.querySelector(".menu-name").textContent = g.title;
+    b.querySelector(".menu-players").textContent = g.players;
+    b.querySelector(".menu-desc").textContent = g.desc;
+    b.addEventListener("click", () => { Sound.sfx("confirm"); show(g.id); });
+    return b;
+  }
+
+  function buildMenu() {
+    const sections = GROUPS.map(group => {
+      const games = GAMES.filter(g => (g.group || "party") === group.id);
+      if (games.length === 0) return null;
+      const section = document.createElement("section");
+      section.className = "menu-section";
+      const head = document.createElement("div");
+      head.className = "menu-section-head";
+      head.innerHTML = `<h2 class="menu-section-title"></h2><p class="menu-section-sub"></p>`;
+      head.querySelector("h2").textContent = group.title;
+      head.querySelector("p").textContent = `${group.sub}（${games.length}）`;
+      const grid = document.createElement("div");
+      grid.className = "menu-grid";
+      grid.replaceChildren(...games.map(menuCard));
+      section.append(head, grid);
+      return section;
+    }).filter(Boolean);
+    $("menuGrid").replaceChildren(...sections);
+    $("menuCount").textContent = `スマホ1台で遊べる${GAMES.length}のゲーム`;
+  }
+
+  function renderTopbar() {
+    const g = byId(current);
+    homeBtn.hidden = !g;
+    $("topIcon").innerHTML = g ? Icons[g.id] : "";
+    $("topIcon").style.setProperty("--tile", g ? `var(${g.color})` : "transparent");
+    $("topIcon").hidden = !g;
+    $("topTitle").textContent = g ? g.title : "スマホ1台パーティー";
+    soundBtn.innerHTML = Icons.sound[Sound.mode()];
+    soundBtn.setAttribute("aria-label", `音の設定：${SOUND_LABEL[Sound.mode()]}`);
+    soundBtn.title = SOUND_LABEL[Sound.mode()];
+    $("soundLabel").textContent = SOUND_LABEL[Sound.mode()];
+  }
+
+  function show(id) {
+    const next = byId(id) ? id : "menu";
+    GAMES.forEach(g => {
+      if (g.id !== next) g.game.leave?.();
+      $(g.el).hidden = g.id !== next;
+    });
+    menu.hidden = next !== "menu";
+    current = next;
+    Music.stop();
+    if (next === "menu" && Sound.ctx()) Music.play("menu");
+    byId(next)?.game.onShow?.();
+    Store.save(MODE_KEY, next);
+    renderTopbar();
+    window.scrollTo(0, 0);
+  }
+
+  function cycleSound() {
+    const modes = Sound.MODES;
+    Sound.setMode(modes[(modes.indexOf(Sound.mode()) + 1) % modes.length]);
+    Sound.ensure();
+    if (current === "menu" && Sound.mode() === "all" && !Music.playing()) Music.play("menu");
+    Sound.sfx("select");
+    renderTopbar();
+  }
+
+  /* First touch unlocks audio (browsers block sound until then). */
+  function unlock() {
+    Sound.ensure();
+    if (current === "menu" && !Music.playing()) Music.play("menu");
+  }
+
+  /* Small click sounds for every button, so the whole app feels responsive. */
+  document.addEventListener("click", (e) => {
+    const t = e.target.closest("button");
+    if (!t || t.disabled || t.classList.contains("menu-card") || t.id === "soundBtn") return;
+    if (t.classList.contains("chip")) Sound.sfx("select");
+    else if (!t.classList.contains("key")) Sound.sfx("tap");
+  });
+  document.addEventListener("pointerdown", unlock, { once: true });
+  homeBtn.addEventListener("click", () => show("menu"));
+  soundBtn.addEventListener("click", cycleSound);
+
+  buildMenu();
+  GAMES.forEach(g => g.game.init());
+  const fromLink = location.hash.slice(1);
+  show(byId(fromLink) ? fromLink : "menu");
+})();
+</script>

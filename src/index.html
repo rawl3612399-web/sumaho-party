@@ -1,0 +1,324 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>スマホ1台パーティー</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles-games.css">
+
+<div class="app">
+  <header class="topbar">
+    <button class="icon-btn" id="homeBtn" type="button" aria-label="ゲーム一覧にもどる" hidden></button>
+    <div class="topbar-title"><span class="topbar-icon" id="topIcon" hidden></span><span id="topTitle">スマホ1台パーティー</span></div>
+    <button class="icon-btn sound-btn" id="soundBtn" type="button"></button>
+    <span class="sr-only" id="soundLabel" aria-live="polite"></span>
+  </header>
+
+  <!-- ===== ゲーム一覧 ===== -->
+  <div class="mode" id="modeMenu">
+    <div class="menu-hero">
+      <p class="menu-title">今日はなにして遊ぶ？</p>
+      <p class="menu-sub" id="menuCount"></p>
+    </div>
+    <div class="menu-sections" id="menuGrid"></div>
+  </div>
+
+  <!-- ===== 20秒おえかき ===== -->
+  <div class="mode" id="modeOekaki" hidden>
+    <div class="settings">
+      <div class="row"><span class="row-label">難易度</span><div class="chips" id="levelChips"></div></div>
+      <p class="level-note" id="levelNote"></p>
+      <div class="row"><span class="row-label">時間</span><div class="chips" id="timeChips"></div></div>
+      <div class="row"><span class="row-label">音楽</span><div class="chips" id="musicChips"></div><span class="round" id="round" style="margin-left:auto;padding-top:8px">0問おわり</span></div>
+    </div>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="pReady">
+        <p class="big" id="readyMsg">描く人だけ見てね</p>
+        <p class="hint">お題を見たら、スタートを押して描きはじめます</p>
+      </section>
+      <section class="panel" id="pTopic" hidden>
+        <span class="label">お題</span>
+        <p class="topic" id="topicText"></p>
+        <span class="tag" id="topicTag"></span>
+      </section>
+      <section class="panel" id="pDraw" hidden>
+        <div class="timer" id="timer">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="track" cx="60" cy="60" r="52"></circle>
+            <circle class="bar" id="bar" cx="60" cy="60" r="52"></circle>
+          </svg>
+          <div class="timer-num" id="timerNum">20</div>
+        </div>
+        <button class="peek" id="peek" type="button">長押しでお題を確認</button>
+      </section>
+      <section class="panel" id="pEnd" hidden>
+        <p class="big">そこまで！</p>
+        <p class="hint">みんなで答えを言ってみよう</p>
+      </section>
+      <section class="panel" id="pAnswer" hidden>
+        <span class="label">こたえ</span>
+        <p class="topic" id="answerText"></p>
+      </section>
+    </main>
+    <div class="actions" id="actions"></div>
+    <details id="customBox">
+      <summary>お題を自分で追加する</summary>
+      <textarea id="customInput" placeholder="1行に1つずつ（例：部長の顔）"></textarea>
+      <div>追加したお題はどの難易度にも混ざります。<span id="customCount"></span></div>
+    </details>
+  </div>
+
+  <!-- ===== 電気イスゲーム ===== -->
+  <div class="mode" id="modeDenki" hidden>
+    <div class="scores" id="scores" hidden></div>
+    <main class="stage" id="dStage" aria-live="polite">
+      <section class="panel" id="dSetup">
+        <div class="setup-form">
+          <label for="p1Name">1人目<input class="name-input" id="p1Name" maxlength="12" autocomplete="off"></label>
+          <label for="p2Name">2人目<input class="name-input" id="p2Name" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">イスの数</span><div class="chips" id="chairChips"></div></div>
+          <div class="opt"><span class="row-label">★ボーナスイス</span><div class="chips" id="bonusChips"></div></div>
+          <div class="opt"><span class="row-label">勝負の長さ</span><div class="chips" id="bestOfChips"></div></div>
+        </div>
+        <ul class="rules" id="dRules"></ul>
+      </section>
+      <section class="panel" id="dPlay" hidden>
+        <p class="d-title" id="dTitle"></p>
+        <div class="ring" id="ring"><div class="ring-center" id="ringCenter"></div></div>
+        <p class="hint" id="dHint"></p>
+        <p class="d-history" id="dHistory" hidden></p>
+      </section>
+    </main>
+    <div class="actions" id="dActions"></div>
+  </div>
+
+  <!-- ===== ワードウルフ ===== -->
+  <div class="mode" id="modeWordwolf" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="wSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="wPlayerChips"></div></div>
+          <div class="opt"><span class="row-label">ウルフの数</span><div class="chips" id="wWolfChips"></div></div>
+          <div class="opt"><span class="row-label">話し合い</span><div class="chips" id="wTalkChips"></div></div>
+        </div>
+        <ul class="rules" id="wRules"></ul>
+      </section>
+      <section class="panel" id="wPlay" hidden>
+        <span class="label" id="wLabel"></span>
+        <p class="d-title" id="wTitle"></p>
+        <div class="word-card" id="wCard"></div>
+        <div class="clock" id="wClock" hidden></div>
+        <p class="hint" id="wHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="wActions"></div>
+  </div>
+
+  <!-- ===== 爆弾ゲーム ===== -->
+  <div class="mode" id="modeBomb" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="bSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">爆発までの時間</span><div class="chips" id="bFuseChips"></div></div>
+          <div class="opt"><span class="row-label">お題の種類</span><div class="chips" id="bKindChips"></div></div>
+        </div>
+        <ul class="rules" id="bRules"></ul>
+      </section>
+      <section class="panel" id="bPlay" hidden>
+        <div class="bomb" id="bBomb" aria-hidden="true">
+          <svg viewBox="0 0 120 120">
+            <path class="bomb-fuse" d="M78 30 C 86 18, 98 16, 104 10"/>
+            <rect class="bomb-cap" x="66" y="24" width="20" height="14" rx="3" transform="rotate(35 76 31)"/>
+            <circle class="bomb-body" cx="56" cy="70" r="38"/>
+            <circle class="bomb-heat" cx="56" cy="70" r="38"/>
+            <ellipse class="bomb-shine" cx="42" cy="54" rx="9" ry="6" transform="rotate(-35 42 54)"/>
+          </svg>
+          <span class="spark"></span>
+        </div>
+        <span class="label" id="bLabel"></span>
+        <p class="d-title" id="bTitle"></p>
+        <div class="word-card" id="bCard"></div>
+        <p class="hint" id="bHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="bActions"></div>
+  </div>
+
+  <!-- ===== おでこ当て ===== -->
+  <div class="mode" id="modeAtekko" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="aSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">時間</span><div class="chips" id="aTimeChips"></div></div>
+          <div class="opt"><span class="row-label">お題の難しさ</span><div class="chips" id="aLevelChips"></div></div>
+        </div>
+        <ul class="rules" id="aRules"></ul>
+      </section>
+      <section class="panel" id="aPlay" hidden>
+        <span class="label" id="aLabel"></span>
+        <p class="d-title" id="aTitle"></p>
+        <div class="word-card" id="aCard"></div>
+        <ul class="result-list" id="aList" hidden></ul>
+        <p class="hint" id="aHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="aActions"></div>
+  </div>
+
+  <!-- ===== 価値観ナンバー ===== -->
+  <div class="mode" id="modeKachikan" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="kSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="kPlayerChips"></div></div>
+        </div>
+        <ul class="rules" id="kRules"></ul>
+      </section>
+      <section class="panel" id="kPlay" hidden>
+        <span class="label" id="kLabel"></span>
+        <p class="d-title" id="kTitle"></p>
+        <div class="word-card" id="kCard"></div>
+        <div class="order-row" id="kOrder" hidden></div>
+        <div class="seat-row" id="kSeats" hidden></div>
+        <ol class="result-list ranked" id="kList" hidden></ol>
+        <p class="hint" id="kHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="kActions"></div>
+  </div>
+
+  <!-- ===== ヒット&ブロー ===== -->
+  <div class="mode" id="modeHitblow" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="hSetup">
+        <div class="setup-form">
+          <label for="hName0">1人目<input class="name-input" id="hName0" maxlength="12" autocomplete="off"></label>
+          <label for="hName1">2人目<input class="name-input" id="hName1" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">けた数</span><div class="chips" id="hDigitChips"></div></div>
+        </div>
+        <ul class="rules" id="hRules"></ul>
+      </section>
+      <section class="panel" id="hPlay" hidden>
+        <p class="d-title" id="hTitle"></p>
+        <p class="hint" id="hHint"></p>
+        <div class="slots" id="hSlots"></div>
+        <div class="keypad" id="hKeypad"></div>
+        <div class="hb-logs" id="hLogs" hidden></div>
+      </section>
+    </main>
+    <div class="actions" id="hActions"></div>
+  </div>
+
+  <!-- ===== 早押しバトル ===== -->
+  <div class="mode" id="modeHayaoshi" hidden>
+    <main class="stage">
+      <section class="panel" id="qSetup">
+        <div class="setup-form">
+          <label for="qName0">1人目（下側）<input class="name-input" id="qName0" maxlength="12" autocomplete="off"></label>
+          <label for="qName1">2人目（上側）<input class="name-input" id="qName1" maxlength="12" autocomplete="off"></label>
+        </div>
+        <div class="opts">
+          <div class="opt"><span class="row-label">勝負の長さ</span><div class="chips" id="qTargetChips"></div></div>
+          <div class="opt"><span class="row-label">フェイント</span><div class="chips" id="qFeintChips"></div></div>
+        </div>
+        <ul class="rules" id="qRules"></ul>
+      </section>
+    </main>
+    <div class="actions" id="qActions"></div>
+  </div>
+
+  <!-- ===== 10秒ストップ ===== -->
+  <div class="mode" id="modeStop" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="tSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">人数</span><div class="chips" id="tPlayerChips"></div></div>
+          <div class="opt"><span class="row-label">目標</span><div class="chips" id="tTargetChips"></div></div>
+          <div class="opt"><span class="row-label">時計</span><div class="chips" id="tHideChips"></div></div>
+        </div>
+        <ul class="rules" id="tRules"></ul>
+      </section>
+      <section class="panel" id="tPlay" hidden>
+        <span class="label" id="tLabel"></span>
+        <p class="d-title" id="tTitle"></p>
+        <div class="stopwatch" id="tDisplay">0.00</div>
+        <ol class="result-list ranked" id="tList" hidden></ol>
+        <p class="hint" id="tHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="tActions"></div>
+  </div>
+
+  <!-- ===== 数字爆弾 ===== -->
+  <div class="mode" id="modeNumbomb" hidden>
+    <main class="stage" aria-live="polite">
+      <section class="panel" id="nSetup">
+        <div class="opts">
+          <div class="opt"><span class="row-label">数字の範囲</span><div class="chips" id="nMaxChips"></div></div>
+        </div>
+        <ul class="rules" id="nRules"></ul>
+      </section>
+      <section class="panel" id="nPlay" hidden>
+        <span class="label" id="nLabel"></span>
+        <p class="d-title" id="nTitle"></p>
+        <div class="range" id="nRange"></div>
+        <div class="word-card" id="nCard"></div>
+        <div class="slots" id="nSlots"></div>
+        <div class="keypad" id="nKeypad"></div>
+        <p class="d-history" id="nHistory" hidden></p>
+        <p class="hint" id="nHint"></p>
+      </section>
+    </main>
+    <div class="actions" id="nActions"></div>
+  </div>
+</div>
+
+<!-- full-screen views -->
+<div class="arena" id="arena" data-state="idle" hidden>
+  <div class="pad top" id="pad1" role="button" aria-label="2人目のボタン"><span class="pad-name"></span><span class="pad-msg"></span><span class="pad-score"></span></div>
+  <div class="arena-mid"><span class="arena-info" id="arenaInfo"></span><div class="arena-buttons" id="arenaButtons"></div></div>
+  <div class="pad bottom" id="pad0" role="button" aria-label="1人目のボタン"><span class="pad-name"></span><span class="pad-msg"></span><span class="pad-score"></span></div>
+</div>
+
+<div class="quiz" id="quiz" hidden>
+  <button class="quiz-pad pass" id="quizPass" type="button"><span>パス</span></button>
+  <div class="quiz-center">
+    <div class="quiz-top"><span id="quizTime"></span><span id="quizScore"></span></div>
+    <div class="quiz-word" id="quizWord"></div>
+    <button class="quiz-quit" id="quizQuit" type="button">やめる</button>
+  </div>
+  <button class="quiz-pad ok" id="quizOk" type="button"><span>正解！</span></button>
+</div>
+
+<script src="shared.js" charset="utf-8"></script>
+<script src="random.js" charset="utf-8"></script>
+<script src="audio.js" charset="utf-8"></script>
+<script src="music.js" charset="utf-8"></script>
+<script src="fx.js" charset="utf-8"></script>
+<script src="icons.js" charset="utf-8"></script>
+<script src="topics.js" charset="utf-8"></script>
+<script src="oekaki.js" charset="utf-8"></script>
+<script src="denki-rules.js" charset="utf-8"></script>
+<script src="denki.js" charset="utf-8"></script>
+<script src="hitblow-rules.js" charset="utf-8"></script>
+<script src="hitblow.js" charset="utf-8"></script>
+<script src="hayaoshi-rules.js" charset="utf-8"></script>
+<script src="hayaoshi.js" charset="utf-8"></script>
+<script src="wordwolf-rules.js" charset="utf-8"></script>
+<script src="wordwolf.js" charset="utf-8"></script>
+<script src="bomb-rules.js" charset="utf-8"></script>
+<script src="bomb.js" charset="utf-8"></script>
+<script src="atekko-rules.js" charset="utf-8"></script>
+<script src="atekko.js" charset="utf-8"></script>
+<script src="kachikan-rules.js" charset="utf-8"></script>
+<script src="kachikan.js" charset="utf-8"></script>
+<script src="stop-rules.js" charset="utf-8"></script>
+<script src="stop.js" charset="utf-8"></script>
+<script src="numbomb-rules.js" charset="utf-8"></script>
+<script src="numbomb.js" charset="utf-8"></script>
+<script src="main.js" charset="utf-8"></script>

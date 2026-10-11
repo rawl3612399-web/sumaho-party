@@ -1,0 +1,6 @@
+# local tooling and build output
+.claude/
+_site/
+dev/
+.DS_Store
+node_modules/
