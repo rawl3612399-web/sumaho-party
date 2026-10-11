@@ -1,6 +1,10 @@
 # スマホ1台パーティー
 
-スマホ1台を回して遊ぶ10のゲーム。公開版：https://claude.ai/artifact/KXXDsnnhn68ARYrXpvQrGg
+スマホ1台で遊べる40のゲーム。
+
+- Web版（だれでも遊べる）：https://rawl3612399-web.github.io/sumaho-party/
+- main に push すると GitHub Actions がテスト・ビルドして自動で公開する
+- 作りかけのゲームはローカルの `wip/remaining-games` ブランチにある（まだアプリに入っていない）
 
 | ゲーム | 人数 | 画面 | ルール |
 |---|---|---|---|
