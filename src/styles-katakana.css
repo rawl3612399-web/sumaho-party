@@ -1,0 +1,114 @@
+/* カタカナ禁止トーク: topic card stamp, talk HUD (clock, tally, time bar), the big buzzer, score board, results.
+   Colors come from the tokens in styles.css only. */
+
+/* ---------- topic card ---------- */
+.word-card.katakana-topic { position: relative; }
+.word-card.katakana-topic .wc-main { font-size: clamp(1.7rem, 8vw, 2.4rem); }
+.word-card.katakana-topic::after {
+  content: "カタカナ禁止";
+  position: absolute; top: -12px; right: -6px;
+  font-size: .72rem; font-weight: 900; letter-spacing: .08em;
+  color: var(--alert); background: var(--card);
+  border: 2px solid var(--alert); border-radius: 8px; padding: 2px 8px;
+  transform: rotate(6deg);
+}
+
+/* ---------- talk HUD ---------- */
+.katakana-talk { position: relative; display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.katakana-hud { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(100%, 340px); }
+.katakana-clock {
+  font-family: var(--display); font-size: clamp(2.8rem, 15vw, 4.2rem); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.katakana-clock.urgent { color: var(--alert); animation: pulse 1s ease-in-out infinite; }
+.katakana-tally {
+  display: flex; align-items: baseline; gap: 4px; padding: 6px 14px; border-radius: 16px;
+  border: 2.5px solid var(--alert); color: var(--alert); background: var(--paper);
+}
+.katakana-tally.zero { border-color: var(--line); color: var(--muted); }
+.katakana-tally-label { font-size: .75rem; font-weight: 900; letter-spacing: .06em; }
+.katakana-tally-num { font-family: var(--display); font-size: clamp(2.2rem, 11vw, 3rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.katakana-tally-unit { font-size: .85rem; font-weight: 900; }
+.katakana-hit { animation: katakanaHit .45s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes katakanaHit { 0% { transform: scale(1.45) rotate(-6deg); } 100% { transform: none; } }
+
+.katakana-meter { width: min(100%, 340px); height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.katakana-meter-fill {
+  display: block; height: 100%; border-radius: inherit; background: var(--accent);
+  transform-origin: left center; transition: transform .1s linear;
+}
+.katakana-meter.urgent .katakana-meter-fill { background: var(--alert); }
+
+/* ---------- the buzzer ---------- */
+.katakana-buzzer {
+  position: relative; width: min(62vw, 240px, 31vh); min-width: 120px; aspect-ratio: 1; margin-bottom: 10px;
+  border-radius: 50%; cursor: pointer; padding: 0;
+  font: inherit; font-family: var(--display); font-size: clamp(1.5rem, 8vw, 2.2rem); line-height: 1;
+  color: var(--on-accent); background: var(--alert);
+  border: 4px solid var(--alert-deep);
+  box-shadow: 0 10px 0 var(--alert-deep), inset 0 -10px 0 color-mix(in srgb, var(--alert-deep) 45%, transparent);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform .06s, box-shadow .06s;
+}
+.katakana-buzzer span { position: relative; z-index: 1; }
+.katakana-buzzer::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 3px solid var(--alert); pointer-events: none;
+  animation: katakanaRing 1.6s ease-out infinite;
+}
+@keyframes katakanaRing { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.22); opacity: 0; } }
+.katakana-buzzer:active {
+  transform: translateY(8px);
+  box-shadow: 0 2px 0 var(--alert-deep), inset 0 -4px 0 color-mix(in srgb, var(--alert-deep) 45%, transparent);
+}
+/* No fill mode: a held end state would override :active and the buzzer would stop looking pressed. */
+.katakana-buzzer.katakana-pressed { animation: katakanaPress .22s ease-out; }
+@keyframes katakanaPress {
+  0% { transform: translateY(8px) scale(.96); }
+}
+.katakana-plus {
+  position: absolute; left: 50%; top: 42%; z-index: 2; pointer-events: none;
+  font-family: var(--display); font-size: 2.6rem; line-height: 1; color: var(--alert);
+  text-shadow: 0 2px 0 var(--card);
+  animation: katakanaPlus .8s ease-out forwards;
+}
+@keyframes katakanaPlus {
+  0% { transform: translate(-50%, 0) scale(.6); opacity: 1; }
+  100% { transform: translate(-50%, -110px) scale(1.25); opacity: 0; }
+}
+
+#xActions.katakana-actions-center { justify-content: center; }
+
+/* ---------- score board (between turns) ---------- */
+.katakana-board { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; width: 100%; }
+.katakana-seat {
+  display: inline-flex; align-items: baseline; justify-content: center; gap: 4px; min-width: 52px;
+  padding: 4px 10px; border-radius: 999px; box-sizing: border-box;
+  border: 2px solid var(--line); background: var(--paper); font-variant-numeric: tabular-nums;
+}
+.katakana-seat b { font-family: var(--display); font-weight: 400; font-size: 1.05rem; }
+.katakana-seat small { font-size: .8rem; font-weight: 700; color: var(--muted); }
+.katakana-seat.hot small { color: var(--alert); }
+.katakana-seat.on { border-color: var(--ink); background: var(--ink); color: var(--paper); }
+.katakana-seat.on small { color: var(--paper); }
+
+/* ---------- turn end and results ---------- */
+.word-card.katakana-perfect { border-color: var(--go); box-shadow: 0 6px 0 var(--go); }
+.word-card.katakana-perfect .wc-main { color: var(--go); }
+.word-card.katakana-bad .wc-main { color: var(--alert); }
+.word-card.katakana-champ { background: var(--zap); color: var(--on-zap); }
+.word-card.katakana-champ .wc-main { font-size: clamp(1.8rem, 9vw, 2.6rem); }
+.word-card.katakana-champ .wc-sub { color: var(--on-zap); opacity: .8; font-weight: 700; }
+.katakana-ranking { gap: 4px; }
+.katakana-ranking li {
+  padding-block: 5px;
+  animation: rise .4s cubic-bezier(.2, .9, .3, 1.2) both; animation-delay: calc(var(--i, 0) * 90ms + 150ms);
+}
+.katakana-ranking .mark { color: var(--go); }
+
+@media (prefers-reduced-motion: reduce) {
+  .katakana-clock.urgent, .katakana-hit, .katakana-buzzer::after, .katakana-buzzer.katakana-pressed, .katakana-ranking li { animation: none; }
+  .katakana-buzzer, .katakana-meter-fill { transition: none; }
+  .katakana-buzzer:active { transform: none; }
+  .katakana-plus { display: none; }
+}

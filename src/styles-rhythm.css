@@ -1,0 +1,116 @@
+/* リズム古今東西: the beat circle, bar dots, live counters and best-run cards. Colors come from tokens in styles.css. */
+#modeRhythm { --rh: var(--c-purple); }
+
+/* ---------- play view ---------- */
+#rPlay.rhythm-live { gap: 10px; }
+.rhythm-live #rTitle {
+  font-size: clamp(1.7rem, 8.5vw, 2.5rem);
+  background: linear-gradient(transparent 60%, var(--hl) 60%, var(--hl) 92%, transparent 92%);
+  padding-inline: .15em;
+}
+.rhythm-live #rTitle.rhythm-long { font-size: clamp(1.25rem, 6.2vw, 2.2rem); }
+
+.rhythm-beat {
+  position: relative; width: 100%;
+  display: flex; flex-direction: column; align-items: center; gap: 16px;
+  padding-block: 8px 2px; overflow-x: clip;
+}
+
+/* the big circle that pulses on every beat */
+.rhythm-pulse {
+  position: relative; box-sizing: border-box;
+  width: min(58vw, 230px, 30vh); min-width: 150px; aspect-ratio: 1; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--paper); color: var(--ink);
+  border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink);
+  transition: background-color .1s, color .1s, border-color .1s;
+  user-select: none; -webkit-user-select: none;
+}
+.rhythm-pulse::after {
+  content: ""; position: absolute; inset: -4px; border-radius: 50%;
+  border: 4px solid var(--rh); opacity: 0; pointer-events: none;
+}
+.rhythm-cue { font-family: var(--display); font-size: clamp(2.2rem, 12vw, 3.4rem); line-height: 1; white-space: nowrap; }
+.rhythm-pulse.rhythm-count { border-style: dashed; box-shadow: none; color: var(--muted); }
+.rhythm-pulse.rhythm-count .rhythm-cue { font-size: clamp(2.6rem, 15vw, 4.4rem); color: var(--ink); }
+.rhythm-pulse.rhythm-count::after { border-color: var(--muted); }
+.rhythm-pulse.rhythm-now { background: var(--rh); color: var(--on-tile); }
+.rhythm-pulse.rhythm-now .rhythm-cue { font-size: clamp(2.6rem, 14vw, 4rem); }
+.rhythm-pulse.rhythm-out {
+  background: var(--alert); border-color: var(--alert-deep); box-shadow: 0 6px 0 var(--alert-deep); color: var(--on-accent);
+}
+.rhythm-pulse.rhythm-out::after { border-color: var(--alert); }
+
+.rhythm-pulse.rhythm-hit { animation: rhythmHit .28s cubic-bezier(.2, 1.5, .4, 1); }
+.rhythm-pulse.rhythm-hit::after { animation: rhythmRing .55s ease-out; }
+.rhythm-pulse.rhythm-now.rhythm-hit::after { border-width: 7px; }
+.rhythm-pulse.rhythm-soft.rhythm-hit { animation-name: rhythmSoft; }
+.rhythm-pulse.rhythm-soft.rhythm-hit::after { animation: none; }
+@keyframes rhythmHit { 0% { transform: scale(1.13); } 100% { transform: none; } }
+@keyframes rhythmSoft { 0% { transform: scale(1.04); } 100% { transform: none; } }
+@keyframes rhythmRing { 0% { transform: scale(1); opacity: .85; } 100% { transform: scale(1.38); opacity: 0; } }
+
+/* tempo-up badge on top of the circle */
+.rhythm-up {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 1;
+  width: max-content; margin-inline: auto; padding: 4px 12px; border-radius: 999px;
+  font-family: var(--display); font-size: 1rem; line-height: 1.2;
+  background: var(--ink); color: var(--paper);
+}
+.rhythm-flash { animation: rhythmFlash .6s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes rhythmFlash { 0% { transform: scale(1.6); opacity: 0; } 35% { transform: none; opacity: 1; } }
+
+/* four dots for the bar: パン パン いま いま */
+.rhythm-dots { display: flex; gap: 16px; }
+.rhythm-dots span {
+  width: 20px; height: 20px; border-radius: 50%; box-sizing: border-box;
+  border: 3px solid var(--ink); transition: background-color .08s;
+}
+.rhythm-dots span.rhythm-ans { border-color: var(--rh); }
+.rhythm-dots span.on { background: var(--ink); }
+.rhythm-dots span.rhythm-ans.on { background: var(--rh); }
+
+.rhythm-meta {
+  display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 4px 22px;
+  color: var(--muted); font-size: .85rem; font-weight: 700;
+}
+.rhythm-stat { display: inline-flex; align-items: baseline; gap: 4px; }
+.rhythm-stat b {
+  display: inline-block; min-width: 1.2em; text-align: right;
+  font-family: var(--display); font-weight: 400; font-size: 2rem; line-height: 1;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+}
+.rhythm-tick { animation: rhythmTick .32s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes rhythmTick { 0% { transform: scale(1.4); color: var(--rh); } 100% { transform: none; } }
+
+/* ---------- result card ---------- */
+.word-card.rhythm-score .wc-main { font-size: clamp(2.8rem, 15vw, 4.2rem); color: var(--rh); font-variant-numeric: tabular-nums; }
+
+/* ---------- best runs per game ---------- */
+.rhythm-records { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 380px; }
+.rhythm-rec-head { grid-column: 1 / -1; margin: 0; font-size: .78rem; color: var(--muted); letter-spacing: .12em; text-align: left; }
+.rhythm-rec {
+  min-width: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 4px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.rhythm-rec span { max-width: 100%; font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.rhythm-rec b { font-family: var(--display); font-weight: 400; font-size: 1.7rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.rhythm-rec small { font-size: .7rem; color: var(--muted); }
+.rhythm-rec.on { border-color: var(--rh); }
+.rhythm-rec.on span { color: var(--rh); }
+.rhythm-rec.rhythm-new { background: var(--rh); border-color: var(--rh); color: var(--on-tile); animation: rhythmNew .9s ease-in-out 3; }
+.rhythm-rec.rhythm-new span, .rhythm-rec.rhythm-new small { color: var(--on-tile); }
+@keyframes rhythmNew { 50% { transform: scale(1.07) rotate(-2deg); } }
+
+/* short phones: keep the アウト button on screen */
+@media (max-height: 600px) {
+  #rPlay.rhythm-live { gap: 6px; }
+  .rhythm-beat { gap: 10px; padding-top: 4px; }
+  .rhythm-pulse { width: min(58vw, 230px, 27vh); min-width: 128px; }
+  .rhythm-stat b { font-size: 1.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rhythm-pulse.rhythm-hit, .rhythm-pulse.rhythm-hit::after, .rhythm-tick, .rhythm-flash, .rhythm-rec.rhythm-new { animation: none; }
+  .rhythm-pulse, .rhythm-dots span { transition: none; }
+}

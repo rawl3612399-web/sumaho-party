@@ -1,0 +1,102 @@
+/* 20の扉: remaining-question counter, clock pill, answer track, tally, big reply buttons, result cards.
+   Colors come only from the shared tokens. */
+#modeTobira { --tobira: var(--c-teal); }
+/* Kept tight so the reply buttons and 正解が出た！ fit on a 375x667 phone without scrolling. */
+#modeTobira .stage { padding-block: 14px; }
+#zPlay { gap: 8px; }
+#zHint { white-space: pre-line; }
+#zHint.tobira-urgent { color: var(--alert); font-weight: 700; }
+.tobira-note { color: var(--alert); font-weight: 700; }
+
+/* secret card: tap it to see the word */
+#zCard.tobira-tap { cursor: pointer; transition: transform .06s, box-shadow .06s; }
+#zCard.tobira-tap:active { transform: translateY(4px); box-shadow: 0 2px 0 var(--accent-deep); }
+
+/* ---------- counter + clock ---------- */
+.tobira-status { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 18px; }
+.tobira-count { margin: 0; display: flex; align-items: baseline; gap: 6px; line-height: 1; }
+.tobira-count-unit { font-size: 1rem; font-weight: 900; color: var(--muted); }
+.tobira-count-num {
+  display: inline-block; text-align: center;
+  font-family: var(--display); font-weight: 400; font-size: clamp(3rem, 15vw, 4.6rem);
+  color: var(--tobira); font-variant-numeric: tabular-nums;
+}
+.tobira-count.warm .tobira-count-num, .tobira-count.hot .tobira-count-num { color: var(--alert); }
+.tobira-count.hot .tobira-count-num { animation: pulse .8s ease-in-out infinite; }
+.tobira-count.tobira-alarm { animation: tobiraAlarm .5s ease-out; }
+@keyframes tobiraAlarm {
+  20% { transform: rotate(-4deg) scale(1.08); }
+  45% { transform: rotate(3deg) scale(1.04); }
+  70% { transform: rotate(-2deg); }
+}
+.clock.tobira-clock {
+  font-size: clamp(1.8rem, 9vw, 2.4rem); padding: 6px 16px; border-radius: 999px;
+  border: 2.5px solid var(--line); background: var(--paper);
+}
+.clock.tobira-clock.urgent { border-color: var(--alert); }
+
+/* ---------- answer track: one pip per question ---------- */
+.tobira-track { display: grid; grid-template-columns: repeat(10, minmax(0, 1fr)); gap: 4px; width: min(100%, 330px); }
+.tobira-track.is-dense { grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 3px; }
+.tobira-track.is-dense .tobira-pip { border-width: 1.5px; font-size: .6rem; }
+.tobira-pip {
+  aspect-ratio: 1; box-sizing: border-box; border-radius: 50%; display: grid; place-items: center;
+  border: 2px solid var(--line); color: var(--muted);
+  font-size: .72rem; font-weight: 900; line-height: 1;
+}
+.tobira-pip.is-yes { background: var(--go); border-color: var(--go); color: var(--on-go); }
+.tobira-pip.is-no { background: var(--alert); border-color: var(--alert); color: var(--on-accent); }
+.tobira-pip.is-unknown { background: var(--c-slate); border-color: var(--c-slate); color: var(--on-tile); }
+.tobira-pip.is-correct { background: var(--zap); border-color: var(--zap); color: var(--on-zap); }
+.tobira-pip.is-next { border-color: var(--tobira); border-style: dashed; animation: tobiraNext 1.2s ease-in-out infinite; }
+@keyframes tobiraNext { 50% { transform: scale(.8); } }
+.tobira-pip.tobira-pip-in { animation: tobiraPipIn .32s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes tobiraPipIn { from { transform: scale(1.9); opacity: 0; } }
+
+/* ---------- tally ---------- */
+.tobira-tally { display: flex; flex-wrap: wrap; justify-content: center; gap: 6px 8px; }
+.tobira-tag {
+  display: inline-flex; align-items: baseline; gap: 4px;
+  font-size: .8rem; font-weight: 700; color: var(--muted);
+  padding: 2px 10px; border-radius: 999px; border: 2px solid var(--line); background: var(--paper);
+}
+.tobira-tag b { font-family: var(--display); font-weight: 400; font-size: 1.1rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tobira-tag.is-yes { border-color: var(--go); }
+.tobira-tag.is-no { border-color: var(--alert); }
+.tobira-tag.is-unknown { border-color: var(--c-slate); }
+
+/* ---------- reply buttons ---------- */
+.tobira-answers { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; width: min(100%, 380px); }
+.tobira-ans {
+  font: inherit; font-family: var(--display); font-size: clamp(1.6rem, 8vw, 2.1rem); line-height: 1.1;
+  min-height: 78px; padding: 6px; border-radius: 20px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink); margin-bottom: 6px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: transform .06s, box-shadow .06s;
+}
+.tobira-ans:active { transform: translateY(5px); box-shadow: 0 1px 0 var(--ink); }
+.tobira-ans-mark { font-family: var(--body); font-weight: 900; font-size: .8em; line-height: 1; }
+.tobira-ans.is-yes { background: var(--go); color: var(--on-go); }
+.tobira-ans.is-no { background: var(--alert); color: var(--on-accent); }
+.tobira-ans.is-unknown {
+  grid-column: 1 / -1; min-height: 50px; flex-direction: row; gap: 10px;
+  font-size: clamp(1.25rem, 6vw, 1.5rem); background: var(--card); color: var(--ink);
+}
+.tobira-ans.is-unknown .tobira-ans-mark { color: var(--c-slate); }
+.peek.tobira-peek { min-height: 44px; }
+
+/* ---------- word and result cards ---------- */
+.word-card.tobira-long .wc-main { font-size: clamp(1.5rem, 7.5vw, 2.2rem); }
+.word-card.tobira-win { background: var(--go); color: var(--on-go); }
+.word-card.tobira-win .wc-sub { color: var(--on-go); font-weight: 700; }
+.word-card.tobira-reveal { border-color: var(--tobira); box-shadow: 0 6px 0 var(--tobira); }
+.word-card.tobira-reveal .wc-main {
+  padding-inline: .15em;
+  background: linear-gradient(transparent 58%, var(--hl) 58%, var(--hl) 92%, transparent 92%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tobira-pip.is-next, .tobira-pip.tobira-pip-in, .tobira-count.tobira-alarm, .tobira-count.hot .tobira-count-num { animation: none; }
+  .tobira-ans:active, #zCard.tobira-tap:active { transform: none; }
+}

@@ -1,0 +1,33 @@
+<!-- ===== 20の扉 ===== -->
+<div class="mode" id="modeTobira" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="zSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">質問の数</span><div class="chips" id="zQuestionChips"></div></div>
+        <div class="opt"><span class="row-label">制限時間</span><div class="chips" id="zTimeChips"></div></div>
+        <div class="opt"><span class="row-label">お題</span><div class="chips" id="zLevelChips"></div></div>
+      </div>
+      <ul class="rules" id="zRules"></ul>
+      <p class="hint tobira-note" id="zNote" role="alert" hidden></p>
+    </section>
+    <section class="panel tobira-play" id="zPlay" hidden>
+      <span class="label" id="zLabel"></span>
+      <p class="d-title" id="zTitle"></p>
+      <div class="word-card" id="zCard"></div>
+      <div class="tobira-status" id="zStatus" hidden>
+        <p class="tobira-count" id="zCount"><span class="tobira-count-unit">のこり</span><b class="tobira-count-num" id="zCountNum">20</b><span class="tobira-count-unit">問</span></p>
+        <div class="clock tobira-clock" id="zClock" role="timer" hidden></div>
+      </div>
+      <div class="tobira-track" id="zTrack" aria-hidden="true" hidden></div>
+      <div class="tobira-tally" id="zTally" hidden></div>
+      <div class="tobira-answers" id="zAnswers" hidden>
+        <button class="tobira-ans is-yes" id="zYes" type="button"><span class="tobira-ans-mark" aria-hidden="true">○</span><span>はい</span></button>
+        <button class="tobira-ans is-no" id="zNo" type="button"><span class="tobira-ans-mark" aria-hidden="true">×</span><span>いいえ</span></button>
+        <button class="tobira-ans is-unknown" id="zUnknown" type="button"><span class="tobira-ans-mark" aria-hidden="true">？</span><span>わからない</span></button>
+      </div>
+      <button class="peek tobira-peek" id="zPeek" type="button" aria-live="off" hidden>長押しでお題を確認</button>
+      <p class="hint" id="zHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="zActions"></div>
+</div>

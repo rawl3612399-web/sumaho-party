@@ -1,0 +1,31 @@
+<!-- ===== ヘンテコ名づけ ===== -->
+<div class="mode" id="modeHenteko" hidden>
+  <main class="stage" id="uStage" aria-live="polite">
+    <section class="panel" id="uSetup">
+      <div class="henteko-hero" id="uHero" aria-hidden="true"></div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">人数</span><div class="chips" id="uPlayerChips"></div></div>
+        <div class="opt"><span class="row-label">種類</span><div class="chips" id="uKindChips"></div></div>
+      </div>
+      <ul class="rules" id="uRules"></ul>
+    </section>
+    <section class="panel" id="uPlay" hidden>
+      <span class="label" id="uLabel"></span>
+      <p class="d-title" id="uTitle"></p>
+      <div class="henteko-table" id="uTable">
+        <button class="henteko-deck" id="uDeck" type="button"><small>のこり</small><b id="uDeckCount"></b></button>
+        <div class="henteko-pilewrap" id="uPileWrap">
+          <div class="henteko-pile" id="uPile"></div>
+          <span class="henteko-sparkles" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+          <span class="henteko-badge" id="uBadge" hidden></span>
+          <span class="henteko-count" id="uPileCount" hidden></span>
+        </div>
+      </div>
+      <div class="henteko-seats" id="uSeats" role="group" aria-label="名前を言えた人のボタン"></div>
+      <ol class="result-list" id="uList" hidden></ol>
+      <div class="henteko-gallery" id="uGallery" hidden></div>
+      <p class="hint" id="uHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="uActions"></div>
+</div>

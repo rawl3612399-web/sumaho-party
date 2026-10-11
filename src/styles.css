@@ -53,6 +53,7 @@
 
 [hidden] { display: none !important; }
 html, body { height: 100%; }
+html, body { overflow-x: clip; }
 body {
   margin: 0;
   background-color: var(--paper);
@@ -88,7 +89,7 @@ body.arena-open { overflow: hidden; }
 .chip {
   font: inherit; font-size: .88rem; font-weight: 700; transition: transform .08s;
   border: 2px solid var(--line); background: var(--card); color: var(--ink);
-  border-radius: 999px; padding: 5px 12px; cursor: pointer;
+  border-radius: 999px; padding: 5px 14px; cursor: pointer; min-height: 44px;
 }
 .chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--paper); }
 .chip:disabled { opacity: .45; cursor: default; }

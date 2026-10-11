@@ -11,7 +11,10 @@ const Sound = (() => {
   let musicBus = null;
   let verb = null;
   let noise = null;
-  let mode = MODES.includes(Store.load(MODE_KEY, "all")) ? Store.load(MODE_KEY, "all") : "all";
+  /* Local test servers (localhost / 127.0.0.1) start silent so automated testing makes no noise; add ?sound to the URL to hear it. */
+  const TEST_HOST = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname) && !/[?&]sound\b/.test(location.search);
+  const savedMode = Store.load(MODE_KEY, "all");
+  let mode = TEST_HOST ? "off" : (MODES.includes(savedMode) ? savedMode : "all");
 
   /* ---------- graph ---------- */
   function impulse(seconds, decay) {
@@ -147,6 +150,16 @@ const Sound = (() => {
     src.stop(t + dur + 0.05);
   }
 
+  /* Cuts every effect already scheduled (drum rolls, fanfares, beats) — used when the player leaves a game. */
+  function silence() {
+    if (!ctx || !sfxBus) return;
+    const old = sfxBus;
+    old.gain.setTargetAtTime(0, ctx.currentTime, 0.015);
+    setTimeout(() => old.disconnect(), 250);
+    sfxBus = ctx.createGain();
+    sfxBus.connect(out);
+  }
+
   function vibrate(pattern) {
     try { if (mode !== "off" && navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* not supported */ }
   }
@@ -270,7 +283,7 @@ const Sound = (() => {
   return {
     ensure, setMode, mode: () => mode, MODES,
     ctx: () => ctx, musicBus: () => musicBus, verb: () => verb, hz,
-    tone, hiss, sfx, beep, hit, vibrate,
+    tone, hiss, sfx, beep, hit, vibrate, silence,
     buzz: () => sfx("buzz"), fanfare: () => sfx("fanfare"), chime: () => sfx("correct"),
     drumroll: (s) => sfx("drumroll", s), zap: () => sfx("zap")
   };

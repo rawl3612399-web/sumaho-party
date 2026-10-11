@@ -17,6 +17,13 @@ const Icons = (() => {
       sfx: svg('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M15.5 9a4 4 0 0 1 0 6"/>'),
       off: svg('<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path d="M16 9.5l5 5M21 9.5l-5 5"/>')
     },
-    back: svg('<path d="M14.5 5.5L8 12l6.5 6.5"/>')
+    back: svg('<path d="M14.5 5.5L8 12l6.5 6.5"/>'),
+    finger: svg('<circle cx="6" cy="6.5" r="2.4"/><circle cx="17.5" cy="6" r="2.4"/><circle cx="6.5" cy="17.5" r="2.4"/><circle cx="16" cy="16" r="1.8"/><circle cx="16" cy="16" r="5"/>'),
+    rhythm: svg('<path d="M5.5 20.5h13L15 3.5H9z"/><path d="M8 16.5h8"/><path d="M12 16.5l4.2-9.5"/><circle cx="14.4" cy="10.8" r="1.4"/>'),
+    tobira: svg('<path d="M6 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M4 21h16"/><path d="M10.2 9.2a1.9 1.9 0 1 1 2.6 1.8c-.5.2-.8.6-.8 1.1v.6"/><path d="M12 15.6h.01"/>'),
+    katakana: svg('<path d="M4.5 3h9A2.5 2.5 0 0 1 16 5.5V10a2.5 2.5 0 0 1-2.5 2.5H9l-3.5 3v-3h-1A2.5 2.5 0 0 1 2 10V5.5A2.5 2.5 0 0 1 4.5 3z"/><path d="M6 6.6h5.4c0 2.2-.4 3.4-1.3 4.2M8.6 5c-.1 2.6-.8 4.4-2.3 5.6"/><circle cx="18.5" cy="18.5" r="3.5"/><path d="M16 16l5 5"/>'),
+    henteko: svg('<path d="M5.5 19.5C4 15 5.2 9 12 9s8 6 6.5 10.5z"/><path d="M9 9.6 7.5 5.6M15 9.6l1.5-4"/><circle cx="7.2" cy="4.6" r="1"/><circle cx="16.8" cy="4.6" r="1"/><path d="M9.8 13.4h.01M14.2 13.4h.01" stroke-width="2.6"/><path d="M10 16.2c1.2 1 2.8 1 4 0"/><path d="M8.6 19.5v1.6M15.4 19.5v1.6"/>'),
+    eshiritori: svg('<rect x="2.5" y="3.5" width="8.5" height="8.5" rx="1.8"/><rect x="13" y="12" width="8.5" height="8.5" rx="1.8"/><path d="M11 7.75h6.25V12"/><path d="M15.25 10l2 2 2-2"/><circle cx="6.75" cy="8.6" r="1.9"/><path d="M6.75 6.7V5.8"/><path d="M15.1 16.6l2.15-1.9 2.15 1.9M15.8 16v2.5h2.9V16"/>'),
+    /* games:icons */
   };
 })();

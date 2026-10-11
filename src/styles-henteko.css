@@ -1,0 +1,189 @@
+/* ヘンテコ名づけ: creature art, the deck and the pile, seat buttons, flying cards, results gallery.
+   Face parts keep fixed colors in both themes, so they are this game's own tokens below. */
+:root {
+  --henteko-eye: #ffffff; --henteko-pupil: #1c2838; --henteko-face: #1c2838;
+  --henteko-mouth: #6b1d2a; --henteko-tongue: #ff7d97; --henteko-tooth: #ffffff; --henteko-horn: #f4ead2;
+  --henteko-cheek: rgba(255, 105, 140, .5); --henteko-spot: rgba(255, 255, 255, .4);
+  --henteko-shadow: rgba(28, 40, 56, .14); --henteko-stripe: rgba(255, 255, 255, .16);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --henteko-eye: #f7faf8; --henteko-pupil: #15201c; --henteko-face: #15201c;
+    --henteko-mouth: #5a1622; --henteko-tongue: #ff8fa6; --henteko-tooth: #f7faf8; --henteko-horn: #efe3c6;
+    --henteko-cheek: rgba(255, 120, 150, .45); --henteko-spot: rgba(255, 255, 255, .34);
+    --henteko-shadow: rgba(0, 0, 0, .32); --henteko-stripe: rgba(255, 255, 255, .14);
+  }
+}
+:root[data-theme="dark"] {
+  --henteko-eye: #f7faf8; --henteko-pupil: #15201c; --henteko-face: #15201c;
+  --henteko-mouth: #5a1622; --henteko-tongue: #ff8fa6; --henteko-tooth: #f7faf8; --henteko-horn: #efe3c6;
+  --henteko-cheek: rgba(255, 120, 150, .45); --henteko-spot: rgba(255, 255, 255, .34);
+  --henteko-shadow: rgba(0, 0, 0, .32); --henteko-stripe: rgba(255, 255, 255, .14);
+}
+
+#modeHenteko .stage { gap: 12px; padding-inline: 12px; }
+#uPlay { gap: 12px; }
+
+/* ---------- creature art ---------- */
+.henteko-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.henteko-fill { fill: var(--henteko-main); stroke: var(--ink); stroke-width: 3; stroke-linejoin: round; }
+.henteko-stroke { fill: none; stroke: var(--ink); stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.henteko-acc { fill: var(--henteko-accent); stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+.henteko-horn { fill: var(--henteko-horn); stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+.henteko-leaf { fill: var(--go); stroke: var(--ink); stroke-width: 2; stroke-linejoin: round; }
+.henteko-gold { fill: var(--c-gold); stroke: var(--ink); stroke-width: 2.5; stroke-linejoin: round; }
+.henteko-band { fill: var(--henteko-pupil); }
+.henteko-spot { fill: var(--henteko-spot); }
+.henteko-shadow { fill: var(--henteko-shadow); }
+.henteko-eye { fill: var(--henteko-eye); stroke: var(--ink); stroke-width: 2.5; }
+.henteko-pupil { fill: var(--henteko-pupil); }
+.henteko-glint { fill: var(--henteko-eye); }
+.henteko-line { fill: none; stroke: var(--henteko-face); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.henteko-mouth { fill: var(--henteko-mouth); stroke: var(--henteko-face); stroke-width: 2.5; stroke-linejoin: round; }
+.henteko-tooth { fill: var(--henteko-tooth); stroke: var(--henteko-face); stroke-width: 1.2; }
+.henteko-tongue { fill: var(--henteko-tongue); stroke: var(--henteko-face); stroke-width: 2; }
+.henteko-cheek { fill: var(--henteko-cheek); }
+.henteko-bob { transform-box: fill-box; transform-origin: 50% 100%; animation: hentekoBob 2.4s ease-in-out infinite; }
+.henteko-eyes { transform-box: fill-box; transform-origin: center; animation: hentekoBlink 4.6s ease-in-out infinite; }
+@keyframes hentekoBob { 50% { transform: translateY(-3px) scale(1.015, .985); } }
+@keyframes hentekoBlink { 0%, 90%, 100% { transform: none; } 94% { transform: scaleY(.12); } }
+
+/* ---------- setup hero ---------- */
+.henteko-hero { display: flex; justify-content: center; align-items: flex-end; gap: 4px; margin-top: -4px; }
+.henteko-hero > div { width: 74px; height: 78px; }
+.henteko-hero > div:nth-child(2) { width: 96px; height: 100px; }
+.henteko-hero > div:nth-child(2) .henteko-bob { animation-delay: -.8s; }
+.henteko-hero > div:nth-child(3) .henteko-bob { animation-delay: -1.6s; }
+
+/* ---------- table: deck + pile ---------- */
+.henteko-table { display: flex; align-items: center; justify-content: center; gap: clamp(14px, 5vw, 26px); width: 100%; perspective: 900px; padding-top: 6px; }
+.henteko-deck {
+  flex: none; position: relative; width: min(22vw, 84px); aspect-ratio: 5 / 6; padding: 0; cursor: pointer;
+  font: inherit; color: var(--on-tile); border-radius: 14px; border: 2.5px solid var(--ink);
+  background-color: var(--c-lime);
+  background-image: repeating-linear-gradient(45deg, transparent 0 8px, var(--henteko-stripe) 8px 16px);
+  box-shadow: 4px -4px 0 -1px var(--c-lime), 4px -4px 0 1.5px var(--ink), 8px -8px 0 -1px var(--c-lime), 8px -8px 0 1.5px var(--ink);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  touch-action: manipulation; transition: transform .08s;
+}
+.henteko-deck small { font-size: .7rem; font-weight: 700; letter-spacing: .08em; }
+.henteko-deck b { font-family: var(--display); font-weight: 400; font-size: 1.8rem; line-height: 1.05; font-variant-numeric: tabular-nums; }
+.henteko-deck:disabled { cursor: default; }
+.henteko-deck.ready { animation: hentekoNudge 2.4s ease-in-out infinite; }
+.henteko-deck:active:not(:disabled) { transform: translateY(3px); animation: none; }
+.henteko-deck.empty { background: transparent; border-style: dashed; border-color: var(--line); box-shadow: none; color: var(--muted); }
+@keyframes hentekoNudge { 0%, 72%, 100% { transform: none; } 80% { transform: rotate(-5deg) translateY(-3px); } 88% { transform: rotate(4deg); } }
+
+.henteko-pilewrap { position: relative; flex: none; width: min(52vw, 200px, 27vh); }
+.henteko-pile { position: relative; isolation: isolate; }
+.henteko-card, .henteko-mini {
+  box-sizing: border-box; display: grid; place-items: center;
+  background: var(--card); background: color-mix(in srgb, var(--henteko-main) 15%, var(--card));
+}
+.henteko-card {
+  position: relative; width: 100%; aspect-ratio: 5 / 6; padding: 12% 9% 6%;
+  border-radius: 20px; border: 2.5px solid var(--ink); box-shadow: 0 5px 0 var(--ink);
+}
+.henteko-art { width: 100%; height: 100%; }
+.henteko-under { position: absolute; inset: 0; z-index: -1; border-radius: 20px; border: 2.5px solid var(--ink); background: var(--card); box-sizing: border-box; }
+.henteko-under:nth-child(1) { transform: translate(5px, 4px) rotate(4deg); }
+.henteko-under:nth-child(2) { transform: translate(-5px, 3px) rotate(-5deg); }
+.henteko-under:nth-child(3) { transform: translate(4px, -3px) rotate(7deg); }
+.henteko-under:nth-child(4) { transform: translate(-6px, -2px) rotate(-9deg); }
+.henteko-slot {
+  aspect-ratio: 5 / 6; display: grid; place-items: center; box-sizing: border-box;
+  border: 2.5px dashed var(--line); border-radius: 20px; color: var(--muted); font-family: var(--display); font-size: 1.6rem;
+}
+.henteko-deal { animation: hentekoDeal .44s cubic-bezier(.2, .9, .3, 1.15); }
+.henteko-jolt { animation: hentekoJolt .42s ease-in-out 2; }
+@keyframes hentekoDeal {
+  0% { transform: translateX(-80%) rotateY(-110deg) scale(.55); opacity: 0; }
+  55% { transform: translateX(4%) rotateY(10deg) scale(1.04); opacity: 1; }
+  100% { transform: none; }
+}
+@keyframes hentekoJolt { 25% { transform: rotate(-6deg) scale(1.05); } 75% { transform: rotate(6deg) scale(1.05); } }
+
+/* ---------- badge, pile count, sparkles ---------- */
+.henteko-badge {
+  position: absolute; z-index: 3; top: -16px; left: 50%; translate: -50% 0; rotate: -6deg;
+  display: flex; flex-direction: column; align-items: center; line-height: 1.15; white-space: nowrap;
+  padding: 5px 12px 6px; border-radius: 14px; border: 2.5px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+  background: var(--zap); color: var(--on-zap); pointer-events: none;
+  animation: hentekoStamp .5s cubic-bezier(.2, 1.5, .4, 1);
+}
+.henteko-badge b { font-family: var(--display); font-weight: 400; font-size: 1.15rem; }
+.henteko-badge span { font-size: .74rem; font-weight: 900; }
+.henteko-badge.race { background: var(--alert); color: var(--on-accent); rotate: 5deg; }
+@keyframes hentekoStamp { 0% { transform: scale(2.4); opacity: 0; } 55% { transform: scale(.92); opacity: 1; } 100% { transform: none; } }
+.henteko-count {
+  position: absolute; z-index: 3; right: -10px; bottom: -8px;
+  font-size: .78rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px; border: 2px solid var(--ink); background: var(--card); color: var(--ink);
+}
+.henteko-sparkles { position: absolute; inset: -20px; z-index: 2; pointer-events: none; display: none; }
+.henteko-pilewrap.henteko-first .henteko-sparkles { display: block; }
+.henteko-sparkles i {
+  position: absolute; width: 20px; height: 20px; background: var(--zap);
+  clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%);
+  animation: hentekoTwinkle 1.2s ease-in-out infinite;
+}
+.henteko-sparkles i:nth-child(1) { top: 14%; left: -4px; }
+.henteko-sparkles i:nth-child(2) { top: 4%; right: 0; width: 15px; height: 15px; animation-delay: .3s; }
+.henteko-sparkles i:nth-child(3) { bottom: 22%; right: -6px; animation-delay: .6s; }
+.henteko-sparkles i:nth-child(4) { bottom: 4%; left: 8px; width: 14px; height: 14px; animation-delay: .9s; }
+@keyframes hentekoTwinkle { 0%, 100% { transform: scale(.2); opacity: 0; } 50% { transform: scale(1) rotate(45deg); opacity: 1; } }
+
+/* ---------- seat buttons ---------- */
+.henteko-seats { display: grid; grid-template-columns: repeat(var(--cols, 4), minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 420px; }
+.henteko-seat {
+  position: relative; min-height: 54px; padding: 4px 2px; cursor: pointer; font: inherit;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  border-radius: 14px; border: 2.5px solid var(--line); background: var(--card); color: var(--muted);
+  box-shadow: 0 4px 0 var(--line); margin-bottom: 4px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+  transition: background-color .15s, border-color .15s, transform .06s, box-shadow .06s;
+}
+.henteko-seat b { font-family: var(--display); font-weight: 400; font-size: 1.5rem; line-height: 1.05; color: var(--ink); }
+.henteko-seat small { font-size: .76rem; font-weight: 900; font-variant-numeric: tabular-nums; }
+.henteko-seat:disabled { cursor: default; }
+.henteko-seat.turn { border-color: var(--c-lime); box-shadow: 0 4px 0 var(--c-lime); }
+.henteko-seat.lead small { color: var(--c-gold); }
+.henteko-seats.live .henteko-seat {
+  background: var(--accent); border-color: var(--accent-deep); color: var(--on-accent); box-shadow: 0 4px 0 var(--accent-deep);
+  animation: hentekoLive .8s ease-in-out infinite;
+}
+.henteko-seats.live .henteko-seat b, .henteko-seats.live .henteko-seat.lead small { color: var(--on-accent); }
+.henteko-seats.live .henteko-seat:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--accent-deep); animation: none; }
+@keyframes hentekoLive { 50% { transform: translateY(-2px); } }
+.henteko-gain {
+  position: absolute; left: 50%; top: -10px; translate: -50% 0; pointer-events: none;
+  font-family: var(--display); font-size: 1.4rem; color: var(--go); white-space: nowrap;
+  animation: hentekoGain .95s ease-out forwards;
+}
+@keyframes hentekoGain {
+  0% { transform: translateY(8px) scale(.6); opacity: 0; }
+  25% { transform: translateY(-8px) scale(1.15); opacity: 1; }
+  100% { transform: translateY(-30px); opacity: 0; }
+}
+
+/* ---------- flying cards (award) ---------- */
+.henteko-fly { position: fixed; z-index: 70; margin: 0; pointer-events: none; will-change: transform; }
+.henteko-fly, .henteko-fly * { animation: none !important; }
+
+/* ---------- results gallery ---------- */
+.henteko-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(54px, 1fr)); gap: 8px; width: 100%; max-width: 360px; }
+.henteko-mini { aspect-ratio: 5 / 6; padding: 8px 4px 2px; border-radius: 12px; border: 2px solid var(--ink); }
+.henteko-mini .henteko-bob { animation-duration: 3s; }
+
+/* Short phones (375x667): keep the seat buttons and the action button on screen during a race. */
+@media (max-height: 740px) {
+  #uPlay { gap: 9px; }
+  .henteko-pilewrap { width: min(52vw, 200px, 23vh); }
+  .henteko-seat { min-height: 50px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .henteko-bob, .henteko-eyes, .henteko-deck.ready, .henteko-deal, .henteko-jolt, .henteko-badge,
+  .henteko-sparkles i, .henteko-seats.live .henteko-seat, .henteko-gain { animation: none; }
+  .henteko-sparkles i { opacity: 1; }
+}

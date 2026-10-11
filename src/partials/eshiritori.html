@@ -1,0 +1,48 @@
+<!-- ===== 絵しりとり ===== -->
+<div class="mode" id="modeEshiritori" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="eSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">人数</span><div class="chips" id="ePlayerChips"></div></div>
+        <div class="opt"><span class="row-label">枚数</span><div class="chips" id="eCountChips"></div></div>
+        <div class="opt"><span class="row-label">制限時間</span><div class="chips" id="eTimeChips"></div></div>
+      </div>
+      <ul class="rules" id="eRules"></ul>
+    </section>
+    <section class="panel eshiritori-play" id="ePlay" hidden>
+      <div class="eshiritori-head" id="eHead" hidden>
+        <button class="eshiritori-prev" id="ePrevBox" type="button" aria-label="押している間、前の絵を大きく見る">
+          <canvas class="eshiritori-thumb" id="ePrev" aria-hidden="true"></canvas>
+          <span class="eshiritori-prev-word" id="ePrevWord" hidden></span>
+        </button>
+        <span class="eshiritori-who"><b id="eWhoName"></b><small id="eWhoNote"></small></span>
+        <span class="eshiritori-clock" id="eClock" role="timer"></span>
+      </div>
+      <span class="label" id="eLabel"></span>
+      <p class="d-title" id="eTitle"></p>
+      <div class="eshiritori-pad" id="ePad" hidden>
+        <canvas class="eshiritori-canvas" id="eCanvas" role="img" aria-label="絵をかくところ"></canvas>
+        <span class="eshiritori-stamp" id="eStamp" hidden>時間切れ！</span>
+      </div>
+      <div class="word-card" id="eCard"></div>
+      <div class="eshiritori-link" id="eLink" hidden></div>
+      <div class="eshiritori-tools" id="eTools" hidden>
+        <div class="eshiritori-palette" id="ePalette" role="group" aria-label="ペンの色と消しゴム"></div>
+        <div class="eshiritori-toolrow">
+          <div class="eshiritori-sizes" id="eSizes" role="group" aria-label="ペンの太さ"></div>
+          <button class="eshiritori-tool" id="eUndo" type="button">1つ戻す</button>
+          <button class="eshiritori-tool" id="eClear" type="button">全部消す</button>
+        </div>
+      </div>
+      <div class="eshiritori-answer" id="eAnswerBox" hidden>
+        <label for="eAnswer">この絵の答え（ひらがな）</label>
+        <input class="name-input eshiritori-input" id="eAnswer" type="text" maxlength="16" lang="ja"
+               autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="done" aria-describedby="eNote">
+        <p class="eshiritori-note" id="eNote"></p>
+      </div>
+      <ol class="result-list eshiritori-list" id="eList" hidden></ol>
+      <p class="hint" id="eHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="eActions"></div>
+</div>

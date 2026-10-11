@@ -1,0 +1,185 @@
+/* 指ルーレット: setup hero and the full-screen touch stage with glowing finger rings.
+   The stage stays dark in both themes so the rings can glow; its colors are this game's own tokens below. */
+:root {
+  --finger-bg: #111923; --finger-fg: #f3f6fa; --finger-dim: #97a5b6; --finger-line: #2c3948;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --finger-bg: #0c1311; --finger-fg: #eef3ef; --finger-dim: #98aba2; --finger-line: #26352f;
+  }
+}
+:root[data-theme="dark"] {
+  --finger-bg: #0c1311; --finger-fg: #eef3ef; --finger-dim: #98aba2; --finger-line: #26352f;
+}
+
+/* ---------- setup hero: four rings taking turns lighting up ---------- */
+.finger-hero {
+  position: relative; width: 100%; max-width: 340px; height: 118px; flex: none; overflow: hidden;
+  border-radius: 20px; border: 2.5px solid var(--ink); box-shadow: 0 5px 0 var(--ink); margin-bottom: 4px;
+  background: radial-gradient(ellipse at 50% 130%, color-mix(in srgb, var(--c-orange) 30%, transparent), transparent 70%), var(--finger-bg);
+}
+.finger-demo {
+  position: absolute; width: 46px; height: 46px; margin: -23px 0 0 -23px; box-sizing: border-box; border-radius: 50%;
+  border: 4px solid var(--ring); background: color-mix(in srgb, var(--ring) 18%, transparent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--ring) 55%, transparent);
+  opacity: .5; animation: fingerDemo 2.4s ease-in-out infinite;
+}
+.finger-demo:nth-child(1) { --ring: var(--c-red); left: 20%; top: 60%; }
+.finger-demo:nth-child(2) { --ring: var(--c-blue); left: 40%; top: 36%; animation-delay: .6s; }
+.finger-demo:nth-child(3) { --ring: var(--c-amber); left: 61%; top: 64%; animation-delay: 1.2s; }
+.finger-demo:nth-child(4) { --ring: var(--c-green); left: 80%; top: 38%; animation-delay: 1.8s; }
+@keyframes fingerDemo {
+  0%, 28%, 100% { opacity: .5; transform: scale(.9); }
+  9% { opacity: 1; transform: scale(1.2); background: var(--ring); box-shadow: 0 0 26px 6px color-mix(in srgb, var(--ring) 70%, transparent); }
+}
+
+/* ---------- full-screen touch stage ---------- */
+.finger-layer {
+  --size: clamp(92px, 25vmin, 128px);
+  position: fixed; inset: 0; z-index: 50; overflow: hidden;
+  background: radial-gradient(circle at 50% 55%, color-mix(in srgb, var(--finger-fg) 6%, transparent), transparent 65%), var(--finger-bg);
+  color: var(--finger-fg);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  cursor: crosshair;
+}
+.finger-glow {
+  position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity .6s ease-out;
+  background: radial-gradient(circle at var(--gx, 50%) var(--gy, 50%), color-mix(in srgb, var(--ring, var(--c-orange)) 36%, transparent), transparent 62%);
+}
+.finger-glow.finger-on { opacity: 1; }
+.finger-field { position: absolute; inset: 0; transition: opacity .9s ease-out; }
+.finger-layer[data-state="after"] .finger-field { opacity: .3; }
+
+/* idle: ripple and "put your fingers here" */
+.finger-idle {
+  position: absolute; inset: 0; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px;
+}
+.finger-ripple { position: relative; width: 124px; height: 124px; }
+.finger-ripple i {
+  position: absolute; inset: 0; border-radius: 50%; border: 3px solid var(--c-orange); opacity: 0;
+  animation: fingerRipple 2.4s ease-out infinite;
+}
+.finger-ripple i:nth-child(2) { animation-delay: .8s; }
+.finger-ripple i:nth-child(3) { animation-delay: 1.6s; }
+.finger-ripple::after {
+  content: ""; position: absolute; inset: 37%; border-radius: 50%;
+  background: var(--c-orange); box-shadow: 0 0 26px 4px color-mix(in srgb, var(--c-orange) 70%, transparent);
+}
+@keyframes fingerRipple { 0% { transform: scale(.3); opacity: .9; } 100% { transform: scale(1.45); opacity: 0; } }
+.finger-idle-text { font-family: var(--display); font-size: clamp(1.4rem, 6.5vw, 2rem); line-height: 1.45; text-align: center; }
+
+/* ---------- one ring per finger ---------- */
+/* Rings never take pointer events: every touch lands on the field, which is never removed mid-touch. */
+.finger-ring { position: absolute; left: 0; top: 0; width: 0; height: 0; --ring: var(--c-orange); pointer-events: none; }
+.finger-ring.finger-win { z-index: 2; }
+.finger-body {
+  position: absolute; width: var(--size); height: var(--size);
+  left: calc(var(--size) / -2); top: calc(var(--size) / -2);
+  transition: transform .2s cubic-bezier(.2, 1.4, .4, 1), opacity .25s, filter .4s;
+  animation: fingerIn .34s cubic-bezier(.2, 1.5, .4, 1);
+}
+@keyframes fingerIn { from { transform: scale(.2); opacity: 0; } }
+.finger-halo {
+  position: absolute; inset: -24%; border-radius: 50%;
+  background: radial-gradient(circle, color-mix(in srgb, var(--ring) 55%, transparent) 30%, transparent 68%);
+  animation: fingerPulse 1.15s ease-in-out infinite;
+}
+@keyframes fingerPulse { 0%, 100% { transform: scale(.86); opacity: .5; } 50% { transform: scale(1.08); opacity: 1; } }
+.finger-core {
+  position: absolute; inset: 0; box-sizing: border-box; border-radius: 50%;
+  border: 6px solid var(--ring);
+  background-color: color-mix(in srgb, var(--ring) 22%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--ring) 80%, transparent), inset 0 0 16px color-mix(in srgb, var(--ring) 60%, transparent);
+  transition: background-color .3s, border-color .35s, box-shadow .35s;
+}
+.finger-arcs { position: absolute; inset: -14px; width: calc(100% + 28px); height: calc(100% + 28px); transform: rotate(-90deg); overflow: visible; }
+.finger-arc { fill: none; stroke: var(--ring); stroke-width: 4; stroke-linecap: round; stroke-dasharray: 100; stroke-dashoffset: 100; opacity: 0; }
+.finger-layer.finger-waiting .finger-arc { opacity: 1; animation: fingerFill var(--wait, 2000ms) linear forwards; }
+@keyframes fingerFill { to { stroke-dashoffset: 0; } }
+
+/* spin: everyone dims, the lit ring jumps */
+.finger-layer[data-state="spin"] .finger-body { opacity: .38; transform: scale(.9); transition-duration: .06s; }
+.finger-layer[data-state="spin"] .finger-hot .finger-body { opacity: 1; transform: scale(1.25); }
+.finger-hot .finger-core { background-color: var(--ring); box-shadow: 0 0 44px 12px color-mix(in srgb, var(--ring) 75%, transparent); }
+
+/* result: the chosen ring grows, the others fade */
+.finger-ring.finger-win .finger-body { transform: scale(2); transition: transform .65s cubic-bezier(.2, 1.6, .35, 1); }
+.finger-ring.finger-win .finger-core {
+  background-color: color-mix(in srgb, var(--ring) 65%, transparent); border-width: 4px;
+  box-shadow: 0 0 60px 18px color-mix(in srgb, var(--ring) 70%, transparent), inset 0 0 22px var(--ring);
+}
+.finger-ring.finger-win .finger-halo { animation-duration: .7s; }
+.finger-ring.finger-out .finger-body { opacity: .15; transform: scale(.7); filter: saturate(.3); transition: opacity .5s, transform .5s, filter .5s; }
+.finger-body.finger-flip { animation: fingerFlip .38s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes fingerFlip { 40% { transform: scale(1.32); } }
+.finger-ring.finger-gone .finger-body { animation: fingerOut .24s ease-in forwards; }
+@keyframes fingerOut { to { transform: scale(1.4); opacity: 0; } }
+.finger-burst {
+  position: absolute; width: var(--size); height: var(--size);
+  left: calc(var(--size) / -2); top: calc(var(--size) / -2);
+  box-sizing: border-box; border-radius: 50%; border: 5px solid var(--ring); pointer-events: none;
+  animation: fingerBurst .95s cubic-bezier(.1, .7, .3, 1) forwards;
+}
+@keyframes fingerBurst { from { transform: scale(.7); opacity: 1; } to { transform: scale(7); opacity: 0; } }
+
+/* number or team badge, just outside the ring (--reach, --dx, --dy from JS: facing the middle unless another finger is nearer) */
+.finger-tagbox {
+  position: absolute; left: -70px; top: -29px; width: 140px; height: 58px; pointer-events: none;
+  display: flex; align-items: center; justify-content: center;
+  transform: translate(calc(var(--dx, 0) * var(--reach, 80px)), calc(var(--dy, -1) * var(--reach, 80px)));
+}
+.finger-tag {
+  min-width: 48px; height: 48px; padding: 0 12px; box-sizing: border-box; border-radius: 999px;
+  display: grid; place-items: center;
+  font-family: var(--display); font-size: 1.7rem; line-height: 1; white-space: nowrap;
+  background: var(--finger-bg); color: var(--finger-fg); border: 3px solid var(--ring);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--ring) 65%, transparent);
+}
+.finger-first .finger-tag {
+  min-width: 58px; height: 58px; font-size: 2.1rem; border-width: 4px;
+  box-shadow: 0 0 28px 4px color-mix(in srgb, var(--ring) 75%, transparent);
+}
+
+/* ---------- controls and messages on the stage ---------- */
+.finger-top {
+  position: absolute; left: 0; right: 0; top: 0; z-index: 3; pointer-events: none;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 10px) calc(env(safe-area-inset-right, 0px) + 12px) 0 calc(env(safe-area-inset-left, 0px) + 12px);
+}
+.finger-quit {
+  pointer-events: auto; font: inherit; font-size: .85rem; font-weight: 700; cursor: pointer;
+  min-height: 44px; padding: 0 16px; border-radius: 999px;
+  color: var(--finger-dim); background: color-mix(in srgb, var(--finger-fg) 7%, transparent); border: 1.5px solid var(--finger-line);
+}
+.finger-info {
+  margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: .8rem; font-weight: 700; letter-spacing: .04em; font-variant-numeric: tabular-nums;
+  color: var(--finger-dim); border: 1.5px solid var(--finger-line); border-radius: 999px; padding: 6px 12px;
+}
+.finger-msgbox {
+  position: absolute; left: 50%; transform: translateX(-50%); width: max-content; max-width: calc(100% - 32px);
+  z-index: 3; pointer-events: none; text-align: center; box-sizing: border-box;
+  top: calc(env(safe-area-inset-top, 0px) + 64px); padding: 6px 16px 8px; border-radius: 18px;
+  background: color-mix(in srgb, var(--finger-bg) 72%, transparent);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+}
+.finger-msg { margin: 0; font-family: var(--display); font-size: clamp(1.35rem, 6vw, 1.9rem); line-height: 1.3; text-wrap: balance; }
+.finger-sub { margin: 4px 0 0; font-size: .9rem; line-height: 1.5; color: var(--finger-dim); text-wrap: balance; white-space: pre-line; }
+.finger-bottom {
+  position: absolute; left: 0; right: 0; bottom: 0; z-index: 3; pointer-events: none;
+  display: flex; justify-content: center; padding: 0 16px calc(env(safe-area-inset-bottom, 0px) + 14px);
+}
+.finger-pick { pointer-events: auto; flex: 0 1 260px; cursor: pointer; }
+
+@media (prefers-reduced-motion: reduce) {
+  .finger-demo, .finger-halo, .finger-body, .finger-body.finger-flip { animation: none; }
+  .finger-ripple i { animation: none; opacity: .45; }
+  .finger-ripple i:nth-child(1) { transform: scale(.55); }
+  .finger-ripple i:nth-child(2) { transform: scale(.85); }
+  .finger-ripple i:nth-child(3) { transform: scale(1.15); }
+  .finger-body, .finger-ring.finger-win .finger-body, .finger-ring.finger-out .finger-body { transition: opacity .2s, filter .2s; }
+  .finger-ring.finger-win .finger-body { transform: scale(1.5); }
+  .finger-ring.finger-gone .finger-body { animation: none; opacity: 0; }
+  .finger-burst { display: none; }
+}

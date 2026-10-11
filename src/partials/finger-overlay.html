@@ -1,0 +1,20 @@
+<!-- ===== 指ルーレット (full screen touch layer) ===== -->
+<div class="finger-layer" id="fLayer" data-state="idle" hidden>
+  <div class="finger-glow" id="fGlow" aria-hidden="true"></div>
+  <div class="finger-idle" id="fIdle" aria-hidden="true">
+    <span class="finger-ripple"><i></i><i></i><i></i></span>
+    <span class="finger-idle-text">みんなで1本ずつ<br>指をのせてね</span>
+  </div>
+  <div class="finger-field" id="fField" aria-hidden="true"></div>
+  <div class="finger-top">
+    <button class="finger-quit" id="fQuit" type="button">やめる</button>
+    <span class="finger-info" id="fInfo"></span>
+  </div>
+  <div class="finger-msgbox" role="status" aria-live="polite">
+    <p class="finger-msg" id="fMsg"></p>
+    <p class="finger-sub" id="fSub"></p>
+  </div>
+  <div class="finger-bottom">
+    <button class="btn primary finger-pick" id="fPick" type="button" hidden>えらぶ</button>
+  </div>
+</div>

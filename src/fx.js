@@ -79,6 +79,7 @@ const Fx = (() => {
       document.body.appendChild(layer);
       const steps = [...Array.from({ length: from }, (_, i) => String(from - i)), goText];
       steps.forEach((text, i) => setTimeout(() => {
+        if (!layer.isConnected) return;
         label.textContent = text;
         label.classList.toggle("go", i === steps.length - 1);
         replay(label, "fx-count");
@@ -88,5 +89,10 @@ const Fx = (() => {
     });
   }
 
-  return { pop, shake, flash, confetti, countdown, replay };
+  /* Removes any countdown or confetti still on screen (used when the player leaves a game). */
+  function clear() {
+    document.querySelectorAll(".fx-countdown, .fx-confetti, .fx-flash").forEach(n => n.remove());
+  }
+
+  return { pop, shake, flash, confetti, countdown, replay, clear };
 })();

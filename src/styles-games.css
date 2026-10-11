@@ -34,6 +34,13 @@
 .menu-hero { text-align: center; padding-block: 6px 2px; }
 .menu-title { font-family: var(--display); font-size: clamp(1.7rem, 7vw, 2.3rem); margin: 0; text-wrap: balance; }
 .menu-sub { margin: 4px 0 0; color: var(--muted); font-size: .9rem; }
+.menu-filter {
+  position: sticky; top: calc(env(safe-area-inset-top, 0px) + 56px); z-index: 9;
+  flex-wrap: nowrap; overflow-x: auto; padding-block: 6px; margin-inline: -16px; padding-inline: 16px;
+  background: var(--paper); scrollbar-width: none;
+}
+.menu-filter::-webkit-scrollbar { display: none; }
+.menu-filter .chip { flex: none; }
 .menu-sections { display: flex; flex-direction: column; gap: 22px; padding-bottom: 12px; }
 .menu-section { display: flex; flex-direction: column; gap: 10px; }
 .menu-section-head { display: flex; flex-direction: column; gap: 2px; padding-inline: 2px; }

@@ -1,0 +1,34 @@
+<!-- ===== カタカナ禁止トーク ===== -->
+<div class="mode" id="modeKatakana" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="xSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">人数</span><div class="chips" id="xPlayerChips"></div></div>
+        <div class="opt"><span class="row-label">1人の時間</span><div class="chips" id="xTimeChips"></div></div>
+        <div class="opt"><span class="row-label">お題</span><div class="chips" id="xLevelChips"></div></div>
+      </div>
+      <ul class="rules" id="xRules"></ul>
+    </section>
+    <section class="panel" id="xPlay" hidden>
+      <span class="label" id="xLabel"></span>
+      <p class="d-title" id="xTitle"></p>
+      <div class="word-card" id="xCard"></div>
+      <div class="katakana-talk" id="xTalk" hidden>
+        <div class="katakana-hud" aria-live="off">
+          <div class="katakana-clock" id="xClock">0:45</div>
+          <div class="katakana-tally zero" id="xTally">
+            <span class="katakana-tally-label">カタカナ</span>
+            <span class="katakana-tally-num" id="xCount">0</span>
+            <span class="katakana-tally-unit">回</span>
+          </div>
+        </div>
+        <div class="katakana-meter" id="xMeter" aria-hidden="true"><span class="katakana-meter-fill"></span></div>
+        <button class="katakana-buzzer" id="xBuzz" type="button" aria-label="カタカナを言った！ ペナルティ1"><span>カタカナ！</span></button>
+      </div>
+      <div class="katakana-board" id="xBoard" aria-label="みんなのペナルティ" hidden></div>
+      <ol class="result-list ranked katakana-ranking" id="xList" hidden></ol>
+      <p class="hint" id="xHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="xActions"></div>
+</div>

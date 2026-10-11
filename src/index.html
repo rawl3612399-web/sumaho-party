@@ -6,6 +6,13 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Yusei+Magic&family=Zen+Maru+Gothic:wght@500;700;900&display=swap">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="styles-games.css">
+<link rel="stylesheet" href="styles-finger.css">
+<link rel="stylesheet" href="styles-rhythm.css">
+<link rel="stylesheet" href="styles-tobira.css">
+<link rel="stylesheet" href="styles-katakana.css">
+<link rel="stylesheet" href="styles-henteko.css">
+<link rel="stylesheet" href="styles-eshiritori.css">
+<!-- games:styles -->
 
 <div class="app">
   <header class="topbar">
@@ -21,6 +28,7 @@
       <p class="menu-title">今日はなにして遊ぶ？</p>
       <p class="menu-sub" id="menuCount"></p>
     </div>
+    <div class="chips menu-filter" id="menuFilter" role="group" aria-label="カテゴリで絞り込む"></div>
     <div class="menu-sections" id="menuGrid"></div>
   </div>
 
@@ -276,6 +284,13 @@
     </main>
     <div class="actions" id="nActions"></div>
   </div>
+  <!-- include partials/finger.html -->
+  <!-- include partials/rhythm.html -->
+  <!-- include partials/tobira.html -->
+  <!-- include partials/katakana.html -->
+  <!-- include partials/henteko.html -->
+  <!-- include partials/eshiritori.html -->
+  <!-- games:partials -->
 </div>
 
 <!-- full-screen views -->
@@ -294,6 +309,9 @@
   </div>
   <button class="quiz-pad ok" id="quizOk" type="button"><span>正解！</span></button>
 </div>
+
+<!-- include partials/finger-overlay.html -->
+<!-- games:overlays -->
 
 <script src="shared.js" charset="utf-8"></script>
 <script src="random.js" charset="utf-8"></script>
@@ -321,4 +339,17 @@
 <script src="stop.js" charset="utf-8"></script>
 <script src="numbomb-rules.js" charset="utf-8"></script>
 <script src="numbomb.js" charset="utf-8"></script>
+<script src="finger-rules.js" charset="utf-8"></script>
+<script src="finger.js" charset="utf-8"></script>
+<script src="rhythm-rules.js" charset="utf-8"></script>
+<script src="rhythm.js" charset="utf-8"></script>
+<script src="tobira-rules.js" charset="utf-8"></script>
+<script src="tobira.js" charset="utf-8"></script>
+<script src="katakana-rules.js" charset="utf-8"></script>
+<script src="katakana.js" charset="utf-8"></script>
+<script src="henteko-rules.js" charset="utf-8"></script>
+<script src="henteko.js" charset="utf-8"></script>
+<script src="eshiritori-rules.js" charset="utf-8"></script>
+<script src="eshiritori.js" charset="utf-8"></script>
+<!-- games:scripts -->
 <script src="main.js" charset="utf-8"></script>

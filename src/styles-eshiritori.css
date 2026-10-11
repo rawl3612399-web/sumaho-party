@@ -1,0 +1,169 @@
+/* 絵しりとり: drawing pad, tools, timer pill, chain link, summary list. Colors come from tokens only. */
+
+#modeEshiritori .stage { padding: 14px 10px; }
+.eshiritori-play { gap: 10px; }
+
+/* ---------- head while drawing: previous drawing, whose turn, timer ---------- */
+.eshiritori-head {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px;
+  width: min(100%, 420px);
+}
+.eshiritori-prev {
+  position: relative; width: 52px; height: 52px; padding: 0; overflow: hidden;
+  display: grid; place-items: center; cursor: pointer;
+  font: inherit; color: var(--ink); background: var(--card);
+  border: 2px solid var(--ink); border-radius: 12px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+.eshiritori-prev:disabled { cursor: default; border-style: dashed; border-color: var(--muted); }
+.eshiritori-prev.is-peeking { border-color: var(--accent); box-shadow: 0 0 0 3px var(--hl); }
+.eshiritori-thumb { display: block; width: 100%; height: 100%; }
+.eshiritori-prev-word { font-family: var(--display); font-size: .78rem; line-height: 1.15; padding: 3px; word-break: break-all; }
+.eshiritori-who { display: flex; flex-direction: column; gap: 1px; min-width: 0; text-align: left; }
+.eshiritori-who b { font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eshiritori-who small { font-size: .74rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eshiritori-clock {
+  --left: 1;
+  min-width: 4.3em; box-sizing: border-box; padding: 9px 12px; text-align: center;
+  font-family: var(--display); font-size: 1.45rem; line-height: 1; font-variant-numeric: tabular-nums;
+  --fill: color-mix(in srgb, var(--accent) 24%, var(--card));
+  border: 2.5px solid var(--ink); border-radius: 999px;
+  background: linear-gradient(90deg, var(--fill) calc(var(--left) * 100%), var(--card) calc(var(--left) * 100%));
+}
+.eshiritori-clock.urgent {
+  --fill: color-mix(in srgb, var(--alert) 24%, var(--card));
+  color: var(--alert); border-color: var(--alert); animation: eshiritoriBeat 1s ease-in-out infinite;
+}
+@keyframes eshiritoriBeat { 50% { transform: scale(1.08); } }
+
+/* ---------- drawing pad ---------- */
+.eshiritori-pad {
+  position: relative; flex: none; box-sizing: border-box;
+  width: min(100%, 420px); aspect-ratio: 1;
+  background: var(--card); border: 2.5px solid var(--ink); border-radius: 18px;
+  box-shadow: 0 5px 0 var(--ink); margin-bottom: 5px; overflow: hidden;
+  transition: width .34s cubic-bezier(.2, .9, .3, 1.1), border-color .2s, box-shadow .2s;
+}
+/* Big enough to draw on, small enough that the tools and button stay on screen. */
+.eshiritori-play[data-phase="draw"] .eshiritori-pad { width: min(100%, 420px, max(220px, 100vh - 392px)); }
+.eshiritori-play[data-phase="draw"] .eshiritori-pad { width: min(100%, 420px, max(220px, 100dvh - 392px)); }
+.eshiritori-play[data-phase="look"] .eshiritori-pad,
+.eshiritori-play[data-phase="show"] .eshiritori-pad { width: min(100%, 420px, max(240px, 100vh - 360px)); }
+.eshiritori-play[data-phase="look"] .eshiritori-pad,
+.eshiritori-play[data-phase="show"] .eshiritori-pad { width: min(100%, 420px, max(240px, 100dvh - 360px)); }
+.eshiritori-pad.is-mid { width: min(56%, 210px, max(140px, 100vh - 520px)); }
+.eshiritori-pad.is-mid { width: min(56%, 210px, max(140px, 100dvh - 520px)); }
+.eshiritori-pad.is-small { width: min(50%, 180px); }
+.eshiritori-pad.is-live { border-color: var(--accent-deep); box-shadow: 0 5px 0 var(--accent-deep); }
+.eshiritori-pad.is-live .eshiritori-canvas { cursor: crosshair; }
+.eshiritori-pad.is-peek { border-style: dashed; border-color: var(--muted); }
+.eshiritori-pad.is-peek::after {
+  content: "前の絵"; position: absolute; top: 10px; left: 10px; pointer-events: none;
+  font-size: .8rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: var(--ink); color: var(--paper);
+}
+.eshiritori-canvas {
+  display: block; width: 100%; height: 100%;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.eshiritori-stamp {
+  position: absolute; left: 50%; top: 50%; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(1.8rem, 9vw, 2.6rem); line-height: 1.1;
+  color: var(--alert); border: 4px solid var(--alert); border-radius: 14px; padding: 6px 18px;
+  background: color-mix(in srgb, var(--card) 82%, transparent);
+  transform: translate(-50%, -50%) rotate(-8deg);
+  animation: eshiritoriStamp .38s cubic-bezier(.2, 1.4, .4, 1);
+}
+@keyframes eshiritoriStamp { from { opacity: 0; transform: translate(-50%, -50%) rotate(-8deg) scale(2.2); } }
+
+/* ---------- tools ---------- */
+.eshiritori-tools { display: flex; flex-direction: column; gap: 6px; width: min(100%, 420px); }
+.eshiritori-palette { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 2px 0; }
+.eshiritori-swatch {
+  width: 44px; height: 44px; padding: 0; border: 0; border-radius: 50%; cursor: pointer;
+  display: grid; place-items: center; background: none; color: var(--ink);
+}
+.eshiritori-dot {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--sw, var(--paper)); box-shadow: 0 0 0 2px var(--line);
+  transition: transform .14s cubic-bezier(.2, 1.4, .4, 1), box-shadow .14s;
+}
+.eshiritori-swatch[aria-pressed="true"] .eshiritori-dot { transform: scale(1.15); box-shadow: 0 0 0 3px var(--card), 0 0 0 5.5px var(--ink); }
+.eshiritori-eraser .eshiritori-dot { background: var(--paper); }
+.eshiritori-eraser svg { width: 20px; height: 20px; }
+.eshiritori-toolrow { display: flex; gap: 6px; }
+.eshiritori-sizes { flex: none; display: flex; border: 2px solid var(--line); border-radius: 12px; overflow: hidden; }
+.eshiritori-size {
+  min-height: 44px; padding: 0 10px; display: flex; align-items: center; gap: 6px; cursor: pointer;
+  font: inherit; font-size: .85rem; font-weight: 700; border: 0; background: var(--card); color: var(--ink);
+}
+.eshiritori-size + .eshiritori-size { border-left: 2px solid var(--line); }
+.eshiritori-size i { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+.eshiritori-size[data-size="thick"] i { width: 11px; height: 11px; }
+.eshiritori-size[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.eshiritori-tool {
+  flex: 1; min-width: 0; min-height: 44px; padding: 0 6px; white-space: nowrap; cursor: pointer;
+  font: inherit; font-size: .85rem; font-weight: 700; color: var(--ink); background: var(--card);
+  border: 2px solid var(--line); border-radius: 12px;
+}
+.eshiritori-tool:active:not(:disabled), .eshiritori-size:active:not(:disabled) { transform: translateY(1px); }
+.eshiritori-swatch:disabled, .eshiritori-size:disabled, .eshiritori-tool:disabled { opacity: .4; cursor: default; }
+
+/* ---------- answer ---------- */
+.eshiritori-answer { display: flex; flex-direction: column; gap: 6px; width: min(100%, 340px); text-align: left; }
+.eshiritori-answer label { font-size: .8rem; color: var(--muted); letter-spacing: .05em; }
+.eshiritori-input {
+  font-family: var(--display); font-size: 1.6rem; text-align: center;
+  padding: 10px 12px; border: 2.5px solid var(--ink); border-radius: 14px;
+}
+.eshiritori-note { margin: 0; min-height: 1.4em; font-size: .88rem; color: var(--muted); text-align: center; }
+.eshiritori-note.is-bad { color: var(--alert); font-weight: 700; }
+
+/* ---------- reveal: answer card and the link between two words ---------- */
+.word-card.eshiritori-compact { min-height: 0; padding: 12px 16px; gap: 2px; }
+.word-card.eshiritori-n { border-color: var(--alert); box-shadow: 0 6px 0 var(--alert-deep); }
+.word-card.eshiritori-n .wc-sub { color: var(--alert); font-weight: 700; }
+.eshiritori-link { display: flex; align-items: flex-end; justify-content: center; gap: 10px; width: 100%; }
+.eshiritori-link.is-ok { color: var(--go); }
+.eshiritori-link.is-ng { color: var(--alert); }
+.eshiritori-side { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; max-width: 40%; }
+.eshiritori-side small { max-width: 100%; font-size: .78rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eshiritori-kana {
+  width: 54px; height: 54px; box-sizing: border-box; display: grid; place-items: center;
+  font-family: var(--display); font-weight: 400; font-size: 1.9rem; line-height: 1;
+  border: 3px solid currentColor; border-radius: 14px; background: var(--card);
+}
+.eshiritori-arrow {
+  position: relative; flex: none; width: 46px; height: 4px; margin-bottom: 25px;
+  border-radius: 2px; background: currentColor;
+}
+.eshiritori-arrow::after {
+  content: ""; position: absolute; right: -1px; top: 50%; width: 12px; height: 12px; box-sizing: border-box;
+  border-top: 4px solid currentColor; border-right: 4px solid currentColor;
+  transform: translateY(-50%) rotate(45deg);
+}
+.eshiritori-link.is-ng .eshiritori-arrow { background: repeating-linear-gradient(90deg, currentColor 0 7px, transparent 7px 12px); }
+.eshiritori-link.is-ng .eshiritori-arrow::before {
+  content: "×"; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -55%);
+  padding: 0 3px; font-size: 1.4rem; font-weight: 900; line-height: 1; background: var(--card);
+}
+
+/* ---------- summary list ---------- */
+.eshiritori-list li { grid-template-columns: 44px minmax(0, 1fr) auto auto; padding: 6px 10px; }
+.eshiritori-mini {
+  display: block; width: 44px; height: 44px; box-sizing: border-box;
+  border-radius: 10px; border: 2px solid var(--line); background: var(--card);
+}
+.eshiritori-flag { display: grid; place-items: center; border-style: dashed; font-size: .6rem; font-weight: 700; color: var(--muted); }
+.eshiritori-row-word { display: flex; flex-direction: column; min-width: 0; }
+.eshiritori-row-word b { font-size: 1.2rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eshiritori-row-word small { font-size: .72rem; color: var(--muted); }
+.eshiritori-row-link { font-family: var(--display); font-size: .95rem; color: var(--muted); white-space: nowrap; }
+.eshiritori-list li.eshiritori-start { border-style: dashed; }
+.eshiritori-list li.eshiritori-endn small { color: var(--alert); font-weight: 700; }
+
+@media (prefers-reduced-motion: reduce) {
+  .eshiritori-pad, .eshiritori-dot, .eshiritori-prev { transition: none; }
+  .eshiritori-clock.urgent, .eshiritori-stamp { animation: none; }
+}

@@ -1,0 +1,30 @@
+<!-- ===== リズム古今東西 ===== -->
+<div class="mode" id="modeRhythm" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="rSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">ゲーム</span><div class="chips" id="rGameChips"></div></div>
+        <div class="opt"><span class="row-label">テンポ</span><div class="chips" id="rTempoChips"></div></div>
+        <div class="opt"><span class="row-label">だんだん速く</span><div class="chips" id="rAccelChips"></div></div>
+      </div>
+      <ul class="rules" id="rRules"></ul>
+    </section>
+    <section class="panel" id="rPlay" hidden>
+      <span class="label" id="rLabel"></span>
+      <p class="d-title" id="rTitle"></p>
+      <div class="word-card" id="rCard"></div>
+      <div class="rhythm-beat" id="rBeat" aria-hidden="true" hidden>
+        <span class="rhythm-up" id="rUp" hidden>テンポアップ！</span>
+        <div class="rhythm-pulse" id="rPulse"><span class="rhythm-cue" id="rCue"></span></div>
+        <div class="rhythm-dots" id="rDots"><span></span><span></span><span class="rhythm-ans"></span><span class="rhythm-ans"></span></div>
+        <div class="rhythm-meta">
+          <span class="rhythm-stat"><b id="rBars">0</b>小節</span>
+          <span class="rhythm-stat"><b id="rBpm">110</b>BPM</span>
+        </div>
+      </div>
+      <p class="hint" id="rHint"></p>
+    </section>
+    <div class="rhythm-records" id="rRecords" hidden></div>
+  </main>
+  <div class="actions" id="rActions"></div>
+</div>
