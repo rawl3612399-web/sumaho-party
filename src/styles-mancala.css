@@ -1,0 +1,148 @@
+/* マンカラ: a wooden board with oval pits, two stores and glass pebbles. Colors come from tokens only;
+   the board and pebble tokens below are defined for light, dark (system) and dark (forced). */
+:root {
+  --m-wood: #d9a86a; --m-wood-hi: #ecc792; --m-wood-deep: #9a6432; --m-grain: #c48d4c;
+  --m-pit: #87552a; --m-pit-in: #613917; --m-shade: rgba(54, 26, 4, .5); --m-label: #3b220e;
+  --m-shine: rgba(255, 255, 255, .9); --m-edge: #1e1208;
+  --m-stone-0: #3f98e0; --m-stone-1: #e0507a; --m-stone-2: #f2b53a; --m-stone-3: #38b98a; --m-stone-4: #9877e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --m-wood: #6e4a2c; --m-wood-hi: #88613e; --m-wood-deep: #3b2715; --m-grain: #5e3e23;
+    --m-pit: #2f1e10; --m-pit-in: #1e1208; --m-shade: rgba(0, 0, 0, .6); --m-label: #f4dfc4;
+    --m-shine: rgba(255, 255, 255, .8); --m-edge: #0d0804;
+    --m-stone-0: #5cb0f2; --m-stone-1: #f06d93; --m-stone-2: #ffc857; --m-stone-3: #4fd3a0; --m-stone-4: #b195ff;
+  }
+}
+:root[data-theme="dark"] {
+  --m-wood: #6e4a2c; --m-wood-hi: #88613e; --m-wood-deep: #3b2715; --m-grain: #5e3e23;
+  --m-pit: #2f1e10; --m-pit-in: #1e1208; --m-shade: rgba(0, 0, 0, .6); --m-label: #f4dfc4;
+  --m-shine: rgba(255, 255, 255, .8); --m-edge: #0d0804;
+  --m-stone-0: #5cb0f2; --m-stone-1: #f06d93; --m-stone-2: #ffc857; --m-stone-3: #4fd3a0; --m-stone-4: #b195ff;
+}
+
+/* ---------- play view ---------- */
+.stage.m-playing { padding-inline: 4px; }
+.stage.m-playing .d-title, .stage.m-playing .hint { padding-inline: 10px; }
+/* The board must not move while you aim at it: one-line turn title, and the hint keeps two lines of room. */
+.stage.m-turns .d-title { box-sizing: border-box; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-hintbox { width: 100%; display: flex; align-items: center; justify-content: center; }
+.m-hintbox .hint { word-break: auto-phrase; }
+.stage.m-turns .m-hintbox { min-height: 2.9rem; }
+.m-scores { width: min(calc(100% - 16px), 420px); }
+.m-score { transition: border-color .2s, box-shadow .2s; }
+.m-score .pts { font-size: 1.75rem; }
+.m-score.turn { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.m-score.think .pts { animation: mThink 1s ease-in-out infinite; }
+@keyframes mThink { 50% { opacity: .4; } }
+#mActions { justify-content: center; }
+
+/* ---------- board ---------- */
+.m-wrap { position: relative; width: min(100%, 420px); }
+.m-board {
+  --m-stone: clamp(9px, 3.2vw, 13px);
+  box-sizing: border-box; width: 100%; aspect-ratio: 11 / 5;
+  display: grid;
+  grid-template-columns: clamp(24px, 8%, 40px) repeat(6, minmax(0, 1fr)) clamp(24px, 8%, 40px);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  row-gap: 6px;
+  padding: 8px 4px;
+  margin-bottom: 6px;
+  border-radius: 26px;
+  border: 2.5px solid var(--m-wood-deep);
+  background:
+    repeating-linear-gradient(177deg, transparent 0 9px, color-mix(in srgb, var(--m-grain) 40%, transparent) 9px 10px, transparent 10px 23px),
+    linear-gradient(180deg, var(--m-wood-hi), var(--m-wood) 38%, var(--m-wood) 72%, var(--m-wood-deep));
+  box-shadow: 0 6px 0 var(--m-wood-deep), inset 0 2px 0 var(--m-wood-hi);
+  user-select: none; -webkit-user-select: none;
+}
+
+.m-pit, .m-store {
+  min-width: 0; min-height: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--m-label);
+}
+.m-pit {
+  font: inherit; background: none; border: 0; margin: 0; padding: 2px; border-radius: 14px;
+  cursor: pointer; touch-action: manipulation;
+}
+.m-pit.bottom { flex-direction: column-reverse; }
+.m-pit[aria-disabled="true"] { cursor: default; }
+.m-store { grid-row: 1 / span 2; padding: 0 1px; gap: 3px; }
+.m-store.s0 { grid-column: 8; flex-direction: column-reverse; }
+.m-store.s1 { grid-column: 1; }
+
+.m-count {
+  font-family: var(--display); font-size: .95rem; line-height: 1; height: 1em;
+  font-variant-numeric: tabular-nums;
+}
+.m-store .m-count { font-size: 1.1rem; height: 1.1rem; }
+
+.m-bowl {
+  position: relative; display: block; flex: 1; width: 100%; min-height: 0; box-sizing: border-box;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 30%, var(--m-pit-in), var(--m-pit) 75%);
+  box-shadow: inset 0 3px 7px var(--m-shade), 0 1px 0 var(--m-wood-hi);
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+.m-pit.legal .m-bowl {
+  box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 2.5px var(--accent), 0 0 10px var(--accent);
+  animation: mGlow 1.6s ease-in-out infinite;
+}
+@keyframes mGlow {
+  50% { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 3.5px var(--accent), 0 0 18px var(--accent); }
+}
+.m-pit.legal:active .m-bowl { transform: scale(.93); }
+.m-pit.from .m-bowl { outline: 2px dashed var(--m-label); outline-offset: 2px; }
+.m-pit.land .m-bowl, .m-store.land .m-bowl { outline: 2.5px solid var(--m-label); outline-offset: 2px; }
+.m-pit.steal .m-bowl { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 3px var(--zap), 0 0 18px var(--zap); }
+.m-store.turn .m-bowl { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 2.5px var(--accent); }
+
+/* ---------- pebbles ---------- */
+.m-stone {
+  position: absolute; width: var(--m-stone); height: var(--m-stone); border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(circle at 34% 30%, var(--m-shine) 0 12%, var(--m-c) 46%, color-mix(in srgb, var(--m-c) 60%, var(--m-edge)) 100%);
+  box-shadow: 0 1px 1.5px var(--m-shade);
+}
+.m-stone.t0 { --m-c: var(--m-stone-0); }
+.m-stone.t1 { --m-c: var(--m-stone-1); }
+.m-stone.t2 { --m-c: var(--m-stone-2); }
+.m-stone.t3 { --m-c: var(--m-stone-3); }
+.m-stone.t4 { --m-c: var(--m-stone-4); }
+.m-stone.m-new { animation: mStoneIn .24s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes mStoneIn {
+  from { transform: translate(-50%, -170%) scale(1.25); opacity: 0; }
+  to { transform: translate(-50%, -50%); opacity: 1; }
+}
+/* The bump outranks the legal-pit glow, so it always finishes (and animationend clears the class). */
+.m-bowl.m-drop, .m-pit.legal .m-bowl.m-drop { animation: mBump .2s ease-out; }
+@keyframes mBump { 40% { transform: scale(1.08); } }
+.m-nope { animation: mNope .25s ease-in-out; }
+@keyframes mNope { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+/* ---------- callout (もう1回！ / 横取り！) ---------- */
+.m-callout {
+  position: absolute; left: 50%; top: 50%; z-index: 2; pointer-events: none;
+  transform: translate(-50%, -50%);
+  width: max-content; max-width: 88%; box-sizing: border-box; text-align: center;
+  font-family: var(--display); font-size: clamp(1.4rem, 7vw, 2.2rem); line-height: 1.2;
+  padding: 6px 18px; border-radius: 999px;
+  background: var(--card); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+}
+.m-callout.extra { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); box-shadow: 0 4px 0 var(--accent-deep); }
+.m-callout.steal { background: var(--zap); color: var(--on-zap); }
+.m-callout.m-show { animation: mCallout 1.15s cubic-bezier(.2, 1.2, .4, 1) both; }
+@keyframes mCallout {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  28% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -75%) scale(.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-pit.legal .m-bowl, .m-pit.legal .m-bowl.m-drop, .m-bowl.m-drop, .m-stone.m-new, .m-nope, .m-callout.m-show,
+  .m-score.think .pts { animation: none; }
+  .m-bowl, .m-score { transition: none; }
+}

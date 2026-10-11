@@ -1,0 +1,125 @@
+/* 四目並べ: score bar, the board with see-through holes, discs, drop / win animations.
+   Disc and board colors are this game's own tokens, defined for light and dark below. */
+:root {
+  --c4-red: #e63b33; --c4-red-rim: #9e1f19; --c4-red-mark: #e63b33;
+  --c4-yellow: #ffc61a; --c4-yellow-rim: #b07e00; --c4-yellow-mark: #c99400;
+  --c4-frame: #1f63c6; --c4-frame-deep: #133f82;
+  --c4-hole: #e8eef7; --c4-shine: rgba(255, 255, 255, .55); --c4-ring: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c4-red: #ff554c; --c4-red-rim: #a8261f; --c4-red-mark: #ff7a72;
+    --c4-yellow: #ffcf33; --c4-yellow-rim: #a87c00; --c4-yellow-mark: #ffd84f;
+    --c4-frame: #2c5fae; --c4-frame-deep: #18396d;
+    --c4-hole: #16201d; --c4-shine: rgba(255, 255, 255, .45); --c4-ring: #fff3a6;
+  }
+}
+:root[data-theme="dark"] {
+  --c4-red: #ff554c; --c4-red-rim: #a8261f; --c4-red-mark: #ff7a72;
+  --c4-yellow: #ffcf33; --c4-yellow-rim: #a87c00; --c4-yellow-mark: #ffd84f;
+  --c4-frame: #2c5fae; --c4-frame-deep: #18396d;
+  --c4-hole: #16201d; --c4-shine: rgba(255, 255, 255, .45); --c4-ring: #fff3a6;
+}
+
+/* A little more room for the board on phones (each column stays at least 44px wide at 375px).
+   Only while the board is up; the setup screen keeps the normal stage padding. */
+#cStage.c4-wide { padding-inline: 6px; gap: 10px; }
+#cPlay { gap: 10px; }
+#cHint { white-space: pre-line; }
+#cActions { justify-content: center; }
+
+.c4-p0 { --c4-fill: var(--c4-red); --c4-rim: var(--c4-red-rim); --c4-mark: var(--c4-red-mark); }
+.c4-p1 { --c4-fill: var(--c4-yellow); --c4-rim: var(--c4-yellow-rim); --c4-mark: var(--c4-yellow-mark); }
+
+/* ---------- score bar ---------- */
+.c4-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.c4-side {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 8px 12px; border-radius: 14px; background: var(--card); border: 2px solid var(--line);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.c4-side.c4-turn { border-color: var(--ink); box-shadow: 0 4px 0 var(--ink); transform: translateY(-2px); }
+.c4-side.c4-won { border-color: var(--accent-deep); background: var(--accent); color: var(--on-accent); }
+.c4-swatch {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--c4-shine), transparent 42%), var(--c4-fill);
+  box-shadow: inset 0 0 0 3px var(--c4-rim);
+}
+.c4-side.c4-turn .c4-swatch { animation: c4Bob 1.2s ease-in-out infinite; }
+.c4-who { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.c4-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c4-meta { font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c4-side.c4-won .c4-meta { color: var(--on-accent); }
+
+/* ---------- board ---------- */
+.c4-board {
+  --c4-gap: 10px;
+  position: relative; isolation: isolate;
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: min(100% - 16px, 420px);
+  margin: 0 auto 18px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.c4-col { position: relative; display: flex; flex-direction: column; cursor: pointer; border-radius: 10px; outline: none; }
+.c4-col:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.c4-board:not(.c4-live) .c4-col, .c4-col.c4-full { cursor: default; }
+.c4-ghost { position: relative; aspect-ratio: 1; margin-bottom: var(--c4-gap); }
+.c4-cell { position: relative; aspect-ratio: 1; background: var(--c4-hole); transition: background-color .15s; }
+.c4-col.c4-aim .c4-cell { background: color-mix(in srgb, var(--c4-hole) 80%, var(--c4-frame)); }
+
+/* The front plate: one layer with a round hole over every cell. Discs sit behind it. */
+.c4-frame {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: 0;
+  top: calc((100% - var(--c4-gap)) / 7 + var(--c4-gap));
+  pointer-events: none; border-radius: 4px;
+  background-image: radial-gradient(circle closest-side, transparent 77%, var(--c4-frame-deep) 79%, var(--c4-frame) 90%);
+  background-size: calc(100% / 7) calc(100% / 6);
+  box-shadow: 0 0 0 8px var(--c4-frame), 0 9px 0 8px var(--c4-frame-deep);
+}
+
+/* ---------- discs ---------- */
+.c4-disc { position: absolute; inset: 9%; z-index: 1; border-radius: 50%; opacity: 0; pointer-events: none; }
+.c4-disc.c4-p0, .c4-disc.c4-p1 {
+  opacity: 1;
+  background: radial-gradient(circle at 34% 28%, var(--c4-shine), transparent 42%), var(--c4-fill);
+  box-shadow: inset 0 0 0 3px var(--c4-rim), inset 0 -4px 0 3px var(--c4-rim);
+}
+.c4-disc::after { content: ""; position: absolute; inset: 23%; border-radius: 50%; border: 2px solid var(--c4-rim); opacity: .4; }
+.c4-disc.c4-last::before { content: ""; position: absolute; inset: 41%; border-radius: 50%; background: var(--c4-rim); z-index: 1; }
+
+/* Ghost disc above the aimed column, and where it would land. */
+.c4-ghost .c4-disc.c4-p0, .c4-ghost .c4-disc.c4-p1 { opacity: .7; animation: c4Bob 1.1s ease-in-out infinite; }
+.c4-col.c4-full .c4-ghost .c4-disc { opacity: .3; filter: grayscale(1); }
+.c4-ghost.c4-nope { animation: c4Nope .32s ease-in-out; }
+.c4-cell.c4-target::before {
+  content: ""; position: absolute; inset: 15%; z-index: 1; border-radius: 50%;
+  border: 3px dashed var(--c4-target, var(--muted)); opacity: .85;
+}
+.c4-board.c4-t0 { --c4-target: var(--c4-red-mark); }
+.c4-board.c4-t1 { --c4-target: var(--c4-yellow-mark); }
+
+/* Drop with a small bounce. The disc first touches down at 72% (LAND_AT in connect4.js). */
+.c4-disc.c4-drop { animation: c4Drop var(--c4-ms, 260ms) both; }
+@keyframes c4Drop {
+  0% { transform: translateY(var(--c4-from, -300%)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  72% { transform: translateY(0); animation-timing-function: cubic-bezier(0, .55, .45, 1); }
+  86% { transform: translateY(-9%); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  100% { transform: translateY(0); }
+}
+@keyframes c4Bob { 50% { transform: translateY(-7%); } }
+@keyframes c4Nope { 25% { transform: translateX(-14%); } 75% { transform: translateX(14%); } }
+
+/* Winning line: a pulsing ring drawn over the plate; the other discs fade back. */
+.c4-cell.c4-win::after {
+  content: ""; position: absolute; inset: 2%; z-index: 3; border-radius: 50%; pointer-events: none;
+  border: 4px solid var(--c4-ring); box-shadow: 0 0 10px var(--c4-ring);
+  animation: c4Pulse .7s ease-in-out infinite alternate;
+}
+@keyframes c4Pulse { from { transform: scale(.9); opacity: .55; } to { transform: scale(1.04); opacity: 1; } }
+.c4-board.c4-over.c4-decided .c4-cell:not(.c4-win) .c4-disc { opacity: .45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .c4-disc.c4-drop, .c4-cell.c4-win::after, .c4-ghost.c4-nope, .c4-side.c4-turn .c4-swatch { animation: none; }
+  .c4-ghost .c4-disc.c4-p0, .c4-ghost .c4-disc.c4-p1 { animation: none; }
+  .c4-side, .c4-cell { transition: none; }
+}

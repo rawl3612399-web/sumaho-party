@@ -1,0 +1,49 @@
+<!-- ===== リバーシ ===== -->
+<div class="mode" id="modeReversi" hidden>
+  <main class="stage v-stage" aria-live="polite">
+    <section class="panel" id="vSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="vVsChips"></div></div>
+        <div class="opt" id="vLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="vLevelChips"></div></div>
+        <div class="opt" id="vSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="vSideChips"></div></div>
+      </div>
+      <div class="setup-form" id="vNames" hidden>
+        <label for="vName1">黒（先攻）<input class="name-input" id="vName1" maxlength="12" autocomplete="off"></label>
+        <label for="vName2">白（後攻）<input class="name-input" id="vName2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">ヒント</span><div class="chips" id="vHintChips"></div></div>
+      </div>
+      <ul class="rules" id="vRules"></ul>
+      <p class="hint v-record" id="vRecord" hidden></p>
+    </section>
+    <section class="panel v-play" id="vPlay" hidden>
+      <div class="v-scores">
+        <div class="v-side" id="vSideB">
+          <span class="v-icon v-b" aria-hidden="true"></span>
+          <span class="v-name" id="vNameB"></span>
+          <span class="v-state" id="vStateB"></span>
+          <span class="v-count" id="vCountB">2</span>
+        </div>
+        <div class="v-side" id="vSideW">
+          <span class="v-icon v-w" aria-hidden="true"></span>
+          <span class="v-name" id="vNameW"></span>
+          <span class="v-state" id="vStateW"></span>
+          <span class="v-count" id="vCountW">2</span>
+        </div>
+      </div>
+      <span class="label" id="vLabel"></span>
+      <p class="d-title v-title" id="vTitle"></p>
+      <div class="v-board-wrap">
+        <div class="v-board" id="vBoard" role="group" aria-label="リバーシの盤"></div>
+        <div class="v-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="v-banner" id="vBanner" hidden>
+          <span class="v-banner-main">パス</span>
+          <span class="v-banner-sub" id="vBannerSub"></span>
+        </div>
+      </div>
+      <p class="hint" id="vHint"></p>
+    </section>
+  </main>
+  <div class="actions v-actions" id="vActions"></div>
+</div>

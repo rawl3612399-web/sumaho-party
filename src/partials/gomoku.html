@@ -1,0 +1,30 @@
+<!-- ===== 五目ならべ ===== -->
+<div class="mode" id="modeGomoku" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="gSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="gModeChips"></div></div>
+        <div class="opt" id="gLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="gLevelChips"></div></div>
+        <div class="opt" id="gSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="gSideChips"></div></div>
+      </div>
+      <div class="setup-form" id="gNames" hidden>
+        <label for="gName0">1人目（最初は黒）<input class="name-input" id="gName0" maxlength="12" autocomplete="off"></label>
+        <label for="gName1">2人目（最初は白）<input class="name-input" id="gName1" maxlength="12" autocomplete="off"></label>
+      </div>
+      <ul class="rules" id="gRules"></ul>
+    </section>
+    <section class="panel g-panel" id="gPlay" hidden>
+      <div class="g-bar" id="gBar">
+        <div class="g-side" id="gSideB"><span class="g-dot b" aria-hidden="true"></span><span class="g-who"><span class="g-name" id="gNameB"></span><span class="g-count" id="gCountB"></span></span></div>
+        <span class="g-moves" id="gMoves"></span>
+        <div class="g-side" id="gSideW"><span class="g-dot w" aria-hidden="true"></span><span class="g-who"><span class="g-name" id="gNameW"></span><span class="g-count" id="gCountW"></span></span></div>
+      </div>
+      <p class="d-title g-title" id="gTitle"></p>
+      <div class="g-board" id="gBoard" tabindex="0" role="application" aria-label="五目ならべの盤。矢印キーで選んでEnterで置きます">
+        <div class="g-grid" id="gGrid"></div>
+      </div>
+      <p class="hint g-hint" id="gHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="gActions"></div>
+</div>

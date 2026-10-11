@@ -1,0 +1,55 @@
+<!-- ===== マンカラ ===== -->
+<div class="mode" id="modeMancala" hidden>
+  <main class="stage" id="mStage" aria-live="polite">
+    <section class="panel" id="mSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="mVsChips"></div></div>
+        <div class="opt" id="mLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="mLevelChips"></div></div>
+        <div class="opt" id="mOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="mOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="mNames" hidden>
+        <label for="mName0">1人目（下の列）<input class="name-input" id="mName0" maxlength="12" autocomplete="off"></label>
+        <label for="mName1">2人目（上の列）<input class="name-input" id="mName1" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">1つの穴の石</span><div class="chips" id="mSeedChips"></div></div>
+      </div>
+      <ul class="rules" id="mRules"></ul>
+    </section>
+    <section class="panel" id="mPlay" hidden>
+      <div class="scores m-scores">
+        <div class="score m-score" id="mSide1">
+          <div class="score-head"><span class="score-name" id="mWho1"></span><span class="role">上の列</span></div>
+          <div class="pts"><span id="mPts1">0</span><small>個</small></div>
+        </div>
+        <div class="score m-score" id="mSide0">
+          <div class="score-head"><span class="score-name" id="mWho0"></span><span class="role">下の列</span></div>
+          <div class="pts"><span id="mPts0">0</span><small>個</small></div>
+        </div>
+      </div>
+      <span class="label" id="mLabel"></span>
+      <p class="d-title" id="mTitle"></p>
+      <div class="m-wrap" aria-live="off">
+        <div class="m-board" id="mBoard" role="group" aria-label="マンカラの盤。右のゴールは下の列、左のゴールは上の列のもの">
+          <button type="button" class="m-pit bottom" data-i="0" style="grid-area: 2 / 2"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="1" style="grid-area: 2 / 3"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="2" style="grid-area: 2 / 4"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="3" style="grid-area: 2 / 5"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="4" style="grid-area: 2 / 6"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="5" style="grid-area: 2 / 7"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <div class="m-store s0" data-i="6" aria-hidden="true"><span class="m-count"></span><span class="m-bowl"></span></div>
+          <button type="button" class="m-pit top" data-i="7" style="grid-area: 1 / 7"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="8" style="grid-area: 1 / 6"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="9" style="grid-area: 1 / 5"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="10" style="grid-area: 1 / 4"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="11" style="grid-area: 1 / 3"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="12" style="grid-area: 1 / 2"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <div class="m-store s1" data-i="13" aria-hidden="true"><span class="m-count"></span><span class="m-bowl"></span></div>
+        </div>
+        <div class="m-callout" id="mCallout" aria-hidden="true" hidden></div>
+      </div>
+      <div class="m-hintbox"><p class="hint" id="mHint"></p></div>
+    </section>
+  </main>
+  <div class="actions" id="mActions"></div>
+</div>

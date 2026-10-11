@@ -18,6 +18,10 @@
     { id: "katakana", title: "カタカナ禁止トーク", players: "3〜8人", desc: "カタカナを言ったらブブー。少ない人が勝ち", color: "--c-rose", el: "modeKatakana", game: Katakana, group: "party" },
     { id: "henteko", title: "ヘンテコ名づけ", players: "2〜8人", desc: "変な生き物に名前をつけて、早い者勝ち", color: "--c-lime", el: "modeHenteko", game: Henteko, group: "party" },
     { id: "eshiritori", title: "絵しりとり", players: "2人〜", desc: "前の人の絵を見て、絵でしりとり", color: "--c-sky", el: "modeEshiritori", game: Eshiritori, group: "party" },
+    { id: "connect4", title: "四目並べ", players: "2人・CPU", desc: "コマを落として、先に4つ並べたら勝ち", color: "--c-cyan", el: "modeConnect4", game: Connect4, group: "classic" },
+    { id: "reversi", title: "リバーシ", players: "2人・CPU", desc: "石をはさんでひっくり返す陣取り", color: "--c-mint", el: "modeReversi", game: Reversi, group: "classic" },
+    { id: "gomoku", title: "五目ならべ", players: "2人・CPU", desc: "先に5つならべたら勝ち", color: "--c-brown", el: "modeGomoku", game: Gomoku, group: "classic" },
+    { id: "mancala", title: "マンカラ", players: "2人・CPU", desc: "石をまいて、ゴールにたくさん集める", color: "--c-gold", el: "modeMancala", game: Mancala, group: "classic" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

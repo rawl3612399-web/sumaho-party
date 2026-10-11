@@ -1417,6 +1417,578 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   .eshiritori-clock.urgent, .eshiritori-stamp { animation: none; }
 }
 </style>
+<style>
+/* 四目並べ: score bar, the board with see-through holes, discs, drop / win animations.
+   Disc and board colors are this game's own tokens, defined for light and dark below. */
+:root {
+  --c4-red: #e63b33; --c4-red-rim: #9e1f19; --c4-red-mark: #e63b33;
+  --c4-yellow: #ffc61a; --c4-yellow-rim: #b07e00; --c4-yellow-mark: #c99400;
+  --c4-frame: #1f63c6; --c4-frame-deep: #133f82;
+  --c4-hole: #e8eef7; --c4-shine: rgba(255, 255, 255, .55); --c4-ring: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c4-red: #ff554c; --c4-red-rim: #a8261f; --c4-red-mark: #ff7a72;
+    --c4-yellow: #ffcf33; --c4-yellow-rim: #a87c00; --c4-yellow-mark: #ffd84f;
+    --c4-frame: #2c5fae; --c4-frame-deep: #18396d;
+    --c4-hole: #16201d; --c4-shine: rgba(255, 255, 255, .45); --c4-ring: #fff3a6;
+  }
+}
+:root[data-theme="dark"] {
+  --c4-red: #ff554c; --c4-red-rim: #a8261f; --c4-red-mark: #ff7a72;
+  --c4-yellow: #ffcf33; --c4-yellow-rim: #a87c00; --c4-yellow-mark: #ffd84f;
+  --c4-frame: #2c5fae; --c4-frame-deep: #18396d;
+  --c4-hole: #16201d; --c4-shine: rgba(255, 255, 255, .45); --c4-ring: #fff3a6;
+}
+
+/* A little more room for the board on phones (each column stays at least 44px wide at 375px).
+   Only while the board is up; the setup screen keeps the normal stage padding. */
+#cStage.c4-wide { padding-inline: 6px; gap: 10px; }
+#cPlay { gap: 10px; }
+#cHint { white-space: pre-line; }
+#cActions { justify-content: center; }
+
+.c4-p0 { --c4-fill: var(--c4-red); --c4-rim: var(--c4-red-rim); --c4-mark: var(--c4-red-mark); }
+.c4-p1 { --c4-fill: var(--c4-yellow); --c4-rim: var(--c4-yellow-rim); --c4-mark: var(--c4-yellow-mark); }
+
+/* ---------- score bar ---------- */
+.c4-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.c4-side {
+  display: flex; align-items: center; gap: 10px; min-width: 0;
+  padding: 8px 12px; border-radius: 14px; background: var(--card); border: 2px solid var(--line);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.c4-side.c4-turn { border-color: var(--ink); box-shadow: 0 4px 0 var(--ink); transform: translateY(-2px); }
+.c4-side.c4-won { border-color: var(--accent-deep); background: var(--accent); color: var(--on-accent); }
+.c4-swatch {
+  flex: none; width: 30px; height: 30px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 28%, var(--c4-shine), transparent 42%), var(--c4-fill);
+  box-shadow: inset 0 0 0 3px var(--c4-rim);
+}
+.c4-side.c4-turn .c4-swatch { animation: c4Bob 1.2s ease-in-out infinite; }
+.c4-who { display: flex; flex-direction: column; min-width: 0; text-align: left; }
+.c4-name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.c4-meta { font-size: .76rem; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.c4-side.c4-won .c4-meta { color: var(--on-accent); }
+
+/* ---------- board ---------- */
+.c4-board {
+  --c4-gap: 10px;
+  position: relative; isolation: isolate;
+  display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));
+  width: min(100% - 16px, 420px);
+  margin: 0 auto 18px;
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.c4-col { position: relative; display: flex; flex-direction: column; cursor: pointer; border-radius: 10px; outline: none; }
+.c4-col:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.c4-board:not(.c4-live) .c4-col, .c4-col.c4-full { cursor: default; }
+.c4-ghost { position: relative; aspect-ratio: 1; margin-bottom: var(--c4-gap); }
+.c4-cell { position: relative; aspect-ratio: 1; background: var(--c4-hole); transition: background-color .15s; }
+.c4-col.c4-aim .c4-cell { background: color-mix(in srgb, var(--c4-hole) 80%, var(--c4-frame)); }
+
+/* The front plate: one layer with a round hole over every cell. Discs sit behind it. */
+.c4-frame {
+  position: absolute; z-index: 2; left: 0; right: 0; bottom: 0;
+  top: calc((100% - var(--c4-gap)) / 7 + var(--c4-gap));
+  pointer-events: none; border-radius: 4px;
+  background-image: radial-gradient(circle closest-side, transparent 77%, var(--c4-frame-deep) 79%, var(--c4-frame) 90%);
+  background-size: calc(100% / 7) calc(100% / 6);
+  box-shadow: 0 0 0 8px var(--c4-frame), 0 9px 0 8px var(--c4-frame-deep);
+}
+
+/* ---------- discs ---------- */
+.c4-disc { position: absolute; inset: 9%; z-index: 1; border-radius: 50%; opacity: 0; pointer-events: none; }
+.c4-disc.c4-p0, .c4-disc.c4-p1 {
+  opacity: 1;
+  background: radial-gradient(circle at 34% 28%, var(--c4-shine), transparent 42%), var(--c4-fill);
+  box-shadow: inset 0 0 0 3px var(--c4-rim), inset 0 -4px 0 3px var(--c4-rim);
+}
+.c4-disc::after { content: ""; position: absolute; inset: 23%; border-radius: 50%; border: 2px solid var(--c4-rim); opacity: .4; }
+.c4-disc.c4-last::before { content: ""; position: absolute; inset: 41%; border-radius: 50%; background: var(--c4-rim); z-index: 1; }
+
+/* Ghost disc above the aimed column, and where it would land. */
+.c4-ghost .c4-disc.c4-p0, .c4-ghost .c4-disc.c4-p1 { opacity: .7; animation: c4Bob 1.1s ease-in-out infinite; }
+.c4-col.c4-full .c4-ghost .c4-disc { opacity: .3; filter: grayscale(1); }
+.c4-ghost.c4-nope { animation: c4Nope .32s ease-in-out; }
+.c4-cell.c4-target::before {
+  content: ""; position: absolute; inset: 15%; z-index: 1; border-radius: 50%;
+  border: 3px dashed var(--c4-target, var(--muted)); opacity: .85;
+}
+.c4-board.c4-t0 { --c4-target: var(--c4-red-mark); }
+.c4-board.c4-t1 { --c4-target: var(--c4-yellow-mark); }
+
+/* Drop with a small bounce. The disc first touches down at 72% (LAND_AT in connect4.js). */
+.c4-disc.c4-drop { animation: c4Drop var(--c4-ms, 260ms) both; }
+@keyframes c4Drop {
+  0% { transform: translateY(var(--c4-from, -300%)); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  72% { transform: translateY(0); animation-timing-function: cubic-bezier(0, .55, .45, 1); }
+  86% { transform: translateY(-9%); animation-timing-function: cubic-bezier(.55, 0, 1, .45); }
+  100% { transform: translateY(0); }
+}
+@keyframes c4Bob { 50% { transform: translateY(-7%); } }
+@keyframes c4Nope { 25% { transform: translateX(-14%); } 75% { transform: translateX(14%); } }
+
+/* Winning line: a pulsing ring drawn over the plate; the other discs fade back. */
+.c4-cell.c4-win::after {
+  content: ""; position: absolute; inset: 2%; z-index: 3; border-radius: 50%; pointer-events: none;
+  border: 4px solid var(--c4-ring); box-shadow: 0 0 10px var(--c4-ring);
+  animation: c4Pulse .7s ease-in-out infinite alternate;
+}
+@keyframes c4Pulse { from { transform: scale(.9); opacity: .55; } to { transform: scale(1.04); opacity: 1; } }
+.c4-board.c4-over.c4-decided .c4-cell:not(.c4-win) .c4-disc { opacity: .45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .c4-disc.c4-drop, .c4-cell.c4-win::after, .c4-ghost.c4-nope, .c4-side.c4-turn .c4-swatch { animation: none; }
+  .c4-ghost .c4-disc.c4-p0, .c4-ghost .c4-disc.c4-p1 { animation: none; }
+  .c4-side, .c4-cell { transition: none; }
+}
+</style>
+<style>
+/* リバーシ: green felt board, black and white stones (fixed colors in both themes), score bar, pass banner. */
+:root {
+  --v-felt: #24935f;
+  --v-felt-hi: #2fa96f;
+  --v-grid: #145a3a;
+  --v-frame: #0e3f2b;
+  --v-black: #16181b;
+  --v-black-hi: #4d545d;
+  --v-white: #fbfbf6;
+  --v-white-lo: #c3c8c1;
+  --v-hint: rgba(6, 32, 20, .36);
+  --v-shade: rgba(0, 0, 0, .35);
+  --v-nope: rgba(220, 62, 51, .5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --v-felt: #1d7c50;
+    --v-felt-hi: #258d5d;
+    --v-grid: #0e4129;
+    --v-frame: #0a2c1e;
+    --v-black: #16181b;
+    --v-black-hi: #4d545d;
+    --v-white: #fbfbf6;
+    --v-white-lo: #c3c8c1;
+    --v-hint: rgba(0, 0, 0, .38);
+    --v-shade: rgba(0, 0, 0, .5);
+    --v-nope: rgba(255, 124, 112, .5);
+  }
+}
+:root[data-theme="dark"] {
+  --v-felt: #1d7c50;
+  --v-felt-hi: #258d5d;
+  --v-grid: #0e4129;
+  --v-frame: #0a2c1e;
+  --v-black: #16181b;
+  --v-black-hi: #4d545d;
+  --v-white: #fbfbf6;
+  --v-white-lo: #c3c8c1;
+  --v-hint: rgba(0, 0, 0, .38);
+  --v-shade: rgba(0, 0, 0, .5);
+  --v-nope: rgba(255, 124, 112, .5);
+}
+
+/* ---------- layout ---------- */
+.v-stage { padding-inline: 8px; }
+#vSetup { padding-inline: 8px; box-sizing: border-box; }
+.v-play { gap: 10px; }
+.v-title { font-size: 1.25rem; min-height: 1.35em; }
+.v-actions { justify-content: center; }
+.v-record { font-size: .85rem; }
+
+/* ---------- stones ---------- */
+.v-b {
+  --v-face: radial-gradient(circle at 34% 30%, var(--v-black-hi), var(--v-black) 62%);
+  --v-back: radial-gradient(circle at 34% 30%, var(--v-white) 42%, var(--v-white-lo));
+}
+.v-w {
+  --v-face: radial-gradient(circle at 34% 30%, var(--v-white) 42%, var(--v-white-lo));
+  --v-back: radial-gradient(circle at 34% 30%, var(--v-black-hi), var(--v-black) 62%);
+}
+
+/* ---------- score bar ---------- */
+.v-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.v-side {
+  display: grid; grid-template-columns: auto 1fr auto; grid-template-areas: "icon name name" "icon state count";
+  align-items: center; column-gap: 8px; min-width: 0;
+  padding: 6px 10px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--paper);
+  text-align: left; transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+.v-side.on { border-color: var(--c-mint); box-shadow: 0 3px 0 var(--c-mint); transform: translateY(-2px); }
+.v-side.won { background: var(--c-mint); border-color: var(--c-mint); color: var(--on-tile); }
+.v-icon {
+  grid-area: icon; width: 24px; height: 24px; border-radius: 50%; background: var(--v-face);
+  box-shadow: 0 0 0 2px var(--line), 0 2px 0 var(--v-shade);
+}
+.v-side.thinking .v-icon { animation: vThink .9s ease-in-out infinite; }
+@keyframes vThink { 50% { transform: scale(.82); } }
+.v-name { grid-area: name; font-weight: 700; font-size: .9rem; line-height: 1.3; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v-state { grid-area: state; align-self: end; font-size: .75rem; line-height: 1.6; color: var(--muted); white-space: nowrap; }
+.v-side.on .v-state { color: var(--c-mint); font-weight: 700; }
+.v-side.won .v-state { color: var(--on-tile); font-weight: 700; }
+.v-count { grid-area: count; font-family: var(--display); font-size: 1.8rem; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.3em; text-align: right; }
+
+/* ---------- board ---------- */
+.v-board-wrap { position: relative; width: min(100%, 420px); }
+.v-board {
+  display: grid; grid-template-columns: repeat(8, 1fr); grid-template-rows: repeat(8, 1fr); gap: 2px;
+  width: 100%; aspect-ratio: 1; box-sizing: border-box; padding: 2px; overflow: hidden;
+  background: var(--v-grid); border: 5px solid var(--v-frame); border-radius: 12px;
+  box-shadow: 0 5px 0 var(--ink);
+}
+.v-cell {
+  position: relative; display: grid; place-items: center; min-width: 0; min-height: 0;
+  margin: 0; padding: 0; border: 0; border-radius: 0; font: inherit; cursor: pointer;
+  background: radial-gradient(circle at 50% 38%, var(--v-felt-hi), var(--v-felt) 72%);
+  touch-action: manipulation; -webkit-user-select: none; user-select: none;
+}
+.v-board.v-locked .v-cell { cursor: default; }
+.v-cell:focus-visible { outline: 3px solid var(--hl); outline-offset: -3px; z-index: 1; }
+.v-dots { position: absolute; inset: 7px; pointer-events: none; }
+.v-dots span { position: absolute; width: 7px; height: 7px; border-radius: 50%; background: var(--v-grid); transform: translate(-50%, -50%); }
+.v-dots span:nth-child(1) { left: 25%; top: 25%; }
+.v-dots span:nth-child(2) { left: 75%; top: 25%; }
+.v-dots span:nth-child(3) { left: 25%; top: 75%; }
+.v-dots span:nth-child(4) { left: 75%; top: 75%; }
+
+/* legal-move hint dot, and a ghost stone on hover */
+.v-cell.v-can::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 24%; height: 24%;
+  border-radius: 50%; background: var(--v-hint); transform: translate(-50%, -50%);
+  transition: width .12s, height .12s, opacity .12s;
+}
+@media (hover: hover) {
+  .v-board[data-turn="black"]:not(.v-locked) .v-cell.v-can:hover::before { width: 78%; height: 78%; background: var(--v-black); opacity: .45; }
+  .v-board[data-turn="white"]:not(.v-locked) .v-cell.v-can:hover::before { width: 78%; height: 78%; background: var(--v-white); opacity: .55; }
+}
+.v-cell.v-nope { animation: vNope .32s ease-out; }
+@keyframes vNope { 30% { box-shadow: inset 0 0 0 40px var(--v-nope); } }
+
+.v-disc {
+  position: relative; width: 80%; height: 80%; border-radius: 50%; display: grid; place-items: center;
+  background: var(--v-face); box-shadow: 0 2px 0 var(--v-shade); visibility: hidden;
+}
+.v-disc.v-b, .v-disc.v-w { visibility: visible; }
+.v-cell.v-last .v-disc::after { content: ""; width: 22%; height: 22%; border-radius: 50%; background: var(--alert); }
+
+.v-disc.v-place { animation: vPlace .22s cubic-bezier(.2, 1.3, .4, 1) both; }
+@keyframes vPlace {
+  0% { transform: translateY(-14%) scale(1.35); opacity: 0; }
+  100% { transform: none; opacity: 1; }
+}
+.v-disc.v-flip { animation: vFlip .3s ease-in-out both; animation-delay: var(--v-delay, 0ms); }
+@keyframes vFlip {
+  0% { transform: translateY(0) scaleX(1); background: var(--v-back); }
+  49.9% { background: var(--v-back); }
+  50% { transform: translateY(-12%) scaleX(.04); background: var(--v-face); }
+  100% { transform: translateY(0) scaleX(1); background: var(--v-face); }
+}
+
+/* ---------- pass banner ---------- */
+.v-banner {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; pointer-events: none;
+}
+.v-banner-main {
+  font-family: var(--display); font-size: clamp(3rem, 16vw, 4.6rem); line-height: 1;
+  padding: 8px 32px 12px; border-radius: 18px; background: var(--zap); color: var(--on-zap);
+  border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink); transform: rotate(-4deg);
+  animation: vStamp .42s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.v-banner-sub {
+  font-size: .9rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; max-width: 90%; text-align: center;
+  background: var(--card); color: var(--ink); border: 2px solid var(--ink);
+  animation: vRise .3s .12s ease-out both;
+}
+@keyframes vStamp { from { transform: rotate(-4deg) scale(2.2); opacity: 0; } to { transform: rotate(-4deg) scale(1); opacity: 1; } }
+@keyframes vRise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .v-disc.v-flip, .v-disc.v-place, .v-banner-main, .v-banner-sub, .v-side.thinking .v-icon, .v-cell.v-nope { animation: none; }
+  .v-side, .v-cell.v-can::before { transition: none; }
+  .v-side.on { transform: none; }
+}
+</style>
+<style>
+/* 五目ならべ: wooden 15x15 board, stones, score bar. Stone colors stay black and white in both themes. */
+:root {
+  --g-wood: #e4b867;
+  --g-wood-deep: #a8742c;
+  --g-grain: rgba(128, 78, 24, .11);
+  --g-sheen: rgba(255, 244, 214, .45);
+  --g-grid: #5b3a16;
+  --g-black: #141414;
+  --g-black-hi: #5d5d5d;
+  --g-white: #fdfcf8;
+  --g-white-lo: #c9c3b5;
+  --g-stone-shadow: rgba(48, 26, 4, .5);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --g-wood: #c9984c;
+    --g-wood-deep: #6f4a1b;
+    --g-grain: rgba(84, 50, 12, .16);
+    --g-sheen: rgba(255, 236, 190, .18);
+    --g-grid: #3b2408;
+    --g-black: #141414;
+    --g-black-hi: #5d5d5d;
+    --g-white: #fdfcf8;
+    --g-white-lo: #c9c3b5;
+    --g-stone-shadow: rgba(30, 16, 2, .6);
+  }
+}
+:root[data-theme="dark"] {
+  --g-wood: #c9984c;
+  --g-wood-deep: #6f4a1b;
+  --g-grain: rgba(84, 50, 12, .16);
+  --g-sheen: rgba(255, 236, 190, .18);
+  --g-grid: #3b2408;
+  --g-black: #141414;
+  --g-black-hi: #5d5d5d;
+  --g-white: #fdfcf8;
+  --g-white-lo: #c9c3b5;
+  --g-stone-shadow: rgba(30, 16, 2, .6);
+}
+
+#modeGomoku .stage { padding: 14px 8px; gap: 10px; }
+.g-panel { gap: 10px; }
+.g-title { font-size: 1.25rem; min-height: 1.35em; }
+.g-hint { font-size: .9rem; min-height: 1.4em; padding-inline: 8px; }
+
+/* ---------- score bar ---------- */
+.g-bar { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; width: 100%; box-sizing: border-box; padding-inline: 4px; }
+.g-side {
+  display: flex; align-items: center; gap: 8px; min-width: 0; text-align: left;
+  padding: 6px 10px; border: 2px solid var(--line); border-radius: 14px; background: var(--card);
+  transition: border-color .2s, box-shadow .2s, transform .2s, background-color .2s;
+}
+.g-side:last-child { flex-direction: row-reverse; text-align: right; }
+.g-side.on { border-color: var(--c-brown); box-shadow: 0 3px 0 var(--c-brown); transform: translateY(-2px); }
+.g-side.won { border-color: var(--accent-deep); background: var(--accent); color: var(--on-accent); box-shadow: 0 3px 0 var(--accent-deep); }
+.g-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.g-name { font-weight: 700; font-size: .88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.g-count { font-size: .75rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.g-side.won .g-count { color: inherit; opacity: .85; }
+.g-moves { font-size: .78rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.g-dot { flex: none; width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 1.5px 1.5px var(--g-stone-shadow); }
+.g-dot.b { background: radial-gradient(circle at 34% 30%, var(--g-black-hi), var(--g-black) 58%); }
+.g-dot.w { background: radial-gradient(circle at 34% 30%, var(--g-white) 35%, var(--g-white-lo)); }
+.g-side.think .g-dot { animation: gThink .9s ease-in-out infinite; }
+
+/* ---------- board ---------- */
+.g-board {
+  position: relative; box-sizing: border-box; width: min(100%, 420px); aspect-ratio: 1; padding: 3.4%;
+  border-radius: 10px; border: 2.5px solid var(--g-wood-deep); box-shadow: 0 5px 0 var(--g-wood-deep); margin-bottom: 5px;
+  background-color: var(--g-wood);
+  background-image:
+    radial-gradient(ellipse at 28% 18%, var(--g-sheen), transparent 62%),
+    repeating-linear-gradient(98deg, transparent 0 9px, var(--g-grain) 9px 11px, transparent 11px 22px, var(--g-grain) 22px 23px, transparent 23px 37px);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.g-board:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.g-grid { position: relative; width: 100%; height: 100%; display: grid; grid-template: repeat(15, 1fr) / repeat(15, 1fr); }
+.g-lines { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--g-grid); pointer-events: none; overflow: visible; }
+.g-lines line, .g-lines rect { fill: none; stroke: currentColor; stroke-width: 1; vector-effect: non-scaling-stroke; }
+.g-lines rect.edge { stroke-width: 2; }
+.g-lines circle { fill: currentColor; }
+.g-lines line.guide { stroke: var(--accent); stroke-width: 2; opacity: .55; }
+
+.g-pt { position: relative; min-width: 0; }
+.g-board.live .g-pt { cursor: pointer; }
+.g-pt::after {
+  content: ""; position: absolute; inset: 4%; border-radius: 50%; transform: scale(0); pointer-events: none;
+}
+.g-pt.b::after, .g-pt.w::after { transform: none; box-shadow: 0 1.5px 1.5px var(--g-stone-shadow); }
+.g-pt.b::after { background: radial-gradient(circle at 34% 30%, var(--g-black-hi), var(--g-black) 58%); }
+.g-pt.w::after { background: radial-gradient(circle at 34% 30%, var(--g-white) 35%, var(--g-white-lo)); }
+
+/* last move: a small red mark on the stone, and the stone drops in */
+.g-pt.last::after { animation: gDrop .24s cubic-bezier(.3, 1.4, .5, 1); }
+.g-pt.last::before {
+  content: ""; position: absolute; z-index: 1; left: 50%; top: 50%; width: 24%; height: 24%;
+  transform: translate(-50%, -50%); border-radius: 50%; background: var(--alert); pointer-events: none;
+}
+
+/* preview (first tap) and keyboard cursor */
+.g-pt.pv::after { transform: none; opacity: .6; animation: gGhost 1s ease-in-out infinite; }
+.g-pt.pv-b::after { background: var(--g-black); }
+.g-pt.pv-w::after { background: var(--g-white); box-shadow: inset 0 0 0 1px var(--g-white-lo); opacity: .85; }
+.g-pt.pv::before, .g-pt.cursor::before {
+  content: ""; position: absolute; z-index: 2; inset: -14%; width: auto; height: auto; transform: none; border-radius: 50%;
+  border: 2.5px solid var(--accent); background: none; pointer-events: none;
+}
+/* the keyboard cursor on the last stone keeps its red mark inside the ring */
+.g-pt.last.cursor::before { background: radial-gradient(circle closest-side, var(--alert) 0 18%, transparent 20%); }
+
+/* winning five */
+.g-pt.win::after { box-shadow: 0 0 0 2px var(--zap), 0 0 9px 2px var(--zap); animation: gWin .5s ease-in-out 6 alternate; }
+
+@media (hover: hover) {
+  .g-board.live .g-pt:not(.b):not(.w):not(.pv):hover::after { transform: none; opacity: .3; background: var(--g-black); }
+  .g-board.live.turn-w .g-pt:not(.b):not(.w):not(.pv):hover::after { background: var(--g-white); }
+}
+
+@keyframes gDrop { from { transform: scale(1.4); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes gGhost { 50% { transform: scale(.84); } }
+@keyframes gWin { to { transform: scale(1.14); } }
+@keyframes gThink { 50% { transform: scale(.78); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .g-pt.last::after, .g-pt.pv::after, .g-pt.win::after, .g-side.think .g-dot { animation: none; }
+  .g-side { transition: none; }
+  .g-side.on { transform: none; }
+}
+</style>
+<style>
+/* マンカラ: a wooden board with oval pits, two stores and glass pebbles. Colors come from tokens only;
+   the board and pebble tokens below are defined for light, dark (system) and dark (forced). */
+:root {
+  --m-wood: #d9a86a; --m-wood-hi: #ecc792; --m-wood-deep: #9a6432; --m-grain: #c48d4c;
+  --m-pit: #87552a; --m-pit-in: #613917; --m-shade: rgba(54, 26, 4, .5); --m-label: #3b220e;
+  --m-shine: rgba(255, 255, 255, .9); --m-edge: #1e1208;
+  --m-stone-0: #3f98e0; --m-stone-1: #e0507a; --m-stone-2: #f2b53a; --m-stone-3: #38b98a; --m-stone-4: #9877e6;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --m-wood: #6e4a2c; --m-wood-hi: #88613e; --m-wood-deep: #3b2715; --m-grain: #5e3e23;
+    --m-pit: #2f1e10; --m-pit-in: #1e1208; --m-shade: rgba(0, 0, 0, .6); --m-label: #f4dfc4;
+    --m-shine: rgba(255, 255, 255, .8); --m-edge: #0d0804;
+    --m-stone-0: #5cb0f2; --m-stone-1: #f06d93; --m-stone-2: #ffc857; --m-stone-3: #4fd3a0; --m-stone-4: #b195ff;
+  }
+}
+:root[data-theme="dark"] {
+  --m-wood: #6e4a2c; --m-wood-hi: #88613e; --m-wood-deep: #3b2715; --m-grain: #5e3e23;
+  --m-pit: #2f1e10; --m-pit-in: #1e1208; --m-shade: rgba(0, 0, 0, .6); --m-label: #f4dfc4;
+  --m-shine: rgba(255, 255, 255, .8); --m-edge: #0d0804;
+  --m-stone-0: #5cb0f2; --m-stone-1: #f06d93; --m-stone-2: #ffc857; --m-stone-3: #4fd3a0; --m-stone-4: #b195ff;
+}
+
+/* ---------- play view ---------- */
+.stage.m-playing { padding-inline: 4px; }
+.stage.m-playing .d-title, .stage.m-playing .hint { padding-inline: 10px; }
+/* The board must not move while you aim at it: one-line turn title, and the hint keeps two lines of room. */
+.stage.m-turns .d-title { box-sizing: border-box; max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.m-hintbox { width: 100%; display: flex; align-items: center; justify-content: center; }
+.m-hintbox .hint { word-break: auto-phrase; }
+.stage.m-turns .m-hintbox { min-height: 2.9rem; }
+.m-scores { width: min(calc(100% - 16px), 420px); }
+.m-score { transition: border-color .2s, box-shadow .2s; }
+.m-score .pts { font-size: 1.75rem; }
+.m-score.turn { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+.m-score.think .pts { animation: mThink 1s ease-in-out infinite; }
+@keyframes mThink { 50% { opacity: .4; } }
+#mActions { justify-content: center; }
+
+/* ---------- board ---------- */
+.m-wrap { position: relative; width: min(100%, 420px); }
+.m-board {
+  --m-stone: clamp(9px, 3.2vw, 13px);
+  box-sizing: border-box; width: 100%; aspect-ratio: 11 / 5;
+  display: grid;
+  grid-template-columns: clamp(24px, 8%, 40px) repeat(6, minmax(0, 1fr)) clamp(24px, 8%, 40px);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  row-gap: 6px;
+  padding: 8px 4px;
+  margin-bottom: 6px;
+  border-radius: 26px;
+  border: 2.5px solid var(--m-wood-deep);
+  background:
+    repeating-linear-gradient(177deg, transparent 0 9px, color-mix(in srgb, var(--m-grain) 40%, transparent) 9px 10px, transparent 10px 23px),
+    linear-gradient(180deg, var(--m-wood-hi), var(--m-wood) 38%, var(--m-wood) 72%, var(--m-wood-deep));
+  box-shadow: 0 6px 0 var(--m-wood-deep), inset 0 2px 0 var(--m-wood-hi);
+  user-select: none; -webkit-user-select: none;
+}
+
+.m-pit, .m-store {
+  min-width: 0; min-height: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--m-label);
+}
+.m-pit {
+  font: inherit; background: none; border: 0; margin: 0; padding: 2px; border-radius: 14px;
+  cursor: pointer; touch-action: manipulation;
+}
+.m-pit.bottom { flex-direction: column-reverse; }
+.m-pit[aria-disabled="true"] { cursor: default; }
+.m-store { grid-row: 1 / span 2; padding: 0 1px; gap: 3px; }
+.m-store.s0 { grid-column: 8; flex-direction: column-reverse; }
+.m-store.s1 { grid-column: 1; }
+
+.m-count {
+  font-family: var(--display); font-size: .95rem; line-height: 1; height: 1em;
+  font-variant-numeric: tabular-nums;
+}
+.m-store .m-count { font-size: 1.1rem; height: 1.1rem; }
+
+.m-bowl {
+  position: relative; display: block; flex: 1; width: 100%; min-height: 0; box-sizing: border-box;
+  border-radius: 999px;
+  background: radial-gradient(ellipse at 50% 30%, var(--m-pit-in), var(--m-pit) 75%);
+  box-shadow: inset 0 3px 7px var(--m-shade), 0 1px 0 var(--m-wood-hi);
+  transition: box-shadow .2s ease, transform .15s ease;
+}
+.m-pit.legal .m-bowl {
+  box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 2.5px var(--accent), 0 0 10px var(--accent);
+  animation: mGlow 1.6s ease-in-out infinite;
+}
+@keyframes mGlow {
+  50% { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 3.5px var(--accent), 0 0 18px var(--accent); }
+}
+.m-pit.legal:active .m-bowl { transform: scale(.93); }
+.m-pit.from .m-bowl { outline: 2px dashed var(--m-label); outline-offset: 2px; }
+.m-pit.land .m-bowl, .m-store.land .m-bowl { outline: 2.5px solid var(--m-label); outline-offset: 2px; }
+.m-pit.steal .m-bowl { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 3px var(--zap), 0 0 18px var(--zap); }
+.m-store.turn .m-bowl { box-shadow: inset 0 3px 7px var(--m-shade), 0 0 0 2.5px var(--accent); }
+
+/* ---------- pebbles ---------- */
+.m-stone {
+  position: absolute; width: var(--m-stone); height: var(--m-stone); border-radius: 50%;
+  transform: translate(-50%, -50%); pointer-events: none;
+  background: radial-gradient(circle at 34% 30%, var(--m-shine) 0 12%, var(--m-c) 46%, color-mix(in srgb, var(--m-c) 60%, var(--m-edge)) 100%);
+  box-shadow: 0 1px 1.5px var(--m-shade);
+}
+.m-stone.t0 { --m-c: var(--m-stone-0); }
+.m-stone.t1 { --m-c: var(--m-stone-1); }
+.m-stone.t2 { --m-c: var(--m-stone-2); }
+.m-stone.t3 { --m-c: var(--m-stone-3); }
+.m-stone.t4 { --m-c: var(--m-stone-4); }
+.m-stone.m-new { animation: mStoneIn .24s cubic-bezier(.3, 1.5, .5, 1); }
+@keyframes mStoneIn {
+  from { transform: translate(-50%, -170%) scale(1.25); opacity: 0; }
+  to { transform: translate(-50%, -50%); opacity: 1; }
+}
+/* The bump outranks the legal-pit glow, so it always finishes (and animationend clears the class). */
+.m-bowl.m-drop, .m-pit.legal .m-bowl.m-drop { animation: mBump .2s ease-out; }
+@keyframes mBump { 40% { transform: scale(1.08); } }
+.m-nope { animation: mNope .25s ease-in-out; }
+@keyframes mNope { 25% { transform: translateX(-3px); } 75% { transform: translateX(3px); } }
+
+/* ---------- callout (もう1回！ / 横取り！) ---------- */
+.m-callout {
+  position: absolute; left: 50%; top: 50%; z-index: 2; pointer-events: none;
+  transform: translate(-50%, -50%);
+  width: max-content; max-width: 88%; box-sizing: border-box; text-align: center;
+  font-family: var(--display); font-size: clamp(1.4rem, 7vw, 2.2rem); line-height: 1.2;
+  padding: 6px 18px; border-radius: 999px;
+  background: var(--card); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+}
+.m-callout.extra { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); box-shadow: 0 4px 0 var(--accent-deep); }
+.m-callout.steal { background: var(--zap); color: var(--on-zap); }
+.m-callout.m-show { animation: mCallout 1.15s cubic-bezier(.2, 1.2, .4, 1) both; }
+@keyframes mCallout {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.4); }
+  16% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+  28% { transform: translate(-50%, -50%) scale(1); }
+  78% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -75%) scale(.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .m-pit.legal .m-bowl, .m-pit.legal .m-bowl.m-drop, .m-bowl.m-drop, .m-stone.m-new, .m-nope, .m-callout.m-show,
+  .m-score.think .pts { animation: none; }
+  .m-bowl, .m-score { transition: none; }
+}
+</style>
 <!-- games:styles -->
 
 <div class="app">
@@ -1880,6 +2452,165 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
     </section>
   </main>
   <div class="actions" id="eActions"></div>
+</div>
+  <!-- ===== 四目並べ ===== -->
+<div class="mode" id="modeConnect4" hidden>
+  <div class="c4-scores" id="cScores" hidden></div>
+  <main class="stage" id="cStage" aria-live="polite">
+    <section class="panel" id="cSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="cVsChips"></div></div>
+        <div class="opt" id="cLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="cLevelChips"></div></div>
+        <div class="opt" id="cOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="cOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="cNames" hidden>
+        <label for="cName1">1人目<input class="name-input" id="cName1" maxlength="12" autocomplete="off"></label>
+        <label for="cName2">2人目<input class="name-input" id="cName2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <ul class="rules" id="cRules"></ul>
+    </section>
+    <section class="panel" id="cPlay" hidden>
+      <span class="label" id="cLabel"></span>
+      <p class="d-title" id="cTitle"></p>
+      <div class="c4-board" id="cBoard" role="group" aria-label="四目並べの盤"></div>
+      <p class="hint" id="cHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="cActions"></div>
+</div>
+  <!-- ===== リバーシ ===== -->
+<div class="mode" id="modeReversi" hidden>
+  <main class="stage v-stage" aria-live="polite">
+    <section class="panel" id="vSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="vVsChips"></div></div>
+        <div class="opt" id="vLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="vLevelChips"></div></div>
+        <div class="opt" id="vSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="vSideChips"></div></div>
+      </div>
+      <div class="setup-form" id="vNames" hidden>
+        <label for="vName1">黒（先攻）<input class="name-input" id="vName1" maxlength="12" autocomplete="off"></label>
+        <label for="vName2">白（後攻）<input class="name-input" id="vName2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">ヒント</span><div class="chips" id="vHintChips"></div></div>
+      </div>
+      <ul class="rules" id="vRules"></ul>
+      <p class="hint v-record" id="vRecord" hidden></p>
+    </section>
+    <section class="panel v-play" id="vPlay" hidden>
+      <div class="v-scores">
+        <div class="v-side" id="vSideB">
+          <span class="v-icon v-b" aria-hidden="true"></span>
+          <span class="v-name" id="vNameB"></span>
+          <span class="v-state" id="vStateB"></span>
+          <span class="v-count" id="vCountB">2</span>
+        </div>
+        <div class="v-side" id="vSideW">
+          <span class="v-icon v-w" aria-hidden="true"></span>
+          <span class="v-name" id="vNameW"></span>
+          <span class="v-state" id="vStateW"></span>
+          <span class="v-count" id="vCountW">2</span>
+        </div>
+      </div>
+      <span class="label" id="vLabel"></span>
+      <p class="d-title v-title" id="vTitle"></p>
+      <div class="v-board-wrap">
+        <div class="v-board" id="vBoard" role="group" aria-label="リバーシの盤"></div>
+        <div class="v-dots" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+        <div class="v-banner" id="vBanner" hidden>
+          <span class="v-banner-main">パス</span>
+          <span class="v-banner-sub" id="vBannerSub"></span>
+        </div>
+      </div>
+      <p class="hint" id="vHint"></p>
+    </section>
+  </main>
+  <div class="actions v-actions" id="vActions"></div>
+</div>
+  <!-- ===== 五目ならべ ===== -->
+<div class="mode" id="modeGomoku" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="gSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="gModeChips"></div></div>
+        <div class="opt" id="gLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="gLevelChips"></div></div>
+        <div class="opt" id="gSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="gSideChips"></div></div>
+      </div>
+      <div class="setup-form" id="gNames" hidden>
+        <label for="gName0">1人目（最初は黒）<input class="name-input" id="gName0" maxlength="12" autocomplete="off"></label>
+        <label for="gName1">2人目（最初は白）<input class="name-input" id="gName1" maxlength="12" autocomplete="off"></label>
+      </div>
+      <ul class="rules" id="gRules"></ul>
+    </section>
+    <section class="panel g-panel" id="gPlay" hidden>
+      <div class="g-bar" id="gBar">
+        <div class="g-side" id="gSideB"><span class="g-dot b" aria-hidden="true"></span><span class="g-who"><span class="g-name" id="gNameB"></span><span class="g-count" id="gCountB"></span></span></div>
+        <span class="g-moves" id="gMoves"></span>
+        <div class="g-side" id="gSideW"><span class="g-dot w" aria-hidden="true"></span><span class="g-who"><span class="g-name" id="gNameW"></span><span class="g-count" id="gCountW"></span></span></div>
+      </div>
+      <p class="d-title g-title" id="gTitle"></p>
+      <div class="g-board" id="gBoard" tabindex="0" role="application" aria-label="五目ならべの盤。矢印キーで選んでEnterで置きます">
+        <div class="g-grid" id="gGrid"></div>
+      </div>
+      <p class="hint g-hint" id="gHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="gActions"></div>
+</div>
+  <!-- ===== マンカラ ===== -->
+<div class="mode" id="modeMancala" hidden>
+  <main class="stage" id="mStage" aria-live="polite">
+    <section class="panel" id="mSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="mVsChips"></div></div>
+        <div class="opt" id="mLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="mLevelChips"></div></div>
+        <div class="opt" id="mOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="mOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="mNames" hidden>
+        <label for="mName0">1人目（下の列）<input class="name-input" id="mName0" maxlength="12" autocomplete="off"></label>
+        <label for="mName1">2人目（上の列）<input class="name-input" id="mName1" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">1つの穴の石</span><div class="chips" id="mSeedChips"></div></div>
+      </div>
+      <ul class="rules" id="mRules"></ul>
+    </section>
+    <section class="panel" id="mPlay" hidden>
+      <div class="scores m-scores">
+        <div class="score m-score" id="mSide1">
+          <div class="score-head"><span class="score-name" id="mWho1"></span><span class="role">上の列</span></div>
+          <div class="pts"><span id="mPts1">0</span><small>個</small></div>
+        </div>
+        <div class="score m-score" id="mSide0">
+          <div class="score-head"><span class="score-name" id="mWho0"></span><span class="role">下の列</span></div>
+          <div class="pts"><span id="mPts0">0</span><small>個</small></div>
+        </div>
+      </div>
+      <span class="label" id="mLabel"></span>
+      <p class="d-title" id="mTitle"></p>
+      <div class="m-wrap" aria-live="off">
+        <div class="m-board" id="mBoard" role="group" aria-label="マンカラの盤。右のゴールは下の列、左のゴールは上の列のもの">
+          <button type="button" class="m-pit bottom" data-i="0" style="grid-area: 2 / 2"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="1" style="grid-area: 2 / 3"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="2" style="grid-area: 2 / 4"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="3" style="grid-area: 2 / 5"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="4" style="grid-area: 2 / 6"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit bottom" data-i="5" style="grid-area: 2 / 7"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <div class="m-store s0" data-i="6" aria-hidden="true"><span class="m-count"></span><span class="m-bowl"></span></div>
+          <button type="button" class="m-pit top" data-i="7" style="grid-area: 1 / 7"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="8" style="grid-area: 1 / 6"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="9" style="grid-area: 1 / 5"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="10" style="grid-area: 1 / 4"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="11" style="grid-area: 1 / 3"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <button type="button" class="m-pit top" data-i="12" style="grid-area: 1 / 2"><span class="m-count"></span><span class="m-bowl"></span></button>
+          <div class="m-store s1" data-i="13" aria-hidden="true"><span class="m-count"></span><span class="m-bowl"></span></div>
+        </div>
+        <div class="m-callout" id="mCallout" aria-hidden="true" hidden></div>
+      </div>
+      <div class="m-hintbox"><p class="hint" id="mHint"></p></div>
+    </section>
+  </main>
+  <div class="actions" id="mActions"></div>
 </div>
   <!-- games:partials -->
 </div>
@@ -2715,6 +3446,10 @@ const Icons = (() => {
     katakana: svg('<path d="M4.5 3h9A2.5 2.5 0 0 1 16 5.5V10a2.5 2.5 0 0 1-2.5 2.5H9l-3.5 3v-3h-1A2.5 2.5 0 0 1 2 10V5.5A2.5 2.5 0 0 1 4.5 3z"/><path d="M6 6.6h5.4c0 2.2-.4 3.4-1.3 4.2M8.6 5c-.1 2.6-.8 4.4-2.3 5.6"/><circle cx="18.5" cy="18.5" r="3.5"/><path d="M16 16l5 5"/>'),
     henteko: svg('<path d="M5.5 19.5C4 15 5.2 9 12 9s8 6 6.5 10.5z"/><path d="M9 9.6 7.5 5.6M15 9.6l1.5-4"/><circle cx="7.2" cy="4.6" r="1"/><circle cx="16.8" cy="4.6" r="1"/><path d="M9.8 13.4h.01M14.2 13.4h.01" stroke-width="2.6"/><path d="M10 16.2c1.2 1 2.8 1 4 0"/><path d="M8.6 19.5v1.6M15.4 19.5v1.6"/>'),
     eshiritori: svg('<rect x="2.5" y="3.5" width="8.5" height="8.5" rx="1.8"/><rect x="13" y="12" width="8.5" height="8.5" rx="1.8"/><path d="M11 7.75h6.25V12"/><path d="M15.25 10l2 2 2-2"/><circle cx="6.75" cy="8.6" r="1.9"/><path d="M6.75 6.7V5.8"/><path d="M15.1 16.6l2.15-1.9 2.15 1.9M15.8 16v2.5h2.9V16"/>'),
+    connect4: svg('<rect x="3" y="9" width="18" height="12" rx="2.5"/><circle cx="7.5" cy="13.1" r="1.2" stroke-width="1.3"/><circle cx="12" cy="13.1" r="1.85" fill="currentColor" stroke="none"/><circle cx="16.5" cy="13.1" r="1.2" stroke-width="1.3"/><circle cx="7.5" cy="17.3" r="1.85" fill="currentColor" stroke="none"/><circle cx="12" cy="17.3" r="1.85" fill="currentColor" stroke="none"/><circle cx="16.5" cy="17.3" r="1.85" fill="currentColor" stroke="none"/><path d="M16.5 2.5v3.6M14.6 4.4l1.9 1.9 1.9-1.9"/>'),
+    reversi: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.7" cy="8.7" r="2.2"/><circle cx="15.3" cy="15.3" r="2.2"/><circle cx="15.3" cy="8.7" r="2.2" fill="currentColor"/><circle cx="8.7" cy="15.3" r="2.2" fill="currentColor"/>'),
+    gomoku: svg('<path d="M3 6h18M3 12h18M3 18h18M6 3v18M12 3v18M18 3v18" stroke-width="1.3"/><circle cx="6" cy="18" r="2.6" fill="currentColor"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/><circle cx="18" cy="6" r="2.6" fill="currentColor"/>'),
+    mancala: svg('<rect x="1.5" y="4.5" width="21" height="15" rx="7"/><ellipse cx="5.7" cy="12" rx="1.5" ry="4.2" stroke-width="1.5"/><ellipse cx="18.3" cy="12" rx="1.5" ry="4.2" stroke-width="1.5"/><circle cx="9.9" cy="9.4" r="1.4" stroke-width="1.4"/><circle cx="14.1" cy="9.4" r="1.4" stroke-width="1.4"/><circle cx="9.9" cy="14.6" r="1.4" stroke-width="1.4"/><circle cx="14.1" cy="14.6" r="1.4" stroke-width="1.4"/>'),
     /* games:icons */
   };
 })();
@@ -9078,6 +9813,3022 @@ const Eshiritori = (() => {
   return { init, leave, onShow };
 })();
 </script>
+<script>
+/* connect4-rules.js */
+/* Connect Four (四目並べ): 7 columns x 6 rows. Discs fall to the lowest empty cell; four in a row in any
+ * direction wins, a full board without four is a draw. Player 0 is red and always moves first, player 1 is yellow.
+ * Also holds the CPU: よわい (easy), ふつう (normal, alpha-beta depth 4), つよい (hard, depth 7 and deeper). */
+const Connect4Rules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const COLS = 7;
+  const ROWS = 6;
+  const SIZE = COLS * ROWS;
+  const NEED = 4;
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+  const CENTER_ORDER = Object.freeze([3, 2, 4, 1, 5, 0, 6]);
+  const CENTER_WEIGHTS = Object.freeze([1, 2, 3, 4, 3, 2, 1]);
+  const DC = Object.freeze([1, 0, 1, 1]);
+  const DR = Object.freeze([0, 1, 1, -1]);
+  const KINDS = Object.freeze(["row", "col", "diag", "anti"]); /* names for the four directions above */
+  const EMPTY = -1;
+
+  /* row 0 is the bottom row. */
+  const index = (col, row) => row * COLS + col;
+  const isPlayer = (p) => p === 0 || p === 1;
+  const validState = (s) => !!s && Array.isArray(s.board) && s.board.length === SIZE && Array.isArray(s.heights);
+
+  function freezeState(s) {
+    return Object.freeze({
+      ...s,
+      board: Object.freeze(s.board), heights: Object.freeze(s.heights), moves: Object.freeze(s.moves),
+      line: Object.freeze(s.line), last: s.last ? Object.freeze(s.last) : null
+    });
+  }
+
+  function newGame() {
+    return freezeState({
+      board: Array(SIZE).fill(null), heights: Array(COLS).fill(0), turn: 0, moves: [],
+      last: null, winner: null, line: [], draw: false
+    });
+  }
+
+  const isOver = (s) => s.winner !== null || s.draw;
+  const canDrop = (s, col) => Number.isInteger(col) && col >= 0 && col < COLS && s.heights[col] < ROWS && !isOver(s);
+  const legalMoves = (s) => (isOver(s) ? [] : Array.from({ length: COLS }, (_, c) => c).filter(c => s.heights[c] < ROWS));
+
+  function moveError(s, col) {
+    if (!validState(s)) return "盤面が正しくありません";
+    if (!Number.isInteger(col) || col < 0 || col >= COLS) return "列の番号が正しくありません";
+    if (isOver(s)) return "もう勝負がついています";
+    if (s.heights[col] >= ROWS) return "その列はもういっぱいです";
+    return null;
+  }
+
+  /* Counts same-colored discs from (col,row) in one direction, not counting the start cell. */
+  function run(cells, col, row, dc, dr, p) {
+    let n = 0;
+    for (let k = 1; k < NEED; k++) {
+      const c = col + dc * k;
+      const r = row + dr * k;
+      if (c < 0 || c >= COLS || r < 0 || r >= ROWS || cells[r * COLS + c] !== p) break;
+      n++;
+    }
+    return n;
+  }
+
+  /* Would a disc of player p at (col,row) make four? */
+  function connects(cells, col, row, p) {
+    for (let d = 0; d < 4; d++) {
+      if (1 + run(cells, col, row, DC[d], DR[d], p) + run(cells, col, row, -DC[d], -DR[d], p) >= NEED) return true;
+    }
+    return false;
+  }
+
+  /* Every cell of every line of four or more through (col,row), or [] when there is none. */
+  function lineThrough(board, col, row) {
+    const p = board[index(col, row)];
+    const cells = new Set();
+    for (let d = 0; d < 4; d++) {
+      const fwd = run(board, col, row, DC[d], DR[d], p);
+      const back = run(board, col, row, -DC[d], -DR[d], p);
+      if (1 + fwd + back < NEED) continue;
+      for (let k = -back; k <= fwd; k++) cells.add(index(col + DC[d] * k, row + DR[d] * k));
+    }
+    return [...cells].sort((a, b) => a - b);
+  }
+
+  function play(s, col) {
+    const err = moveError(s, col);
+    if (err) throw new Error(err);
+    const row = s.heights[col];
+    const at = index(col, row);
+    const board = s.board.map((v, i) => (i === at ? s.turn : v));
+    const heights = s.heights.map((h, c) => (c === col ? h + 1 : h));
+    const line = lineThrough(board, col, row);
+    const moves = [...s.moves, col];
+    const winner = line.length ? s.turn : null;
+    return freezeState({
+      board, heights, moves, line, winner,
+      turn: 1 - s.turn, last: { col, row }, draw: winner === null && moves.length === SIZE
+    });
+  }
+
+  function fromMoves(moves) {
+    if (!Array.isArray(moves)) throw new Error("手順が正しくありません");
+    return moves.reduce((s, col) => play(s, col), newGame());
+  }
+
+  /* Takes back the last n moves. */
+  function undo(s, n = 1) {
+    if (!validState(s)) throw new Error("盤面が正しくありません");
+    if (!Number.isInteger(n) || n < 1 || n > s.moves.length) throw new Error("もどせる手がありません");
+    return fromMoves(s.moves.slice(0, -n));
+  }
+
+  /* Columns where player p would make four right now. */
+  function winningMoves(s, p) {
+    if (!isPlayer(p)) throw new Error("プレイヤーが正しくありません");
+    return legalMoves(s).filter(c => connects(s.board, c, s.heights[c], p));
+  }
+
+  /* Which ways the winning line runs: "row" (ヨコ), "col" (タテ), "diag" (up-right) or "anti" (down-right).
+   * More than one when the last disc finished two lines at once; [] when nobody has won. */
+  function lineKinds(s) {
+    if (!validState(s)) throw new Error("盤面が正しくありません");
+    if (s.winner === null || !s.last) return [];
+    const { col, row } = s.last;
+    const p = s.board[index(col, row)];
+    return KINDS.filter((_, d) => 1 + run(s.board, col, row, DC[d], DR[d], p) + run(s.board, col, row, -DC[d], -DR[d], p) >= NEED);
+  }
+
+  const counts = (s) => [0, 1].map(p => s.board.filter(v => v === p).length);
+  const centerMost = (cols) => CENTER_ORDER.find(c => cols.includes(c));
+
+  /* ---------- CPU search ---------- */
+
+  /* Every line of four cells on the board, and for each cell the lines that pass through it. */
+  const WINDOWS = (() => {
+    const out = [];
+    for (let cell = 0; cell < SIZE; cell++) {
+      const col = cell % COLS;
+      const row = Math.floor(cell / COLS);
+      for (let d = 0; d < 4; d++) {
+        const endC = col + DC[d] * (NEED - 1);
+        const endR = row + DR[d] * (NEED - 1);
+        if (endC >= 0 && endC < COLS && endR >= 0 && endR < ROWS) {
+          out.push(Int8Array.from({ length: NEED }, (_, k) => index(col + DC[d] * k, row + DR[d] * k)));
+        }
+      }
+    }
+    return Object.freeze(out);
+  })();
+  const CELL_WINDOWS = Object.freeze(Array.from({ length: SIZE }, (_, cell) =>
+    Int16Array.from(WINDOWS.map((w, i) => (w.includes(cell) ? i : -1)).filter(i => i >= 0))));
+
+  /* Fixed pseudo-random keys for hashing positions (xorshift with a fixed seed, so the CPU stays repeatable). */
+  const ZOBRIST = (() => {
+    let x = 0x9e3779b9 | 0;
+    const next = () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return x | 0; };
+    const keys = () => Int32Array.from({ length: SIZE }, next);
+    return Object.freeze([0, 1].map(() => Object.freeze([keys(), keys()])));
+  })();
+
+  const WIN_SCORE = 1000000;
+  const MATE_ZONE = WIN_SCORE - 100;
+  const INF = 1e9;
+  const ABORT = Object.freeze({ abort: true });
+  const CLOCK_EVERY = 1023; /* look at the clock once every 1024 nodes */
+  const LINE_WEIGHTS = Object.freeze([0, 1, 4, 12, 0]);
+  const CENTER_BONUS = 3;
+  /* Threat parity (つよい only): red profits from open threes on odd rows (1st, 3rd, 5th), yellow on even rows. */
+  const PARITY_BONUS = 6;
+  const TABLE_BITS = 16;
+  const TABLE_MASK = (1 << TABLE_BITS) - 1;
+  const EXACT = 0;
+  const LOWER = 1;
+  const UPPER = 2;
+  const ORDERS = Object.freeze(Array.from({ length: COLS }, (_, first) =>
+    Object.freeze([first, ...CENTER_ORDER.filter(c => c !== first)])));
+
+  function newTable() {
+    const n = 1 << TABLE_BITS;
+    return { key: new Int32Array(n), depth: new Int8Array(n), flag: new Int8Array(n), score: new Int32Array(n), move: new Int8Array(n) };
+  }
+
+  /* The search plays and takes back moves on its own scratch board (for speed), keeping the window counts,
+   * the heuristic score (from red's view) and the position hash up to date. The game state is never touched. */
+  function searchContext(s, opts) {
+    const ctx = {
+      cells: new Int8Array(SIZE).fill(EMPTY), heights: new Int8Array(COLS),
+      lines: [new Int8Array(WINDOWS.length), new Int8Array(WINDOWS.length)],
+      score: 0, count: 0, nodes: 0, limit: Infinity, deadline: Infinity, clock: opts.clock, parity: opts.parity, hash: 0, check: 0,
+      table: opts.table ? newTable() : null
+    };
+    s.moves.forEach((col, i) => shift(ctx, col, i % 2, 1));
+    return ctx;
+  }
+
+  function gapOf(ctx, w) {
+    const cells = WINDOWS[w];
+    for (let k = 0; k < NEED; k++) if (ctx.cells[cells[k]] === EMPTY) return cells[k];
+    return -1;
+  }
+  const parityBonus = (cell, p) => ((Math.floor(cell / COLS) % 2 === 0) === (p === 0) ? PARITY_BONUS : 0);
+
+  /* What one window adds to the score (red's view): open lines count, mixed lines are dead. */
+  function windowValue(ctx, w) {
+    const red = ctx.lines[0][w];
+    const yellow = ctx.lines[1][w];
+    if (red && yellow) return 0;
+    if (red) return LINE_WEIGHTS[red] + (ctx.parity && red === 3 ? parityBonus(gapOf(ctx, w), 0) : 0);
+    if (yellow) return -LINE_WEIGHTS[yellow] - (ctx.parity && yellow === 3 ? parityBonus(gapOf(ctx, w), 1) : 0);
+    return 0;
+  }
+
+  /* Drops (step 1) or lifts (step -1) a disc of player p in column col on the scratch board. */
+  function shift(ctx, col, p, step) {
+    const row = step > 0 ? ctx.heights[col] : ctx.heights[col] - 1;
+    const at = index(col, row);
+    const ws = CELL_WINDOWS[at];
+    const own = ctx.lines[p];
+    for (let i = 0; i < ws.length; i++) ctx.score -= windowValue(ctx, ws[i]);
+    ctx.cells[at] = step > 0 ? p : EMPTY;
+    ctx.heights[col] += step;
+    ctx.count += step;
+    for (let i = 0; i < ws.length; i++) {
+      own[ws[i]] += step;
+      ctx.score += windowValue(ctx, ws[i]);
+    }
+    if (col === 3) ctx.score += (p === 0 ? CENTER_BONUS : -CENTER_BONUS) * step;
+    ctx.hash ^= ZOBRIST[p][0][at];
+    ctx.check ^= ZOBRIST[p][1][at];
+  }
+
+  /* Would p make four by dropping into col right now? */
+  function winsAt(ctx, col, p) {
+    const h = ctx.heights[col];
+    if (h >= ROWS) return false;
+    const ws = CELL_WINDOWS[index(col, h)];
+    const own = ctx.lines[p];
+    for (let i = 0; i < ws.length; i++) if (own[ws[i]] === NEED - 1) return true;
+    return false;
+  }
+
+  /* The only column p must play to stop an immediate loss: -1 when there is no threat, -2 when there are two or more. */
+  function forcedColumn(ctx, p) {
+    let forced = -1;
+    for (let c = 0; c < COLS; c++) {
+      if (!winsAt(ctx, c, 1 - p)) continue;
+      if (forced >= 0) return -2;
+      forced = c;
+    }
+    return forced;
+  }
+
+  /* Win scores are stored relative to the node so they stay right at any ply. */
+  const toTable = (v, ply) => (v > MATE_ZONE ? v + ply : v < -MATE_ZONE ? v - ply : v);
+  const fromTable = (v, ply) => (v > MATE_ZONE ? v - ply : v < -MATE_ZONE ? v + ply : v);
+
+  /* A stored result that settles this node, or null. */
+  function tableCut(ctx, slot, depth, alpha, beta, ply) {
+    const t = ctx.table;
+    if (!t || t.depth[slot] - 1 < depth || t.key[slot] !== ctx.check) return null;
+    const v = fromTable(t.score[slot], ply);
+    const flag = t.flag[slot];
+    if (flag === EXACT || (flag === LOWER && v >= beta) || (flag === UPPER && v <= alpha)) return v;
+    return null;
+  }
+  function tableMove(ctx, slot) {
+    const t = ctx.table;
+    return t && t.depth[slot] && t.key[slot] === ctx.check ? t.move[slot] : -1;
+  }
+  function tableStore(ctx, slot, entry) {
+    const t = ctx.table;
+    if (!t) return;
+    t.key[slot] = ctx.check;
+    t.depth[slot] = entry.depth + 1;
+    t.flag[slot] = entry.flag;
+    t.score[slot] = toTable(entry.score, entry.ply);
+    t.move[slot] = entry.move;
+  }
+
+  function negamax(ctx, p, depth, alpha, beta, ply) {
+    ctx.nodes++;
+    if (ctx.nodes > ctx.limit) throw ABORT;
+    if ((ctx.nodes & CLOCK_EVERY) === 0 && ctx.clock() > ctx.deadline) throw ABORT;
+    if (ctx.count >= SIZE) return 0;
+    for (let c = 0; c < COLS; c++) if (winsAt(ctx, c, p)) return WIN_SCORE - ply;
+    const forced = forcedColumn(ctx, p);
+    if (forced === -2) return -(WIN_SCORE - ply - 1);
+    if (depth <= 0) return p === 0 ? ctx.score : -ctx.score;
+    const slot = ctx.hash & TABLE_MASK;
+    const cut = tableCut(ctx, slot, depth, alpha, beta, ply);
+    if (cut !== null) return cut;
+    const hint = tableMove(ctx, slot);
+    const order = forced >= 0 ? [forced] : hint >= 0 ? ORDERS[hint] : CENTER_ORDER;
+    const nextDepth = forced >= 0 ? depth : depth - 1;
+    const alpha0 = alpha;
+    let best = -INF;
+    let move = -1;
+    for (let i = 0; i < order.length && alpha < beta; i++) {
+      const c = order[i];
+      if (ctx.heights[c] >= ROWS) continue;
+      shift(ctx, c, p, 1);
+      const score = -negamax(ctx, 1 - p, nextDepth, -beta, -alpha, ply + 1);
+      shift(ctx, c, p, -1);
+      if (score > best) { best = score; move = c; }
+      if (best > alpha) alpha = best;
+    }
+    const flag = best <= alpha0 ? UPPER : best >= beta ? LOWER : EXACT;
+    tableStore(ctx, slot, { depth, flag, score: best, move, ply });
+    return best;
+  }
+
+  /* Scores every root move; ties with the best are scored exactly so the CPU can vary its play.
+   * An ABORT thrown from below leaves the scratch board half-played; the caller then drops the context. */
+  function searchRoot(ctx, p, depth, order) {
+    let alpha = -INF;
+    let best = [];
+    for (const c of order) {
+      shift(ctx, c, p, 1);
+      const score = -negamax(ctx, 1 - p, depth - 1, -INF, -(alpha - 1), 1);
+      shift(ctx, c, p, -1);
+      if (score > alpha) {
+        alpha = score;
+        best = [c];
+      } else if (score === alpha) {
+        best = [...best, c];
+      }
+    }
+    return { score: alpha, best };
+  }
+
+  /* Node caps bound the think time (about 0.6 microseconds per node in Node, a few times more on a phone).
+   * Up to sureDepth only the safety cap applies; deeper iterations stop at nodeCap (counted from the start of
+   * the search) or once deepMs have passed, whichever comes first, so a slow phone simply reads less deep.
+   * A stopped iteration is thrown away and the deepest finished one decides. */
+  const NORMAL = Object.freeze({ sureDepth: 4, maxDepth: 4, safetyCap: Infinity, nodeCap: Infinity, deepMs: Infinity, parity: false, table: false });
+  const HARD = Object.freeze({ sureDepth: 7, maxDepth: SIZE, safetyCap: 100000, nodeCap: 45000, deepMs: 70, parity: true, table: true });
+
+  function searchMove(s, opts, r) {
+    const started = opts.clock();
+    const ctx = searchContext(s, opts);
+    const p = s.turn;
+    let order = CENTER_ORDER.filter(c => s.heights[c] < ROWS);
+    let result = { score: 0, best: order };
+    for (let depth = 1; depth <= Math.min(opts.maxDepth, SIZE - s.moves.length); depth++) {
+      const deep = depth > opts.sureDepth;
+      ctx.limit = deep ? opts.nodeCap : opts.safetyCap;
+      ctx.deadline = deep ? started + opts.deepMs : Infinity;
+      try {
+        result = searchRoot(ctx, p, depth, order);
+      } catch (e) {
+        if (e !== ABORT) throw e;
+        break;
+      }
+      order = [...result.best, ...order.filter(c => !result.best.includes(c))];
+      if (Math.abs(result.score) > MATE_ZONE) break;
+    }
+    return R.pick(result.best, r);
+  }
+
+  /* よわい: random, but drawn to the center. */
+  function weightedCenter(cols, r) {
+    const total = cols.reduce((sum, c) => sum + CENTER_WEIGHTS[c], 0);
+    let roll = r() * total;
+    for (const c of cols) {
+      roll -= CENTER_WEIGHTS[c];
+      if (roll < 0) return c;
+    }
+    return cols[cols.length - 1];
+  }
+
+  /* よわい: wins at once if it can, blocks a direct threat half the time, otherwise plays loosely.
+   * ふつう / つよい: win at once, else block a direct threat, else search.
+   * clock (milliseconds) is read only by つよい, to stop reading past 7 moves on a slow phone. */
+  function cpuMove(s, level, r = Math.random, clock = Date.now) {
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    if (typeof r !== "function" || typeof clock !== "function") throw new Error("CPUの設定が正しくありません");
+    if (!validState(s)) throw new Error("盤面が正しくありません");
+    if (isOver(s)) throw new Error("もう勝負がついています");
+    const me = s.turn;
+    const wins = winningMoves(s, me);
+    if (wins.length) return centerMost(wins);
+    const threats = winningMoves(s, 1 - me);
+    if (level === "easy") {
+      if (threats.length && r() < 0.5) return centerMost(threats);
+      return weightedCenter(legalMoves(s), r);
+    }
+    if (threats.length) return centerMost(threats);
+    return searchMove(s, { ...(level === "hard" ? HARD : NORMAL), clock }, r);
+  }
+
+  return {
+    COLS, ROWS, SIZE, NEED, LEVELS, index,
+    newGame, play, fromMoves, undo, canDrop, legalMoves, moveError, isOver,
+    winningMoves, lineKinds, counts, cpuMove
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = Connect4Rules;
+</script>
+<script>
+/* connect4.js */
+/* 四目並べ screen: drop discs into a 7x6 board, against the CPU or a friend on one phone. */
+const Connect4 = (() => {
+  const C = Connect4Rules;
+  const KEY = "connect4.settings";
+  const CPU_AIM_MS = 200;
+  const CPU_WAIT_MS = 450;
+  const ARM_MS = 3000;
+  const CONFIRM_GAP_MS = 400; /* a second tap sooner than this is a double tap, not a confirmation */
+  const LAND_AT = 0.72; /* share of the drop animation when the disc first touches down (matches the CSS keyframes) */
+  const VS = Object.freeze({ cpu: "CPUと", duo: "2人で" });
+  const LEVEL_LABELS = Object.freeze({ easy: "よわい", normal: "ふつう", hard: "つよい" });
+  const LEVEL_NOTES = Object.freeze({ easy: "ときどき見落としてくれる。まずはここから",
+    normal: "4手先まで読んでくる。油断すると負けるかも", hard: "7手先以上まで読んでくる本気モード" });
+  const ORDER = Object.freeze({ first: "先攻", second: "後攻", random: "ランダム" });
+  const COLOR = Object.freeze(["赤", "黄色"]);
+  const KIND_NAMES = Object.freeze({ row: "ヨコ", col: "タテ", diag: "ナナメ", anti: "ナナメ" });
+  const DEFAULTS = Object.freeze({ vs: "cpu", level: "normal", order: "first" });
+
+  const el = {
+    stage: $("cStage"), setup: $("cSetup"), play: $("cPlay"), label: $("cLabel"), title: $("cTitle"), card: null,
+    hint: $("cHint"), actions: $("cActions"), scores: $("cScores"), board: $("cBoard"), rules: $("cRules"),
+    levelOpt: $("cLevelOpt"), orderOpt: $("cOrderOpt"), names: $("cNames"), nameInputs: [$("cName1"), $("cName2")]
+  };
+
+  let settings = DEFAULTS;
+  let game = null;
+  let match = null; /* { people: [{ name, cpu }], red: person index playing red, wins: [n, n], draws } */
+  /* busy: taps ignored (disc falling, CPU thinking). landing: a disc has not touched down. armed: when 投了 was first tapped, or 0. */
+  const FRESH = Object.freeze({ aim: 3, busy: false, landing: false, thinking: false, armed: 0, note: "", result: null });
+  let ui = { ...FRESH, phase: "setup" };
+  let timers = [];
+  let shown = 0; /* moves already drawn; the next one gets the drop animation */
+  let cols = [];
+
+  const reduced = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const personOf = (player) => (player === 0 ? match.red : 1 - match.red);
+  const isCpu = (player) => match.people[personOf(player)].cpu;
+  const vsCpu = () => match.people.some(p => p.cpu);
+  const humanTurn = () => ui.phase === "play" && !C.isOver(game) && !isCpu(game.turn);
+  const fallMs = (row) => 200 + 25 * (C.ROWS - row);
+  const options = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
+  const who = (player) => (isCpu(player) ? "CPU" : vsCpu() ? "あなた" : `${match.people[personOf(player)].name}さん`);
+
+  /* ---------- settings ---------- */
+  function normalize(s) {
+    const src = s && typeof s === "object" ? s : {};
+    const pick = (key, allowed) => (allowed.includes(src[key]) ? src[key] : DEFAULTS[key]);
+    return { vs: pick("vs", Object.keys(VS)), level: pick("level", C.LEVELS), order: pick("order", Object.keys(ORDER)) };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) { ui = { ...ui, ...patch }; render(); }
+  function later(fn, ms) {
+    const id = setTimeout(() => { timers = timers.filter(t => t !== id); fn(); }, ms);
+    timers = [...timers, id];
+  }
+  function clearTimers() { timers.forEach(clearTimeout); timers = []; }
+
+  /* ---------- flow ---------- */
+  function redFor(prev) {
+    if (settings.vs === "duo") return prev === null ? 0 : 1 - prev;
+    if (settings.order === "random") return Math.random() < 0.5 ? 0 : 1;
+    return settings.order === "first" ? 0 : 1;
+  }
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    const people = settings.vs === "duo"
+      ? Duo.read(el.nameInputs).map(name => ({ name, cpu: false }))
+      : [{ name: "あなた", cpu: false }, { name: "CPU", cpu: true }];
+    match = { people, red: redFor(null), wins: [0, 0], draws: 0 };
+    newRound();
+  }
+  function rematch() {
+    match = { ...match, red: redFor(match.red) };
+    newRound();
+  }
+  function newRound() {
+    clearTimers();
+    game = C.newGame();
+    shown = 0;
+    ui = { ...FRESH, phase: "play" };
+    Sound.sfx("confirm");
+    Music.play("think");
+    render();
+    Fx.pop(el.board);
+    if (isCpu(game.turn)) cpuTurn();
+  }
+  function toSetup() {
+    clearTimers();
+    Music.stop();
+    go({ ...FRESH, phase: "setup" });
+  }
+  function onColumn(c) {
+    if (!humanTurn() || ui.busy) return;
+    if (!C.canDrop(game, c)) {
+      Sound.sfx("wrong");
+      go({ aim: c, note: "その列はもういっぱい。ほかの列にしよう" });
+      Fx.replay(cols[c].ghost, "c4-nope");
+      return;
+    }
+    drop(c);
+  }
+  function drop(c) {
+    const player = game.turn;
+    game = C.play(game, c);
+    const ms = reduced() ? 0 : fallMs(game.last.row);
+    go({ aim: c, busy: true, landing: true, thinking: false, armed: 0, note: "" });
+    dropSound((ms * LAND_AT) / 1000, game.last.row, player);
+    later(landed, ms * LAND_AT);
+  }
+  function landed() {
+    if (C.isOver(game)) return finish(game.draw ? null : game.winner, game.draw ? "draw" : "four");
+    const reach = reachNote();
+    if (reach) Sound.sfx(reach.good ? "coin" : "heartbeat");
+    go({ busy: false, landing: false, note: reach ? reach.text : "" });
+    if (isCpu(game.turn)) cpuTurn();
+  }
+  /* Who can make four next, never which column. A human to move hears their own chance first (no "block" advice when they can win). */
+  function reachNote() {
+    const next = game.turn;
+    const mover = 1 - next;
+    if (!isCpu(next) && C.winningMoves(game, next).length) {
+      return { good: vsCpu(), text: vsCpu() ? "チャンス！ 4つそろう列があるよ" : `${who(next)}のチャンス！ 4つそろう列があるよ` };
+    }
+    if (!C.winningMoves(game, mover).length) return null;
+    if (!vsCpu()) return { good: false, text: `${who(mover)}がリーチ！ 4つ目を止めないと負けちゃう` };
+    return isCpu(mover) ? { good: false, text: "CPUがリーチ！ 4つ目をふさごう" } : { good: true, text: "リーチ！ あと1つでそろう" };
+  }
+  function cpuTurn() {
+    go({ busy: true, thinking: true });
+    later(() => {
+      const col = safeCpuMove();
+      go({ aim: col });
+      later(() => drop(col), CPU_WAIT_MS - CPU_AIM_MS);
+    }, CPU_AIM_MS);
+  }
+  function safeCpuMove() {
+    try {
+      return C.cpuMove(game, settings.level);
+    } catch (e) {
+      console.error("Connect4: CPU move failed, playing the first open column", e);
+      return C.legalMoves(game)[0];
+    }
+  }
+  function finish(winner, reason) {
+    clearTimers();
+    Music.stop();
+    const wins = match.wins.map((w, i) => (winner !== null && i === personOf(winner) ? w + 1 : w));
+    match = { ...match, wins, draws: match.draws + (winner === null ? 1 : 0) };
+    go({ ...FRESH, aim: ui.aim, phase: "over", result: { winner, reason } });
+    celebrate(winner);
+    Fx.pop(el.title);
+  }
+  function celebrate(winner) {
+    if (winner === null) return Sound.sfx("reveal");
+    const lost = vsCpu() && isCpu(winner);
+    Sound.sfx(lost ? "lose" : vsCpu() ? "victory" : "fanfare");
+    if (lost) Fx.shake(); else Fx.confetti();
+  }
+  /* 投了 needs a second tap within ARM_MS; a double tap (faster than CONFIRM_GAP_MS) does not count. */
+  function resign() {
+    if (ui.phase !== "play" || (ui.busy && !ui.thinking)) return;
+    if (!ui.armed) {
+      const at = performance.now();
+      go({ armed: at });
+      later(() => { if (ui.armed === at) go({ armed: 0 }); }, ARM_MS);
+      return;
+    }
+    if (performance.now() - ui.armed < CONFIRM_GAP_MS) return;
+    const loser = vsCpu() ? [0, 1].find(p => !isCpu(p)) : game.turn;
+    finish(1 - loser, "resign");
+  }
+  /* Vs the CPU, one undo goes back to your previous turn (your move and the CPU's reply). */
+  function undoSteps() {
+    if (ui.phase !== "play" || ui.busy || !game) return 0;
+    const n = vsCpu() ? 2 : 1;
+    return game.moves.length >= n ? n : 0;
+  }
+  function takeBack() {
+    const n = undoSteps();
+    if (!n) return;
+    game = C.undo(game, n);
+    shown = game.moves.length;
+    Sound.sfx("back");
+    go({ note: "", armed: 0 });
+  }
+
+  /* ---------- sound ---------- */
+  /* A soft swish when the disc is let go, then a plastic "thunk" and a tiny bounce where it lands. */
+  function dropSound(delay, row, player) {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const land = t + delay;
+    const base = 118 + row * 7 + player * 9;
+    Sound.hiss({ t, dur: 0.12, vol: 0.05, type: "bandpass", freq: 2600, to: 900 });
+    Sound.tone({ freq: base * 2.4, glide: base, glideTime: 0.07, type: "sine", t: land, dur: 0.2, vol: 0.5 });
+    Sound.tone({ freq: 1500, glide: 700, type: "triangle", t: land, dur: 0.04, vol: 0.07 });
+    Sound.hiss({ t: land, dur: 0.07, vol: 0.16, type: "lowpass", freq: 1700, to: 300 });
+    Sound.tone({ freq: base * 1.9, glide: base * 1.2, type: "sine", t: land + 0.09, dur: 0.09, vol: 0.13 });
+  }
+
+  /* ---------- text for each screen ---------- */
+  function lineName() {
+    const kinds = C.lineKinds(game);
+    if (kinds.length !== 1) return `一度に${kinds.length}方向そろった！`;
+    return `${KIND_NAMES[kinds[0]]}に${game.line.length}つそろった！`;
+  }
+  function tally() {
+    const [a, b] = match.people;
+    const draws = match.draws ? `、引き分け${match.draws}回` : "";
+    return `通算 ${a.name}が${match.wins[0]}勝、${b.name}が${match.wins[1]}勝${draws}`;
+  }
+  function overTitle() {
+    const w = ui.result.winner;
+    if (w === null) return "引き分け！";
+    if (vsCpu()) return isCpu(w) ? "CPUの勝ち…" : "あなたの勝ち！";
+    return `${who(w)}の勝ち！`;
+  }
+  function overReason() {
+    const { winner, reason } = ui.result;
+    if (reason === "draw") return "盤がうまって、どちらも4つそろわず。";
+    if (reason === "resign") return `${who(1 - winner)}が投了しました。`;
+    return lineName();
+  }
+  const levelTag = () => (vsCpu() ? `CPU ${LEVEL_LABELS[settings.level]}・` : "");
+  function playHint() {
+    if (ui.thinking) return "どこに落とすか考えています";
+    if (game.moves.length < 2) return "落としたい列をタップ。コマはいちばん下まで落ちる";
+    return `${COLOR[game.turn]}のコマ。タテ・ヨコ・ナナメに4つをめざそう`;
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: () => ({
+      label: `${levelTag()}${game.moves.length + 1}手目`,
+      title: ui.thinking ? "CPUが考え中…" : `${who(game.turn)}の番（${COLOR[game.turn]}）`,
+      hint: ui.note || playHint(),
+      actions: [
+        makeButton("1手もどす", takeBack, "small", undoSteps() === 0),
+        makeButton(ui.armed ? "本当に投了する" : "投了", resign, ui.armed ? "primary danger" : "small")
+      ]
+    }),
+    over: () => ({
+      label: `${levelTag()}${game.moves.length ? `${game.moves.length}手で` : ""}決着`,
+      title: overTitle(),
+      hint: `${overReason()}\n${tally()}`, /* #cHint keeps the line break (white-space: pre-line) */
+      actions: [makeButton("設定", toSetup, "small"), makeButton("もう一回", rematch, "primary")]
+    })
+  };
+
+  /* ---------- rendering ---------- */
+  function renderSetup() {
+    const cpu = settings.vs === "cpu";
+    View.chips($("cVsChips"), options(VS), settings.vs, v => update({ vs: v }));
+    View.chips($("cLevelChips"), options(LEVEL_LABELS), settings.level, v => update({ level: v }));
+    View.chips($("cOrderChips"), options(ORDER), settings.order, v => update({ order: v }));
+    el.levelOpt.hidden = !cpu;
+    el.orderOpt.hidden = !cpu;
+    el.names.hidden = cpu;
+    View.list(el.rules, [
+      "交代で、好きな列にコマを1つずつ落とす。コマはいちばん下まで落ちる",
+      "タテ・ヨコ・ナナメのどれかに、自分の色を4つ並べたら勝ち",
+      "先攻が赤、後攻が黄色。盤がうまっても4つ並ばなければ引き分け",
+      cpu ? `CPU（${LEVEL_LABELS[settings.level]}）は${LEVEL_NOTES[settings.level]}` : "1台のスマホを交代で持って遊ぶ。もう一回のたびに先攻が入れかわる"
+    ]);
+  }
+  function renderScores() {
+    const counts = C.counts(game);
+    const winner = ui.phase === "over" ? ui.result.winner : null;
+    el.scores.replaceChildren(...[0, 1].map(player => {
+      const card = document.createElement("div");
+      const turn = ui.phase === "play" && game.turn === player;
+      card.className = `c4-side c4-p${player}${turn ? " c4-turn" : ""}${winner === player ? " c4-won" : ""}`;
+      card.innerHTML = '<span class="c4-swatch"></span><span class="c4-who"><span class="c4-name"></span><span class="c4-meta"></span></span>';
+      card.querySelector(".c4-name").textContent = match.people[personOf(player)].name;
+      card.querySelector(".c4-meta").textContent = `${COLOR[player]}・${counts[player]}個・${match.wins[personOf(player)]}勝`;
+      return card;
+    }));
+  }
+  function renderBoard() {
+    const ghostOn = (!ui.busy && humanTurn()) || ui.thinking;
+    const flags = { "c4-t0": game.turn === 0, "c4-t1": game.turn === 1, "c4-over": ui.phase === "over",
+      "c4-decided": game.line.length > 0, "c4-live": !ui.busy && humanTurn() };
+    Object.entries(flags).forEach(([cls, on]) => el.board.classList.toggle(cls, on)); /* one by one: keeps a running Fx.pop */
+    cols.forEach((col, c) => {
+      const full = game.heights[c] >= C.ROWS;
+      const aimed = ghostOn && c === ui.aim;
+      col.el.classList.toggle("c4-full", full);
+      col.el.classList.toggle("c4-aim", aimed);
+      col.el.setAttribute("aria-label", `${c + 1}列目${full ? "（いっぱい）" : ""}`);
+      col.ghostDisc.classList.toggle("c4-p0", aimed && game.turn === 0);
+      col.ghostDisc.classList.toggle("c4-p1", aimed && game.turn === 1);
+      col.cells.forEach((cell, row) => paintCell(cell, c, row, aimed && row === game.heights[c]));
+    });
+    animateNew();
+  }
+  function paintCell(cell, col, row, target) {
+    const i = C.index(col, row);
+    const v = game.board[i];
+    cell.el.classList.toggle("c4-win", game.line.includes(i));
+    cell.el.classList.toggle("c4-target", target);
+    cell.disc.classList.toggle("c4-p0", v === 0);
+    cell.disc.classList.toggle("c4-p1", v === 1);
+    cell.disc.classList.toggle("c4-last", !!game.last && game.last.col === col && game.last.row === row);
+  }
+  /* The newest disc falls from the ghost spot above its column into its cell. */
+  function animateNew() {
+    const n = game.moves.length;
+    if (n === shown + 1 && game.last && !reduced()) {
+      const { col, row } = game.last;
+      const cell = cols[col].cells[row];
+      const from = cols[col].ghost.getBoundingClientRect().top - cell.el.getBoundingClientRect().top;
+      cell.disc.style.setProperty("--c4-from", `${from}px`);
+      cell.disc.style.setProperty("--c4-ms", `${fallMs(row)}ms`);
+      Fx.replay(cell.disc, "c4-drop");
+    }
+    shown = n;
+  }
+  function render() {
+    el.stage.classList.toggle("c4-wide", ui.phase !== "setup");
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    el.scores.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else { renderScores(); renderBoard(); }
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  /* ---------- board markup (built once) ---------- */
+  function slot(cls) {
+    const box = document.createElement("div");
+    box.className = cls;
+    const disc = document.createElement("span");
+    disc.className = "c4-disc";
+    box.appendChild(disc);
+    box.addEventListener("animationend", (e) => {
+      if (e.target === disc) disc.classList.remove("c4-drop");
+      else box.classList.remove("c4-nope");
+    });
+    return { el: box, disc };
+  }
+  function aim(c) {
+    if (c === ui.aim || !humanTurn() || ui.busy) return;
+    ui = { ...ui, aim: c };
+    renderBoard();
+  }
+  function onKey(e, c) {
+    const step = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+    if (!step && e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    if (step) cols[Math.min(C.COLS - 1, Math.max(0, c + step))].el.focus();
+    else onColumn(c);
+  }
+  function buildColumn(c) {
+    const col = document.createElement("div");
+    col.className = "c4-col";
+    col.tabIndex = 0;
+    col.setAttribute("role", "button");
+    const ghost = slot("c4-ghost");
+    const cells = Array.from({ length: C.ROWS }, () => slot("c4-cell")); /* index = row, 0 is the bottom */
+    col.append(ghost.el, ...[...cells].reverse().map(x => x.el));
+    col.addEventListener("click", () => onColumn(c));
+    col.addEventListener("pointermove", () => aim(c));
+    col.addEventListener("focus", () => aim(c));
+    col.addEventListener("keydown", (e) => onKey(e, c));
+    return { el: col, ghost: ghost.el, ghostDisc: ghost.disc, cells };
+  }
+  function buildBoard() {
+    cols = Array.from({ length: C.COLS }, (_, c) => buildColumn(c));
+    const frame = document.createElement("div");
+    frame.className = "c4-frame";
+    el.board.replaceChildren(...cols.map(x => x.el), frame);
+  }
+  function init() {
+    settings = normalize(Store.load(KEY, null));
+    Duo.fill(el.nameInputs);
+    buildBoard();
+    render();
+  }
+  /* Stops the CPU and drop timers; `landing` stays set so onShow can finish that move (win check, CPU reply). */
+  function leave() {
+    clearTimers();
+    el.board.querySelectorAll(".c4-drop, .c4-nope").forEach(x => x.classList.remove("c4-drop", "c4-nope"));
+    if (ui.phase === "play") ui = { ...ui, busy: false, thinking: false, armed: 0 };
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.nameInputs);
+    if (ui.phase !== "play") return;
+    Music.play("think");
+    if (ui.landing) return landed();
+    render();
+    if (isCpu(game.turn)) cpuTurn();
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
+<script>
+/* reversi-rules.js */
+/* Reversi rules: 8x8, black first, a move must flip at least one line; no move means pass; both stuck ends the game. */
+const ReversiRules = (() => {
+  const SIZE = 8;
+  const CELLS = 64;
+  const EMPTY = 0;
+  const BLACK = 1;
+  const WHITE = 2;
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+  const CORNERS = Object.freeze([0, 7, 56, 63]);
+  const DIRS = [[-1, -1], [-1, 0], [-1, 1], [0, -1], [0, 1], [1, -1], [1, 0], [1, 1]];
+  const WIN = 100000;
+  const SEARCH = Object.freeze({ depth: 5, endgame: 10, nodes: 12000, endNodes: 30000, ms: 80 });
+
+  /* Corners high, X and C squares (next to empty corners) negative. */
+  const WEIGHTS = Object.freeze([
+    100, -20, 10, 5, 5, 10, -20, 100,
+    -20, -50, -2, -2, -2, -2, -50, -20,
+    10, -2, -1, -1, -1, -1, -2, 10,
+    5, -2, -1, -1, -1, -1, -2, 5,
+    5, -2, -1, -1, -1, -1, -2, 5,
+    10, -2, -1, -1, -1, -1, -2, 10,
+    -20, -50, -2, -2, -2, -2, -50, -20,
+    100, -20, 10, 5, 5, 10, -20, 100
+  ]);
+  /* Squares whose penalty disappears once their corner is taken. */
+  const CORNER_NEAR = Object.freeze([[0, [1, 8, 9]], [7, [6, 14, 15]], [56, [48, 49, 57]], [63, [54, 55, 62]]]);
+
+  /* Flat ray tables: rays SQ_RAYS[sq]..SQ_RAYS[sq + 1] start at sq and walk outward; ray k covers RAY_SQ[RAY_BEGIN[k]..RAY_END[k]). */
+  const { RAY_SQ, RAY_BEGIN, RAY_END, SQ_RAYS } = (() => {
+    const squares = [];
+    const begin = [];
+    const end = [];
+    const bySq = [];
+    for (let sq = 0; sq < CELLS; sq++) {
+      bySq.push(begin.length);
+      for (const [dr, dc] of DIRS) {
+        const ray = [];
+        for (let r = Math.floor(sq / SIZE) + dr, c = (sq % SIZE) + dc; r >= 0 && r < SIZE && c >= 0 && c < SIZE; r += dr, c += dc) ray.push(r * SIZE + c);
+        if (ray.length < 2) continue;
+        begin.push(squares.length);
+        squares.push(...ray);
+        end.push(squares.length);
+      }
+    }
+    bySq.push(begin.length);
+    return { RAY_SQ: Int8Array.from(squares), RAY_BEGIN: Int16Array.from(begin), RAY_END: Int16Array.from(end), SQ_RAYS: Int16Array.from(bySq) };
+  })();
+
+  const opponent = (color) => 3 - color;
+  const name = (sq) => `${"abcdefgh"[sq % SIZE]}${Math.floor(sq / SIZE) + 1}`;
+
+  /* ---------- board helpers (work on plain arrays and typed arrays) ---------- */
+  /* Index in RAY_SQ of the first own stone closing ray k, or -1 when the ray flips nothing. */
+  function closer(board, k, color) {
+    const opp = 3 - color;
+    let p = RAY_BEGIN[k];
+    if (board[RAY_SQ[p]] !== opp) return -1;
+    const end = RAY_END[k];
+    p++;
+    while (p < end && board[RAY_SQ[p]] === opp) p++;
+    return p < end && board[RAY_SQ[p]] === color ? p : -1;
+  }
+  function flipsAt(board, sq, color) {
+    if (board[sq] !== EMPTY) return [];
+    const out = [];
+    for (let k = SQ_RAYS[sq]; k < SQ_RAYS[sq + 1]; k++) {
+      const stop = closer(board, k, color);
+      for (let p = RAY_BEGIN[k]; p < stop; p++) out.push(RAY_SQ[p]);
+    }
+    return out;
+  }
+  function canPlay(board, sq, color) {
+    if (board[sq] !== EMPTY) return false;
+    for (let k = SQ_RAYS[sq]; k < SQ_RAYS[sq + 1]; k++) if (closer(board, k, color) >= 0) return true;
+    return false;
+  }
+  function movesOf(board, color) {
+    const list = [];
+    for (let sq = 0; sq < CELLS; sq++) if (canPlay(board, sq, color)) list.push(sq);
+    return list;
+  }
+  function countMoves(board, color) {
+    let n = 0;
+    for (let sq = 0; sq < CELLS; sq++) if (canPlay(board, sq, color)) n++;
+    return n;
+  }
+  function hasMove(board, color) {
+    for (let sq = 0; sq < CELLS; sq++) if (canPlay(board, sq, color)) return true;
+    return false;
+  }
+  function counts(board) {
+    let black = 0;
+    let white = 0;
+    for (let i = 0; i < CELLS; i++) {
+      if (board[i] === BLACK) black++;
+      else if (board[i] === WHITE) white++;
+    }
+    return { black, white, empty: CELLS - black - white };
+  }
+
+  /* ---------- game state ---------- */
+  function checkState(s) {
+    if (!s || !Array.isArray(s.board) || s.board.length !== CELLS || s.board.some(v => v !== EMPTY && v !== BLACK && v !== WHITE)) {
+      throw new Error("盤面が正しくありません");
+    }
+    if (s.turn !== BLACK && s.turn !== WHITE) throw new Error("手番が正しくありません");
+  }
+  function make(board, turn, extra) {
+    return Object.freeze({ board: Object.freeze(board), turn, last: null, flipped: Object.freeze([]), passed: null, over: false, ...extra });
+  }
+
+  /* d4/e5 white, d5/e4 black; black moves first. */
+  function newGame() {
+    const board = Array(CELLS).fill(EMPTY);
+    board[27] = WHITE;
+    board[36] = WHITE;
+    board[28] = BLACK;
+    board[35] = BLACK;
+    return make(board, BLACK, {});
+  }
+  /* For tests and puzzles: a state from a 64-entry board and the side to move. */
+  function fromBoard(board, turn) {
+    const s = { board: [...board], turn };
+    checkState(s);
+    return make(s.board, turn, { over: !hasMove(s.board, BLACK) && !hasMove(s.board, WHITE) });
+  }
+  function legalMoves(state) {
+    checkState(state);
+    return state.over ? [] : movesOf(state.board, state.turn);
+  }
+  const isLegal = (state, sq) => Number.isInteger(sq) && sq >= 0 && sq < CELLS && legalMoves(state).includes(sq);
+  const mustPass = (state) => !state.over && !hasMove(state.board, state.turn);
+
+  function play(state, sq) {
+    checkState(state);
+    if (state.over) throw new Error("もう終わっています");
+    if (!Number.isInteger(sq) || sq < 0 || sq >= CELLS) throw new Error("マスが正しくありません");
+    const flipped = flipsAt(state.board, sq, state.turn);
+    if (!flipped.length) throw new Error("そこには置けません");
+    const hit = new Set([sq, ...flipped]);
+    const board = state.board.map((v, i) => (hit.has(i) ? state.turn : v));
+    const next = 3 - state.turn;
+    const over = !hasMove(board, next) && !hasMove(board, state.turn);
+    return make(board, next, { last: sq, flipped: Object.freeze(flipped), over });
+  }
+  function pass(state) {
+    checkState(state);
+    if (!mustPass(state)) throw new Error("置ける場所があるのでパスできません");
+    return Object.freeze({ ...state, turn: 3 - state.turn, flipped: Object.freeze([]), passed: state.turn });
+  }
+  /* winner: BLACK, WHITE, or EMPTY for a draw (only meaningful once over). */
+  function result(state) {
+    const c = counts(state.board);
+    const winner = c.black > c.white ? BLACK : c.white > c.black ? WHITE : EMPTY;
+    return { ...c, winner, over: state.over };
+  }
+
+  /* ---------- CPU ---------- */
+  function discDiff(board, me) {
+    const c = counts(board);
+    return me === BLACK ? c.black - c.white : c.white - c.black;
+  }
+  function terminal(board, me) {
+    const diff = discDiff(board, me);
+    return diff > 0 ? WIN + diff : diff < 0 ? -WIN + diff : 0;
+  }
+  function positional(board, me) {
+    let score = 0;
+    for (let i = 0; i < CELLS; i++) {
+      if (board[i] === me) score += WEIGHTS[i];
+      else if (board[i] !== EMPTY) score -= WEIGHTS[i];
+    }
+    return score;
+  }
+  function pickBest(scored) {
+    return scored.reduce((a, b) => (b.score > a.score ? b : a)).sq;
+  }
+
+  /* A move that ends the game with the mover ahead (largest margin first). */
+  function immediateWin(state, moves) {
+    const wins = moves.map(sq => ({ sq, after: play(state, sq) }))
+      .filter(m => m.after.over && result(m.after).winner === state.turn)
+      .map(m => ({ sq: m.sq, score: terminal(m.after.board, state.turn) }));
+    return wins.length ? pickBest(wins) : null;
+  }
+
+  /* よわい: random, weighted toward moves that flip more stones. */
+  function weakMove(state, moves, r) {
+    const weights = moves.map(sq => flipsAt(state.board, sq, state.turn).length);
+    let x = r() * weights.reduce((a, b) => a + b, 0);
+    for (let i = 0; i < moves.length; i++) {
+      x -= weights[i];
+      if (x < 0) return moves[i];
+    }
+    return moves[moves.length - 1];
+  }
+
+  /* ふつう: weight table, looking one reply ahead. */
+  function replyScore(after, me) {
+    if (after.over) return terminal(after.board, me);
+    if (mustPass(after)) return positional(after.board, me) + 30;
+    return Math.min(...movesOf(after.board, after.turn).map(sq => {
+      const next = play(after, sq);
+      return next.over ? terminal(next.board, me) : positional(next.board, me);
+    }));
+  }
+  function normalMove(state, moves, r) {
+    return pickBest(moves.map(sq => ({ sq, score: replyScore(play(state, sq), state.turn) + r() * 0.9 })));
+  }
+
+  /* つよい: alpha-beta on a scratch board (make/unmake), then an exact endgame solve. */
+  function searcher(board, opts) {
+    const now = typeof opts.now === "function" ? opts.now : Date.now;
+    const ms = Number.isFinite(opts.ms) && opts.ms > 0 ? opts.ms : SEARCH.ms;
+    return {
+      b: Int8Array.from(board), bufs: Array.from({ length: 72 }, () => new Int8Array(24)), hist: new Int32Array(CELLS),
+      nodes: 0, limit: 0, aborted: false, now, start: now(), ms, deadline: 0
+    };
+  }
+  function tick(s) {
+    s.nodes++;
+    if (s.nodes > s.limit || ((s.nodes & 511) === 0 && s.now() > s.deadline)) s.aborted = true;
+    return s.aborted;
+  }
+  function doMove(b, sq, me, buf) {
+    let n = 0;
+    for (let k = SQ_RAYS[sq]; k < SQ_RAYS[sq + 1]; k++) {
+      const stop = closer(b, k, me);
+      for (let p = RAY_BEGIN[k]; p < stop; p++) {
+        b[RAY_SQ[p]] = me;
+        buf[n++] = RAY_SQ[p];
+      }
+    }
+    b[sq] = me;
+    return n;
+  }
+  function undoMove(b, sq, me, buf, n) {
+    b[sq] = EMPTY;
+    for (let j = 0; j < n; j++) b[buf[j]] = 3 - me;
+  }
+  function evaluate(b, me) {
+    let score = positional(b, me);
+    for (const [corner, near] of CORNER_NEAR) {
+      if (b[corner] === EMPTY) continue;
+      const sign = b[corner] === me ? 1 : -1;
+      score += sign * 35;
+      for (const sq of near) if (b[sq] !== EMPTY) score -= (b[sq] === me ? 1 : -1) * WEIGHTS[sq];
+    }
+    return score + 9 * mobility(b, me);
+  }
+  /* My legal move count minus the opponent's, in one pass. */
+  function mobility(b, me) {
+    let diff = 0;
+    for (let sq = 0; sq < CELLS; sq++) {
+      if (b[sq] !== EMPTY) continue;
+      if (canPlay(b, sq, me)) diff++;
+      if (canPlay(b, sq, 3 - me)) diff--;
+    }
+    return diff;
+  }
+
+  function negamax(s, me, depth, alpha, beta, ply) {
+    if (tick(s)) return 0;
+    const b = s.b;
+    if (depth === 0) return evaluate(b, me);
+    const moves = movesOf(b, me);
+    if (!moves.length) {
+      if (!hasMove(b, 3 - me)) return terminal(b, me);
+      return -negamax(s, 3 - me, depth - 1, -beta, -alpha, ply + 1);
+    }
+    moves.sort((x, y) => s.hist[y] - s.hist[x] || WEIGHTS[y] - WEIGHTS[x]);
+    let best = -Infinity;
+    for (const sq of moves) {
+      const n = doMove(b, sq, me, s.bufs[ply]);
+      const v = -negamax(s, 3 - me, depth - 1, -beta, -alpha, ply + 1);
+      undoMove(b, sq, me, s.bufs[ply], n);
+      if (s.aborted) return 0;
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) {
+        s.hist[sq] += depth * depth;
+        break;
+      }
+    }
+    return best;
+  }
+
+  /* Exact final disc difference with perfect play (fastest-first ordering while many squares are empty). */
+  function solve(s, me, alpha, beta, ply, empties) {
+    if (tick(s)) return 0;
+    const b = s.b;
+    const moves = movesOf(b, me);
+    if (!moves.length) {
+      if (!hasMove(b, 3 - me)) return discDiff(b, me);
+      return -solve(s, 3 - me, -beta, -alpha, ply + 1, empties);
+    }
+    if (empties > 5 && moves.length > 1) orderFastest(s, moves, me, ply);
+    let best = -Infinity;
+    for (const sq of moves) {
+      const n = doMove(b, sq, me, s.bufs[ply]);
+      const v = -solve(s, 3 - me, -beta, -alpha, ply + 1, empties - 1);
+      undoMove(b, sq, me, s.bufs[ply], n);
+      if (s.aborted) return 0;
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+  function orderFastest(s, moves, me, ply) {
+    const key = new Map(moves.map(sq => {
+      const n = doMove(s.b, sq, me, s.bufs[ply]);
+      const k = countMoves(s.b, 3 - me) * 4 - (WEIGHTS[sq] > 50 ? 8 : 0);
+      undoMove(s.b, sq, me, s.bufs[ply], n);
+      return [sq, k];
+    }));
+    moves.sort((a, b) => key.get(a) - key.get(b));
+  }
+
+  /* One root pass; returns moves best-first, or null if the budget ran out. */
+  function rootPass(s, me, order, child) {
+    let alpha = -Infinity;
+    const out = [];
+    for (const sq of order) {
+      const n = doMove(s.b, sq, me, s.bufs[0]);
+      const v = -child(-Infinity, -alpha);
+      undoMove(s.b, sq, me, s.bufs[0], n);
+      if (s.aborted) return null;
+      out.push({ sq, score: v });
+      if (v > alpha) alpha = v;
+    }
+    return out.sort((a, b) => b.score - a.score).map(m => m.sq);
+  }
+  function endgameMove(s, me, order, empties) {
+    s.limit = SEARCH.endNodes;
+    s.deadline = s.start + s.ms / 2;
+    const ranked = rootPass(s, me, order, (a, b) => solve(s, 3 - me, a, b, 1, empties - 1));
+    return ranked ? ranked[0] : null;
+  }
+  /* Leaf cost grows with the empty squares, so busy early boards get fewer nodes. */
+  function deepen(s, me, order, empties) {
+    let best = order[0];
+    let ranked = order;
+    s.limit = s.nodes + Math.round(SEARCH.nodes * Math.min(1, 30 / empties));
+    s.deadline = s.start + s.ms;
+    for (let depth = 1; depth <= SEARCH.depth; depth++) {
+      const next = rootPass(s, me, ranked, (a, b) => negamax(s, 3 - me, depth - 1, a, b, 1));
+      if (!next) break;
+      ranked = next;
+      best = next[0];
+    }
+    return best;
+  }
+  function strongMove(state, moves, r, opts) {
+    const s = searcher(state.board, opts);
+    const order = moves.map(sq => ({ sq, k: WEIGHTS[sq] + r() })).sort((a, b) => b.k - a.k).map(m => m.sq);
+    const empties = counts(state.board).empty;
+    if (empties <= SEARCH.endgame) {
+      const exact = endgameMove(s, state.turn, order, empties);
+      if (exact !== null) return exact;
+      s.b = Int8Array.from(state.board);
+      s.aborted = false;
+    }
+    return deepen(s, state.turn, order, empties);
+  }
+
+  /* Pure: the CPU's square for the side to move. opts.now / opts.ms let tests control the time guard. */
+  function cpuMove(state, level = "normal", r = Math.random, opts = {}) {
+    checkState(state);
+    if (!LEVELS.includes(level)) throw new Error("強さが正しくありません");
+    const moves = legalMoves(state);
+    if (!moves.length) throw new Error("置ける場所がありません");
+    if (moves.length === 1) return moves[0];
+    const win = immediateWin(state, moves);
+    if (win !== null) return win;
+    if (level === "easy") return weakMove(state, moves, r);
+    if (level === "normal") return normalMove(state, moves, r);
+    return strongMove(state, moves, r, opts || {});
+  }
+
+  return {
+    SIZE, CELLS, EMPTY, BLACK, WHITE, LEVELS, CORNERS, WEIGHTS,
+    opponent, name, flipsAt, movesOf, counts,
+    newGame, fromBoard, legalMoves, isLegal, mustPass, play, pass, result, cpuMove
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = ReversiRules;
+</script>
+<script>
+/* reversi.js */
+/* Reversi screen: 8x8 board against the CPU or a friend, with flip animations, passes and a live score bar. */
+const Reversi = (() => {
+  const V = ReversiRules;
+  const KEY = "reversi.settings";
+  const RECORD_KEY = "reversi.record";
+  const CPU_WAIT_MS = 450;
+  const PASS_MS = 1500;
+  const CALM_MS = 600; /* after つぎへ, a quick second tap must not land on 1手もどす */
+  const PLACE_MS = 90;
+  const FLIP_MS = 300;
+  const FLIP_STEP_MS = 60;
+  const SIDES = ["black", "white", "random"];
+  const LEVEL_LABEL = { easy: "よわい", normal: "ふつう", hard: "つよい" };
+  const SIDE_LABEL = { black: "黒（先攻）", white: "白（後攻）", random: "ランダム" };
+  const COLOR_NAME = { [V.BLACK]: "黒", [V.WHITE]: "白" };
+  const RULES = [
+    "黒が先攻。相手の石を自分の石ではさめるマスにだけ置ける",
+    "はさんだ石は、たて・よこ・ななめ全部ひっくり返って自分の色になる",
+    "置ける場所がないときはパス。どちらも置けなくなったら終わり",
+    "最後に石が多いほうの勝ち。同じ数なら引き分け"
+  ];
+
+  const el = {
+    setup: $("vSetup"), play: $("vPlay"), label: $("vLabel"), title: $("vTitle"), hint: $("vHint"),
+    actions: $("vActions"), board: $("vBoard"), banner: $("vBanner"), bannerSub: $("vBannerSub"),
+    namesBox: $("vNames"), names: [$("vName1"), $("vName2")], record: $("vRecord"),
+    sides: {
+      [V.BLACK]: { box: $("vSideB"), name: $("vNameB"), state: $("vStateB"), count: $("vCountB") },
+      [V.WHITE]: { box: $("vSideW"), name: $("vNameW"), state: $("vStateW"), count: $("vCountW") }
+    }
+  };
+
+  let settings = { vs: "cpu", level: "normal", side: "black", hints: true };
+  let match = { cpu: true, human: V.BLACK, level: "normal", names: { [V.BLACK]: "あなた", [V.WHITE]: "CPU" } };
+  let game = null;
+  let history = [];
+  let ui = { phase: "setup", wait: null, anim: null, confirm: false, end: null, calmUntil: 0 };
+  let cells = [];
+  let timer = 0;
+
+  const cls = (...names) => names.filter(Boolean).join(" ");
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const isCpuTurn = () => match.cpu && game.turn !== match.human;
+  const who = (color) => match.names[color];
+
+  function normalize(s) {
+    return {
+      vs: s.vs === "duo" ? "duo" : "cpu",
+      level: V.LEVELS.includes(s.level) ? s.level : "normal",
+      side: SIDES.includes(s.side) ? s.side : "black",
+      hints: typeof s.hints === "boolean" ? s.hints : true
+    };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function later(fn, ms) {
+    clearTimeout(timer);
+    timer = setTimeout(fn, ms);
+  }
+
+  /* ---------- record against the CPU ---------- */
+  function loadRecord() {
+    const raw = Store.load(RECORD_KEY, {});
+    const src = raw && typeof raw === "object" ? raw : {};
+    const n = (x) => (Number.isInteger(x) && x >= 0 ? x : 0);
+    return Object.fromEntries(V.LEVELS.map(l => [l, { win: n(src[l]?.win), lose: n(src[l]?.lose), draw: n(src[l]?.draw) }]));
+  }
+  function saveRecord(winner) {
+    const rec = loadRecord();
+    const key = winner === V.EMPTY ? "draw" : winner === match.human ? "win" : "lose";
+    const mine = rec[match.level];
+    Store.save(RECORD_KEY, { ...rec, [match.level]: { ...mine, [key]: mine[key] + 1 } });
+  }
+  function recordText() {
+    const r = loadRecord()[settings.level];
+    if (!r.win && !r.lose && !r.draw) return "";
+    return `${LEVEL_LABEL[settings.level]}との成績：${r.win}勝 ${r.lose}敗${r.draw ? ` ${r.draw}分` : ""}`;
+  }
+
+  /* ---------- sounds ---------- */
+  function soundMove(plan) {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    Sound.hiss({ t, dur: 0.035, vol: 0.3, type: "bandpass", freq: 2400, q: 1.3 });
+    Sound.tone({ freq: 230, glide: 110, glideTime: 0.07, type: "sine", t, dur: 0.1, vol: 0.38 });
+    const delays = [...plan.delays.values()].sort((a, b) => a - b);
+    let same = 0;
+    delays.forEach((d, k) => {
+      same = k > 0 && d === delays[k - 1] ? same + 1 : 0;
+      const at = t + (d + FLIP_MS / 2) / 1000 + same * 0.014;
+      Sound.tone({ freq: 1250 + k * 55, type: "triangle", t: at, dur: 0.03, vol: 0.1 });
+      Sound.hiss({ t: at, dur: 0.02, vol: 0.05, type: "highpass", freq: 5000 });
+    });
+    if (V.CORNERS.includes(plan.at)) Sound.sfx("coin");
+  }
+  function soundPass() {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    Sound.tone({ freq: Sound.hz(76), type: "square", t, dur: 0.12, vol: 0.06, filter: { freq: 2400 } });
+    Sound.tone({ freq: Sound.hz(69), type: "square", t: t + 0.13, dur: 0.26, vol: 0.06, filter: { freq: 2400 }, send: 0.2 });
+  }
+  function soundNope() {
+    Sound.tone({ freq: 150, type: "square", dur: 0.08, vol: 0.05, filter: { freq: 800 } });
+  }
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    const human = settings.side === "random" ? (Math.random() < 0.5 ? V.BLACK : V.WHITE) : settings.side === "white" ? V.WHITE : V.BLACK;
+    const duo = settings.vs === "duo" ? Duo.read(el.names) : null;
+    match = {
+      cpu: !duo, human, level: settings.level,
+      names: duo ? { [V.BLACK]: duo[0], [V.WHITE]: duo[1] } : { [human]: "あなた", [3 - human]: "CPU" }
+    };
+    game = V.newGame();
+    history = [game];
+    Sound.sfx("confirm");
+    Music.play("think");
+    go({ phase: "play", wait: null, anim: null, confirm: false, end: null });
+    Fx.pop(el.board);
+    next();
+  }
+  /* Decides what happens after every move or pass. */
+  function next() {
+    if (game.over) {
+      finish(null);
+      return;
+    }
+    if (V.mustPass(game)) {
+      showPass();
+      return;
+    }
+    if (isCpuTurn()) {
+      go({ wait: "cpu" });
+      later(cpuPlay, CPU_WAIT_MS);
+      return;
+    }
+    go({ wait: null });
+  }
+  function cpuPlay() {
+    if (ui.phase !== "play" || !isCpuTurn()) return;
+    let sq;
+    try {
+      sq = V.cpuMove(game, match.level);
+    } catch (e) {
+      console.error("リバーシ: CPUの手を決められませんでした", e);
+      sq = V.legalMoves(game)[0];
+    }
+    move(sq);
+  }
+  function tapCell(i) {
+    if (ui.phase !== "play" || ui.wait || ui.confirm || isCpuTurn()) return;
+    if (!V.isLegal(game, i)) {
+      soundNope();
+      Fx.replay(cells[i], "v-nope");
+      return;
+    }
+    move(i);
+  }
+  /* Flips ripple outward from the new stone. */
+  function flipPlan(state) {
+    const at = state.last;
+    const dist = (sq) => Math.max(Math.abs((sq >> 3) - (at >> 3)), Math.abs((sq & 7) - (at & 7)));
+    const delays = new Map(state.flipped.map(sq => [sq, PLACE_MS + (dist(sq) - 1) * FLIP_STEP_MS]));
+    const total = reduced() ? 180 : Math.max(...delays.values()) + FLIP_MS + 140;
+    return { at, by: 3 - state.turn, delays, total };
+  }
+  function move(i) {
+    game = V.play(game, i);
+    history = [...history, game];
+    const plan = flipPlan(game);
+    go({ wait: "anim", anim: plan });
+    soundMove(plan);
+    later(() => {
+      ui = { ...ui, anim: null };
+      next();
+    }, plan.total);
+  }
+  function showPass() {
+    go({ wait: "pass" });
+    soundPass();
+    if (match.cpu) later(doPass, PASS_MS);
+  }
+  function doPass() {
+    if (ui.phase !== "play" || ui.wait !== "pass") return;
+    game = V.pass(game);
+    history = [...history, game];
+    ui = { ...ui, calmUntil: Date.now() + CALM_MS };
+    Sound.sfx("whoosh");
+    next();
+  }
+  /* 1手もどす: back to the previous position where it was the human's move (any real move in 2-player). */
+  function undoTarget() {
+    for (let i = history.length - 2; i >= 0; i--) {
+      if (V.mustPass(history[i])) continue;
+      if (!match.cpu || history[i].turn === match.human) return i;
+    }
+    return -1;
+  }
+  function undo() {
+    const i = undoTarget();
+    if (i < 0 || ui.wait || Date.now() < ui.calmUntil) return;
+    clearTimeout(timer);
+    history = history.slice(0, i + 1);
+    game = history[i];
+    Sound.sfx("back");
+    go({ wait: null, anim: null, confirm: false });
+  }
+  /* The resign question pauses a pending CPU move, so the board never changes behind it. */
+  function askResign() {
+    if (ui.phase !== "play" || ui.wait === "anim" || ui.wait === "pass") return;
+    clearTimeout(timer);
+    go({ confirm: true, wait: null });
+  }
+  function keepPlaying() {
+    ui = { ...ui, confirm: false };
+    next();
+  }
+  function resign() {
+    if (ui.phase !== "play" || !ui.confirm) return;
+    finish(match.cpu ? match.human : game.turn);
+  }
+  function finish(resigned) {
+    clearTimeout(timer);
+    const winner = resigned ? 3 - resigned : V.result(game).winner;
+    Music.stop();
+    go({ phase: "result", wait: null, anim: null, confirm: false, end: { winner, resigned } });
+    if (match.cpu) saveRecord(winner);
+    if (winner === V.EMPTY) Sound.sfx("reveal");
+    else if (!match.cpu) Sound.sfx("fanfare");
+    else Sound.sfx(winner === match.human ? "victory" : "lose");
+    if (winner !== V.EMPTY && (!match.cpu || winner === match.human)) Fx.confetti();
+  }
+
+  /* ---------- screens ---------- */
+  function statusText() {
+    if (ui.wait === "pass") return `${who(game.turn)}はパス`;
+    if (ui.wait === "cpu") return "CPUが考え中…";
+    if (ui.wait === "anim") return `${who(ui.anim.by)}の番`;
+    return `${who(game.turn)}の番`;
+  }
+  function hintText() {
+    if (ui.wait === "pass") return match.cpu ? "" : "「つぎへ」で相手の番にもどります";
+    if (ui.wait || isCpuTurn()) return "";
+    const color = `${COLOR_NAME[game.turn]}の石`;
+    return settings.hints ? `${color}を、点のマスに置けます` : `${color}で、相手の石をはさめるマスに置こう`;
+  }
+  function playView() {
+    if (ui.confirm) {
+      return {
+        label: "投了",
+        title: "投了しますか？",
+        hint: match.cpu ? "CPUの勝ちになります" : `${who(game.turn)}の負けになります`,
+        actions: [makeButton("つづける", keepPlaying, "small"), makeButton("投了する", resign, "primary danger")]
+      };
+    }
+    const actions = ui.wait === "pass" && !match.cpu
+      ? [makeButton("つぎへ", doPass, "primary")]
+      : [
+        makeButton("投了", askResign, "small", ui.wait === "anim" || ui.wait === "pass"),
+        makeButton("1手もどす", undo, "small", Boolean(ui.wait) || undoTarget() < 0)
+      ];
+    return { label: `のこり${V.counts(game.board).empty}マス`, title: statusText(), hint: hintText(), actions };
+  }
+  function resultTitle() {
+    const { winner, resigned } = ui.end;
+    if (resigned && match.cpu) return "投了しました。CPUの勝ち";
+    if (resigned) return `${who(resigned)}が投了。${who(winner)}の勝ち！`;
+    if (winner === V.EMPTY) return "引き分け！";
+    if (!match.cpu) return `${who(winner)}の勝ち！`;
+    return winner === match.human ? "あなたの勝ち！" : "CPUの勝ち…";
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: playView,
+    result: () => {
+      const c = V.counts(game.board);
+      return {
+        label: ui.end.resigned ? "投了" : "対局終了",
+        title: resultTitle(),
+        hint: `黒 ${c.black} 対 ${c.white} 白`,
+        actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("もう一回", start, "primary")]
+      };
+    }
+  };
+
+  function paintScores() {
+    const c = V.counts(game.board);
+    [V.BLACK, V.WHITE].forEach(color => {
+      const s = el.sides[color];
+      const turn = ui.wait === "anim" ? ui.anim.by : game.turn;
+      const on = ui.phase === "play" && turn === color;
+      const won = ui.phase === "result" && ui.end.winner === color;
+      s.box.classList.toggle("on", on);
+      s.box.classList.toggle("won", won);
+      s.box.classList.toggle("thinking", on && ui.wait === "cpu");
+      s.name.textContent = who(color);
+      s.state.textContent = won ? "勝ち" : on ? (ui.wait === "cpu" ? "考え中…" : ui.wait === "pass" ? "パス" : "手番") : "";
+      const n = String(color === V.BLACK ? c.black : c.white);
+      if (s.count.textContent !== n) {
+        s.count.textContent = n;
+        Fx.pop(s.count);
+      }
+    });
+  }
+  function paintBoard() {
+    const showHints = settings.hints && ui.phase === "play" && !ui.wait && !ui.confirm && !isCpuTurn();
+    const legal = new Set(showHints ? V.legalMoves(game) : []);
+    const plan = ui.anim;
+    el.board.dataset.turn = game.turn === V.BLACK ? "black" : "white";
+    el.board.classList.toggle("v-locked", ui.phase !== "play" || Boolean(ui.wait) || isCpuTurn());
+    cells.forEach((cell, i) => {
+      const v = game.board[i];
+      const delay = plan ? plan.delays.get(i) : undefined;
+      cell.className = cls("v-cell", legal.has(i) && "v-can", game.last === i && "v-last");
+      cell.firstChild.className = cls("v-disc", v === V.BLACK && "v-b", v === V.WHITE && "v-w",
+        plan && plan.at === i && "v-place", delay !== undefined && "v-flip");
+      cell.firstChild.style.setProperty("--v-delay", `${delay ?? 0}ms`);
+      cell.setAttribute("aria-label", `${V.name(i)} ${v ? COLOR_NAME[v] : legal.has(i) ? "置ける" : "空き"}`);
+    });
+  }
+  function renderPlay() {
+    if (!game) return;
+    paintScores();
+    paintBoard();
+    const passing = ui.phase === "play" && ui.wait === "pass";
+    el.banner.hidden = !passing;
+    if (passing) el.bannerSub.textContent = `${who(game.turn)}は置ける場所がありません`;
+  }
+  function renderSetup() {
+    const cpu = settings.vs === "cpu";
+    View.chips($("vVsChips"), [{ value: "cpu", label: "CPUと" }, { value: "duo", label: "2人で" }], settings.vs, v => update({ vs: v }));
+    View.chips($("vLevelChips"), View.options(V.LEVELS, l => LEVEL_LABEL[l]), settings.level, v => update({ level: v }));
+    View.chips($("vSideChips"), View.options(SIDES, s => SIDE_LABEL[s]), settings.side, v => update({ side: v }));
+    View.chips($("vHintChips"), [{ value: true, label: "あり" }, { value: false, label: "なし" }], settings.hints, v => update({ hints: v }));
+    $("vLevelOpt").hidden = !cpu;
+    $("vSideOpt").hidden = !cpu;
+    el.namesBox.hidden = cpu;
+    View.list($("vRules"), RULES);
+    View.text(el.record, cpu ? recordText() : "");
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else renderPlay();
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function buildBoard() {
+    cells = Array.from({ length: V.CELLS }, (_, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "v-cell";
+      b.dataset.i = String(i);
+      b.appendChild(document.createElement("span"));
+      return b;
+    });
+    el.board.replaceChildren(...cells);
+    el.board.addEventListener("click", (e) => {
+      const cell = e.target.closest(".v-cell");
+      if (!cell) return;
+      e.stopPropagation(); /* the stone sound replaces the app's generic button tap */
+      tapCell(Number(cell.dataset.i));
+    });
+  }
+  function init() {
+    const saved = Store.load(KEY, {});
+    settings = normalize(saved && typeof saved === "object" ? saved : {});
+    buildBoard();
+    Duo.fill(el.names);
+    render();
+  }
+  /* Leaving mid-game pauses it; coming back picks up where it stopped. */
+  function leave() {
+    clearTimeout(timer);
+    if (ui.phase === "play") ui = { ...ui, wait: null, anim: null, confirm: false };
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.names);
+    if (ui.phase !== "play" || !game) return;
+    Awake.keep();
+    Music.play("think");
+    next();
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
+<script>
+/* gomoku-rules.js */
+/* Gomoku, free style (フリー五目): 15x15, black first, five or more in a row wins, no forbidden moves, full board
+ * is a draw. CPU: pattern scoring; hard adds a four-chain (VCF) search and a shallow alpha-beta search. */
+const GomokuRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const SIZE = 15, CELLS = SIZE * SIZE, CENTER = 7 * SIZE + 7;
+  const EMPTY = 0, BLACK = 1, WHITE = 2;
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+  const STARS = Object.freeze([3 * SIZE + 3, 3 * SIZE + 11, CENTER, 11 * SIZE + 3, 11 * SIZE + 11]);
+  const DIRS = Object.freeze([[0, 1], [1, 0], [1, 1], [1, -1]]);
+
+  const other = (c) => 3 - c;
+  const colorOfMove = (n) => (n % 2 === 0 ? BLACK : WHITE);
+  const isIndex = (i) => Number.isInteger(i) && i >= 0 && i < CELLS;
+  const rowOf = (i) => Math.floor(i / SIZE);
+  const colOf = (i) => i % SIZE;
+  const at = (r, c) => (r >= 0 && r < SIZE && c >= 0 && c < SIZE ? r * SIZE + c : -1);
+
+  /* ---------- game ---------- */
+  function newGame() {
+    return { board: Array(CELLS).fill(EMPTY), turn: BLACK, moves: [], winner: EMPTY, line: [], draw: false, over: false, resigned: EMPTY };
+  }
+  function checkState(state) {
+    const ok = state && Array.isArray(state.board) && state.board.length === CELLS && Array.isArray(state.moves)
+      && (state.turn === BLACK || state.turn === WHITE);
+    if (!ok) throw new Error("盤面のデータが正しくありません");
+  }
+  function moveError(state, i) {
+    checkState(state);
+    if (state.over) return "もう決着がついています";
+    if (!isIndex(i)) return "盤の外です";
+    if (state.board[i] !== EMPTY) return "そこにはもう石があります";
+    return null;
+  }
+  const isLegal = (state, i) => moveError(state, i) === null;
+
+  /* Every stone of a run of five or more through i (an overline counts too). */
+  function winLine(board, i) {
+    const color = board[i];
+    if (color === EMPTY) return [];
+    const walk = (dr, dc) => {
+      const out = [];
+      for (let j = at(rowOf(i) + dr, colOf(i) + dc); j >= 0 && board[j] === color; j = at(rowOf(j) + dr, colOf(j) + dc)) out.push(j);
+      return out;
+    };
+    const cells = DIRS.flatMap(([dr, dc]) => {
+      const run = [i, ...walk(dr, dc), ...walk(-dr, -dc)];
+      return run.length >= 5 ? run : [];
+    });
+    return [...new Set(cells)].sort((a, b) => a - b);
+  }
+  function play(state, i) {
+    const err = moveError(state, i);
+    if (err) throw new Error(err);
+    const color = state.turn;
+    const board = state.board.map((v, k) => (k === i ? color : v));
+    const moves = [...state.moves, i];
+    const line = winLine(board, i);
+    const won = line.length > 0;
+    const draw = !won && moves.length === CELLS;
+    return { ...state, board, moves, turn: other(color), winner: won ? color : EMPTY, line, draw, over: won || draw };
+  }
+  function fromMoves(moves) {
+    if (!Array.isArray(moves)) throw new Error("手順のデータが正しくありません");
+    return moves.reduce(play, newGame());
+  }
+  /* Takes moves back until one of `color`'s moves is gone, so it is that player's turn again. */
+  function undoTurn(state, color) {
+    checkState(state);
+    const last = state.moves.map((_, n) => n).filter(n => colorOfMove(n) === color).pop();
+    return last === undefined ? state : fromMoves(state.moves.slice(0, last));
+  }
+  function resign(state, color) {
+    checkState(state);
+    if (state.over) throw new Error("もう決着がついています");
+    if (color !== BLACK && color !== WHITE) throw new Error("色が正しくありません");
+    return { ...state, over: true, winner: other(color), resigned: color, line: [] };
+  }
+
+  const counts = (state) => ({ black: state.board.filter(v => v === BLACK).length, white: state.board.filter(v => v === WHITE).length });
+  const lastMove = (state) => (state.moves.length ? state.moves[state.moves.length - 1] : -1);
+
+  /* ---------- geometry, precomputed once ---------- */
+  const OFFSETS = [-4, -3, -2, -1, 1, 2, 3, 4];
+  const NEIGH = new Int16Array(CELLS * 32); // (i * 4 + dir) * 8 + k -> cell, or -1 off the board
+  const RUNS = [];                           // every line of 5 cells on the board
+  for (let i = 0; i < CELLS; i++) {
+    DIRS.forEach(([dr, dc], d) => {
+      OFFSETS.forEach((s, k) => { NEIGH[(i * 4 + d) * 8 + k] = at(rowOf(i) + dr * s, colOf(i) + dc * s); });
+      const run = [0, 1, 2, 3, 4].map(s => at(rowOf(i) + dr * s, colOf(i) + dc * s));
+      if (!run.includes(-1)) RUNS.push(run);
+    });
+  }
+  const NRUNS = RUNS.length, RUN_CELLS = Int16Array.from(RUNS.flat());
+  const ALL_RUNS = Int16Array.from(RUNS.map((_, w) => w));
+  const RUNS_AT = Array.from({ length: CELLS }, () => []);
+  RUNS.forEach((run, w) => run.forEach(i => RUNS_AT[i].push(w)));
+  const AROUND = Array.from({ length: CELLS }, (_, i) => {
+    const out = [];
+    for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+      const j = at(rowOf(i) + dr, colOf(i) + dc);
+      if (j >= 0 && j !== i) out.push(j);
+    }
+    return Int16Array.from(out);
+  });
+  const CENTRAL = Float32Array.from({ length: CELLS }, (_, i) => (7 - Math.max(Math.abs(rowOf(i) - 7), Math.abs(colOf(i) - 7))) * 0.5);
+
+  /* ---------- line shapes ---------- */
+  /* A shape is what one direction through a point looks like once our stone is on it. Nine cells
+   * (4 each side) are coded base 3: 0 empty, 1 ours, 2 blocked (their stone or the edge). */
+  const NONE = 0, ONE = 1, CLOSED2 = 2, TWO = 3, CLOSED3 = 4, THREE = 5, FOUR = 6, OPEN4 = 7, FIVE = 8;
+  const POW3 = [1, 3, 9, 27, 81, 243, 729, 2187];
+  const GROW = [NONE, ONE, ONE, ONE, CLOSED2, TWO, CLOSED3, THREE, THREE]; // shape one stone short of each
+  const SHAPES = new Int8Array(6561).fill(-1);
+
+  function decode(code) {
+    const w = [];
+    for (let d = 0, k = code; d < 8; d++, k = Math.floor(k / 3)) w.push(k % 3);
+    w.splice(4, 0, 1);
+    return w;
+  }
+  /* Empty cells that would finish a five through the centre; null when it already is five. */
+  function completions(w) {
+    const pts = [];
+    for (let s = 0; s <= 4; s++) {
+      const run = w.slice(s, s + 5);
+      if (run.includes(2)) continue;
+      const gaps = run.filter(v => v === 0).length;
+      if (gaps === 0) return null;
+      if (gaps === 1 && !pts.includes(s + run.indexOf(0))) pts.push(s + run.indexOf(0));
+    }
+    return pts;
+  }
+  function shapeOf(code) {
+    if (SHAPES[code] >= 0) return SHAPES[code];
+    const w = decode(code);
+    const pts = completions(w);
+    let shape;
+    if (pts === null) shape = FIVE;
+    else if (pts.length) shape = pts.length >= 2 ? OPEN4 : FOUR;
+    else {
+      let best = NONE;
+      w.forEach((v, p) => { if (v === 0) best = Math.max(best, shapeOf(code + POW3[p < 4 ? p : p - 1])); });
+      shape = GROW[best];
+    }
+    SHAPES[code] = shape;
+    return shape;
+  }
+  for (let code = 0; code < SHAPES.length; code++) shapeOf(code);
+
+  /* Shapes through i in the 4 directions for c (slots 0-3) and for the other color (slots 4-7), read in one
+   * pass. The result is a shared buffer: use it before the next call. */
+  const SH = new Int8Array(8);
+  function shapes(b, i, c) {
+    const o = other(c);
+    for (let d = 0; d < 4; d++) {
+      let mine = 0, theirs = 0;
+      for (let k = 7, base = (i * 4 + d) * 8; k >= 0; k--) {
+        const j = NEIGH[base + k], v = j < 0 ? -1 : b[j];
+        mine = mine * 3 + (v === EMPTY ? 0 : v === c ? 1 : 2);
+        theirs = theirs * 3 + (v === EMPTY ? 0 : v === o ? 1 : 2);
+      }
+      SH[d] = SHAPES[mine];
+      SH[d + 4] = SHAPES[theirs];
+    }
+    return SH;
+  }
+
+  /* ---------- point scores ---------- */
+  //            NONE ONE CLOSED2 TWO CLOSED3 THREE FOUR  OPEN4   FIVE
+  const VALUE = [0, 4, 30, 200, 260, 1500, 2600, 100000, 10000000];
+  const SOFT_DEFENSE = [0, 2, 8, 25, 30, 40, 50, 60, 900]; // よわい barely notices the other side's threats
+  const SURE = 1000000, FOUR_THREE = 300000, THREE_THREE = 40000;
+
+  /* Value of the shapes sh[from..from+3]. With combos, double threats (four-four, four-three, three-three)
+   * count extra. pointValue: the value of putting c on i. */
+  function score(sh, from, combos, table) {
+    let sum = 0, fours = 0, threes = 0, top = NONE;
+    for (let d = from; d < from + 4; d++) {
+      const s = sh[d];
+      sum += table[s];
+      if (s === FOUR) fours++;
+      if (s === THREE) threes++;
+      if (s > top) top = s;
+    }
+    if (!combos || top === FIVE) return sum;
+    if (top === OPEN4 || fours >= 2) return sum + SURE;
+    if (fours && threes) return sum + FOUR_THREE;
+    return threes >= 2 ? sum + THREE_THREE : sum;
+  }
+  const pointValue = (b, i, c, combos, table = VALUE) => score(shapes(b, i, c), 0, combos, table);
+
+  /* ---------- CPU scratch board ---------- */
+  /* The CPU works on its own typed-array copy, built fresh for each call; game states are never changed.
+   * cnt holds, for every run of 5, how many black and white stones it has. near counts stones within 2. */
+  function scratch(board) {
+    const x = { b: new Int8Array(CELLS), cnt: new Int8Array(NRUNS * 2), near: new Uint8Array(CELLS), mark: new Int32Array(CELLS), stamp: 0 };
+    board.forEach((v, i) => { if (v === BLACK || v === WHITE) put(x, i, v); });
+    return x;
+  }
+  function put(x, i, c) {
+    x.b[i] = c;
+    for (const w of RUNS_AT[i]) x.cnt[w * 2 + c - 1]++;
+    for (const j of AROUND[i]) x.near[j]++;
+  }
+  function take(x, i, c) {
+    x.b[i] = EMPTY;
+    for (const w of RUNS_AT[i]) x.cnt[w * 2 + c - 1]--;
+    for (const j of AROUND[i]) x.near[j]--;
+  }
+  /* Empty cells inside runs holding `need` stones of c and none of the other color.
+   * need 4: points where c makes five. need 3: points where c makes a four. */
+  function runGaps(x, c, need, runs = ALL_RUNS) {
+    const out = [];
+    const stamp = ++x.stamp;
+    for (let n = 0; n < runs.length; n++) {
+      const w = runs[n];
+      if (x.cnt[w * 2 + c - 1] !== need || x.cnt[w * 2 + 2 - c] !== 0) continue;
+      for (let k = w * 5; k < w * 5 + 5; k++) {
+        const j = RUN_CELLS[k];
+        if (x.b[j] === EMPTY && x.mark[j] !== stamp) { x.mark[j] = stamp; out.push(j); }
+      }
+    }
+    return out;
+  }
+  function hasFivePoint(x, c, runs = ALL_RUNS) {
+    for (let n = 0; n < runs.length; n++) {
+      const w = runs[n];
+      if (x.cnt[w * 2 + c - 1] === 4 && x.cnt[w * 2 + 2 - c] === 0) return true;
+    }
+    return false;
+  }
+
+  /* Candidate points near the stones, best first. Keeps only the best `limit`; ties stay in board order. */
+  function ranked(x, c, o, limit = CELLS) {
+    const list = [];
+    for (let i = 0; i < CELLS; i++) {
+      if (x.b[i] !== EMPTY || x.near[i] === 0) continue;
+      const sh = shapes(x.b, i, c);
+      const atk = score(sh, 0, o.combos, VALUE);
+      const v = atk + score(sh, 4, o.combos, o.table || VALUE) * o.defense + CENTRAL[i];
+      if (list.length === limit && v <= list[limit - 1].v) continue;
+      let k = Math.min(list.length, limit - 1);
+      for (; k > 0 && list[k - 1].v < v; k--) list[k] = list[k - 1];
+      list[k] = { i, atk, v };
+    }
+    return list;
+  }
+
+  /* ---------- levels ---------- */
+  const EASY = { combos: false, defense: 0.7, table: SOFT_DEFENSE };
+  const NORMAL = { combos: false, defense: 0.85 };
+  const HARD = { combos: true, defense: 0.6 };
+  const EASY_BLOCK = 0.7, EASY_NOTICE = 0.3; // chance よわい blocks a four / takes threes seriously this move
+
+  function easyMove(x, c, r) {
+    const list = ranked(x, c, r() < EASY_NOTICE ? NORMAL : EASY, 12);
+    return list.reduce((best, m) => {
+      const v = m.v * (0.3 + 1.4 * r()) + r() * 60;
+      return v > best.v ? { i: m.i, v } : best;
+    }, { i: list[0].i, v: -Infinity }).i;
+  }
+  function normalMove(x, c, r) {
+    const list = ranked(x, c, NORMAL);
+    const close = list.filter(m => m.v >= list[0].v * 0.92);
+    return R.pick(close, r).i;
+  }
+
+  /* ---------- hard: VCF (win by continuous fours) ---------- */
+  const VCF_DEPTH = 10, VCF_BUDGET = 1500;
+  /* First move of a forced win made only of fours, or -1. Assumes the other side has no four on the board. */
+  function findVcf(x, c, depth, budget) {
+    if (depth <= 0 || budget.left <= 0) return -1;
+    const o = other(c);
+    for (const q of runGaps(x, c, 3)) {
+      if (--budget.left < 0) return -1;
+      put(x, q, c);
+      const fives = runGaps(x, c, 4, RUNS_AT[q]);
+      let win = fives.length >= 2;
+      if (fives.length === 1) {
+        put(x, fives[0], o);
+        win = !hasFivePoint(x, o, RUNS_AT[fives[0]]) && findVcf(x, c, depth - 1, budget) >= 0;
+        take(x, fives[0], o);
+      }
+      take(x, q, c);
+      if (win) return q;
+    }
+    return -1;
+  }
+
+  /* ---------- hard: shallow alpha-beta ---------- */
+  const WIN = 1e9, SOON = 1e8, TUPLE = [0, 1, 12, 90, 0, 0];
+  const DEPTH = 4, K_ROOT = 12, K_INNER = 8, MAX_PLY = 14;
+  const NODE_BUDGET = 320; // searched (non-forced) positions per move: caps the think time on any board
+
+  /* Static value for side s to move (no five points for either side here). */
+  function leafEval(x, s) {
+    const o = other(s);
+    let mine = 0, theirs = 0;
+    for (let w = 0; w < NRUNS; w++) {
+      const a = x.cnt[w * 2 + s - 1], z = x.cnt[w * 2 + o - 1];
+      if (a && !z) mine += TUPLE[a];
+      else if (z && !a) theirs += TUPLE[z];
+    }
+    for (const j of runGaps(x, s, 3)) {
+      const v = pointValue(x.b, j, s, true);
+      if (v >= SURE) return SOON;
+      if (v >= FOUR_THREE) return SOON / 2;
+    }
+    return mine * 1.2 - theirs;
+  }
+
+  function negamax(x, s, depth, alpha, beta, ply, budget) {
+    const o = other(s);
+    if (hasFivePoint(x, s)) return WIN - ply;
+    const blocks = runGaps(x, o, 4);
+    if (blocks.length >= 2) return -(WIN - ply - 1);
+    if ((blocks.length === 0 && (depth <= 0 || budget.left <= 0)) || ply >= MAX_PLY) return leafEval(x, s);
+    if (!blocks.length) budget.left--;
+    const moves = blocks.length ? blocks : ranked(x, s, HARD, K_INNER).map(m => m.i);
+    if (!moves.length) return 0;
+    let best = -Infinity;
+    for (const m of moves) {
+      put(x, m, s);
+      const v = -negamax(x, o, depth - 1, -beta, -alpha, ply + 1, budget);
+      take(x, m, s);
+      if (v > best) best = v;
+      if (v > alpha) alpha = v;
+      if (alpha >= beta) break;
+    }
+    return best;
+  }
+  function hardMove(x, c, r) {
+    const cands = ranked(x, c, HARD, K_ROOT)
+      .map(m => ({ ...m, v: m.v * (1 + 0.03 * r()) })).sort((p, q) => q.v - p.v);
+    if (cands[0].atk >= SURE) return cands[0].i;
+    const vcf = findVcf(x, c, VCF_DEPTH, { left: VCF_BUDGET });
+    if (vcf >= 0) return vcf;
+    let best = -Infinity, choice = cands[0].i;
+    const budget = { left: NODE_BUDGET };
+    for (const m of cands) {
+      put(x, m.i, c);
+      const v = -negamax(x, other(c), DEPTH - 1, -Infinity, -best, 1, budget);
+      take(x, m.i, c);
+      if (v > best) { best = v; choice = m.i; }
+    }
+    return choice;
+  }
+
+  /* ---------- CPU entry ---------- */
+  const firstMove = (level, r) => (level !== "easy" ? CENTER
+    : R.pick([CENTER, CENTER - 1, CENTER + 1, CENTER - SIZE, CENTER + SIZE, CENTER - SIZE - 1, CENTER + SIZE + 1], r));
+  function cpuMove(state, level, r = Math.random) {
+    checkState(state);
+    if (state.over) throw new Error("もう決着がついています");
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    const c = state.turn;
+    if (!state.board.some(v => v !== EMPTY)) return firstMove(level, r);
+    const x = scratch(state.board);
+    const wins = runGaps(x, c, 4);
+    if (wins.length) return wins[0];
+    const blocks = runGaps(x, other(c), 4);
+    if (blocks.length && (level !== "easy" || r() < EASY_BLOCK)) {
+      return ranked(x, c, HARD).find(m => blocks.includes(m.i))?.i ?? blocks[0];
+    }
+    if (!x.near.some((n, i) => n > 0 && x.b[i] === EMPTY)) return state.board.indexOf(EMPTY);
+    if (level === "easy") return easyMove(x, c, r);
+    if (level === "normal") return normalMove(x, c, r);
+    return hardMove(x, c, r);
+  }
+
+  /* Shape names in the 4 directions through i if c played there (for tests and hints). */
+  const SHAPE_NAMES = Object.freeze(["none", "one", "closed2", "two", "closed3", "three", "four", "open4", "five"]);
+  function shapesAt(board, i, c) {
+    if (!isIndex(i) || (c !== BLACK && c !== WHITE)) throw new Error("位置か色が正しくありません");
+    return Array.from(shapes(Int8Array.from(board), i, c).subarray(0, 4), s => SHAPE_NAMES[s]);
+  }
+
+  /* What the player who just moved threatens: "open4" (two points that make five, cannot be stopped),
+   * "four" (wins next move unless blocked), "three" (can make an open four). */
+  function threat(state) {
+    checkState(state);
+    if (state.over || !state.moves.length) return null;
+    const c = colorOfMove(state.moves.length - 1);
+    const x = scratch(state.board);
+    const fives = runGaps(x, c, 4).length;
+    if (fives) return { color: c, kind: fives >= 2 ? "open4" : "four" };
+    const open = runGaps(x, c, 3).some(j => shapes(x.b, j, c).subarray(0, 4).includes(OPEN4));
+    return open ? { color: c, kind: "three" } : null;
+  }
+
+  return {
+    SIZE, CELLS, EMPTY, BLACK, WHITE, CENTER, LEVELS, STARS,
+    other, colorOfMove, rowOf, colOf, at,
+    newGame, moveError, isLegal, play, fromMoves, undoTurn, resign, counts, lastMove, winLine,
+    cpuMove, threat, shapesAt, SHAPE_NAMES
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = GomokuRules;
+</script>
+<script>
+/* gomoku.js */
+/* Gomoku screen: 15x15 wooden board, tap twice to place a stone, play the CPU or a friend on one phone. */
+const Gomoku = (() => {
+  const G = GomokuRules;
+  const KEY = "gomoku.settings";
+  const CPU_DELAY = 450;
+  const RESULT_GUARD = 600; // ms: a quick second tap on the last button must not hit もう一回 right away
+  const SVG_NS = "http://www.w3.org/2000/svg";
+  const MODES = Object.freeze({ cpu: "CPUと", duo: "2人で" });
+  const LEVELS = Object.freeze({ easy: "よわい", normal: "ふつう", hard: "つよい" });
+  const SIDES = Object.freeze({ first: "先攻（黒）", second: "後攻（白）", random: "ランダム" });
+  const COLOR = Object.freeze({ [G.BLACK]: "黒", [G.WHITE]: "白" });
+  const ARROWS = Object.freeze({ ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] });
+  const RULES = Object.freeze([
+    "黒と白が交互に、線の交わる点へ石を置く。黒が先手",
+    "たて・よこ・ななめに5つ並べたら勝ち",
+    "フリールール：禁じ手なし。三三も四四もOK、6つ以上並んでも勝ち",
+    "置きたい点をタップすると仮置き。同じ点をもう一度タップで決定",
+    "盤が全部うまったら引き分け"
+  ]);
+
+  const el = {
+    setup: $("gSetup"), play: $("gPlay"), title: $("gTitle"), hint: $("gHint"), actions: $("gActions"),
+    board: $("gBoard"), grid: $("gGrid"), moves: $("gMoves"), names: $("gNames"),
+    nameInputs: [$("gName0"), $("gName1")], levelOpt: $("gLevelOpt"), sideOpt: $("gSideOpt"),
+    modeChips: $("gModeChips"), levelChips: $("gLevelChips"), sideChips: $("gSideChips"), rules: $("gRules"),
+    side: { [G.BLACK]: $("gSideB"), [G.WHITE]: $("gSideW") },
+    name: { [G.BLACK]: $("gNameB"), [G.WHITE]: $("gNameW") },
+    count: { [G.BLACK]: $("gCountB"), [G.WHITE]: $("gCountW") }
+  };
+
+  let settings = { mode: "cpu", level: "normal", side: "first" };
+  let game = G.newGame();
+  let match = { cpu: true, level: "normal", human: G.BLACK, round: 0, names: { [G.BLACK]: "あなた", [G.WHITE]: "CPU" } };
+  let ui = { phase: "setup", preview: -1, thinking: false, confirm: false, threat: null, error: "" };
+  let cells = [];
+  let guides = [];
+  let cpuTimer = 0;
+  let stopConfetti = null;
+  let finishedAt = 0;
+
+  const pickKey = (table, value, fallback) => (Object.keys(table).includes(value) ? value : fallback);
+  function normalize(s) {
+    const src = s && typeof s === "object" ? s : {};
+    return {
+      mode: pickKey(MODES, src.mode, "cpu"),
+      level: pickKey(LEVELS, src.level, "normal"),
+      side: pickKey(SIDES, src.side, "first")
+    };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+
+  const nameOf = (color) => match.names[color];
+  const humanTurn = () => !game.over && (!match.cpu || game.turn === match.human);
+  const canPlace = () => ui.phase === "play" && !ui.thinking && !ui.confirm && humanTurn() && ui.preview >= 0 && G.isLegal(game, ui.preview);
+  function canUndo() {
+    if (ui.phase !== "play" || ui.thinking || ui.confirm) return false;
+    return match.cpu ? game.moves.some((_, n) => G.colorOfMove(n) === match.human) : game.moves.length > 0;
+  }
+
+  /* ---------- sounds ---------- */
+  function stoneSound(color) {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const k = color === G.BLACK ? 1 : 1.09;
+    Sound.hiss({ t, dur: 0.04, vol: 0.3, type: "bandpass", freq: 2600 * k, q: 2.4 });
+    Sound.tone({ freq: 1700 * k, glide: 1150 * k, glideTime: 0.05, type: "triangle", t, dur: 0.07, vol: 0.12 });
+    Sound.tone({ freq: 210, glide: 90, glideTime: 0.08, type: "sine", t, dur: 0.1, vol: 0.3 });
+    Sound.hiss({ t: t + 0.01, dur: 0.16, vol: 0.05, type: "lowpass", freq: 1200, to: 300, send: 0.3 });
+  }
+  const previewSound = () => Sound.tone({ freq: 1320, glide: 1560, glideTime: 0.03, type: "sine", dur: 0.05, vol: 0.06 });
+  function threatSound(threat) {
+    const ctx = Sound.ctx();
+    if (!threat || !ctx) return;
+    const mine = match.cpu && threat.color === match.human;
+    if (threat.kind !== "three") { Sound.sfx(mine ? "coin" : "heartbeat"); return; }
+    const t = ctx.currentTime + 0.09;
+    Sound.tone({ freq: Sound.hz(76), type: "triangle", t, dur: 0.12, vol: 0.08 });
+    Sound.tone({ freq: Sound.hz(mine ? 83 : 71), type: "triangle", t: t + 0.09, dur: 0.2, vol: 0.08 });
+  }
+
+  /* ---------- flow ---------- */
+  function newMatch(fresh) {
+    const round = fresh ? 1 : match.round + 1;
+    if (settings.mode === "cpu") {
+      const first = settings.side === "random" ? Math.random() < 0.5 : settings.side === "first";
+      const human = first ? G.BLACK : G.WHITE;
+      return { cpu: true, level: settings.level, human, round, names: { [human]: "あなた", [G.other(human)]: "CPU" } };
+    }
+    const [a, b] = Duo.read(el.nameInputs);
+    const swap = round % 2 === 0;
+    return { cpu: false, level: settings.level, human: G.EMPTY, round, names: { [G.BLACK]: swap ? b : a, [G.WHITE]: swap ? a : b } };
+  }
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    clearTimeout(cpuTimer);
+    match = newMatch(ui.phase === "setup");
+    game = G.newGame();
+    Sound.sfx("confirm");
+    Music.play("think");
+    ui = { phase: "play", preview: -1, thinking: false, confirm: false, threat: null, error: "" };
+    Fx.pop(el.board);
+    nextTurn();
+  }
+  function nextTurn() {
+    if (game.over) { finish(); return; }
+    if (!match.cpu || game.turn === match.human) { go({ thinking: false }); return; }
+    go({ thinking: true, preview: -1 });
+    const expected = game;
+    clearTimeout(cpuTimer);
+    cpuTimer = setTimeout(() => cpuPlays(expected), CPU_DELAY);
+  }
+  function cpuPlays(expected) {
+    if (game !== expected || ui.phase !== "play") return;
+    try {
+      place(G.cpuMove(game, match.level));
+    } catch (e) {
+      console.error("gomoku cpu", e);
+      go({ thinking: false, error: "CPUが打てませんでした。1手もどすか、もう一回遊んでね" });
+    }
+  }
+  function place(i) {
+    const color = game.turn;
+    game = G.play(game, i);
+    stoneSound(color);
+    const threat = G.threat(game);
+    ui = { ...ui, preview: -1, thinking: false, confirm: false, threat, error: "" };
+    if (!game.over) threatSound(threat);
+    nextTurn();
+  }
+  function choose(i) {
+    if (ui.phase !== "play" || ui.thinking || ui.confirm || !humanTurn()) return;
+    if (!G.isLegal(game, i)) { Sound.beep(180, 0.08, 0, "square", 0.05); return; }
+    if (ui.preview === i) { place(i); return; }
+    previewSound();
+    go({ preview: i });
+  }
+  function undo() {
+    if (!canUndo()) return;
+    clearTimeout(cpuTimer);
+    game = G.undoTurn(game, match.cpu ? match.human : G.colorOfMove(game.moves.length - 1));
+    Sound.sfx("back");
+    ui = { ...ui, preview: -1, threat: G.threat(game), error: "" };
+    nextTurn();
+  }
+  function resign() {
+    clearTimeout(cpuTimer);
+    game = G.resign(game, match.cpu ? match.human : game.turn);
+    finish();
+  }
+  function finish() {
+    clearTimeout(cpuTimer);
+    finishedAt = Date.now();
+    Music.stop();
+    go({ phase: "over", preview: -1, thinking: false, confirm: false, threat: null });
+    Fx.pop(el.title);
+    if (game.draw) { Sound.sfx("reveal"); return; }
+    if (match.cpu && game.winner !== match.human) { Sound.sfx("lose"); Fx.shake(); return; }
+    Sound.sfx(match.cpu ? "victory" : "fanfare");
+    stopConfetti = Fx.confetti() || null;
+  }
+  function toSetup() {
+    clearTimeout(cpuTimer);
+    Duo.fill(el.nameInputs);
+    go({ phase: "setup", preview: -1, thinking: false, confirm: false });
+  }
+
+  /* ---------- text ---------- */
+  function statusTitle() {
+    if (ui.confirm) return "投了しますか？";
+    if (ui.thinking) return "CPUが考え中…";
+    if (match.cpu) return game.turn === match.human ? `あなたの番（${COLOR[game.turn]}）` : "CPUの番";
+    return `${nameOf(game.turn)}さんの番（${COLOR[game.turn]}）`;
+  }
+  function threatHint(t) {
+    const byCpu = match.cpu && t.color !== match.human;
+    const byYou = match.cpu && t.color === match.human;
+    const who = byCpu ? "CPU" : COLOR[t.color];
+    if (t.kind === "open4") return byYou ? "四が2か所！ もう止められない" : `${who}の四が2か所…！ 大ピンチ`;
+    if (t.kind === "four") return byYou ? "四！ あと1つで5つ" : `${who}の四！ ふさがないと負け`;
+    return byYou ? "三ができた！ チャンス到来" : `${who}の三！ 早めにふさごう`;
+  }
+  function playHint() {
+    if (ui.confirm) return "投了すると相手の勝ちになります";
+    if (ui.error) return ui.error;
+    if (ui.threat) return threatHint(ui.threat);
+    if (ui.thinking) return "どこに置くかな…";
+    if (ui.preview >= 0) return "もう一度タップか「ここに置く」で決定";
+    return game.moves.length ? "置きたい点をタップ" : "黒から。まずは真ん中あたりがおすすめ";
+  }
+  function resultTitle() {
+    if (game.draw) return "引き分け";
+    if (match.cpu) return game.winner === match.human ? "あなたの勝ち！" : "CPUの勝ち…";
+    return `${nameOf(game.winner)}さんの勝ち！`;
+  }
+  function resultHint() {
+    const n = game.moves.length;
+    if (game.draw) return `盤がうまりました。全${n}手の大勝負！`;
+    if (game.resigned) return `${match.cpu ? "あなた" : `${nameOf(game.resigned)}さん`}が投了。${n}手で決着`;
+    return `${COLOR[game.winner]}が5つならべた！ ${n}手で決着`;
+  }
+  function playActions() {
+    if (ui.confirm) {
+      return [makeButton("やめない", () => go({ confirm: false }), "small"), makeButton("投了する", resign, "primary danger")];
+    }
+    return [
+      makeButton("投了", () => go({ confirm: true, preview: -1 }), "small", ui.thinking),
+      makeButton("1手もどす", undo, "small", !canUndo()),
+      makeButton("ここに置く", () => choose(ui.preview), "primary", !canPlace())
+    ];
+  }
+
+  const settled = (fn) => () => { if (Date.now() - finishedAt >= RESULT_GUARD) fn(); };
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: () => ({ title: statusTitle(), hint: playHint(), actions: playActions() }),
+    over: () => ({
+      title: resultTitle(),
+      hint: resultHint(),
+      actions: [makeButton("設定", settled(toSetup), "small"), makeButton("もう一回", settled(start), "primary")]
+    })
+  };
+
+  /* ---------- rendering ---------- */
+  function renderSetup() {
+    View.chips(el.modeChips, View.options(Object.keys(MODES), k => MODES[k]), settings.mode, v => update({ mode: v }));
+    View.chips(el.levelChips, View.options(Object.keys(LEVELS), k => LEVELS[k]), settings.level, v => update({ level: v }));
+    View.chips(el.sideChips, View.options(Object.keys(SIDES), k => SIDES[k]), settings.side, v => update({ side: v }));
+    const cpu = settings.mode === "cpu";
+    el.levelOpt.hidden = !cpu;
+    el.sideOpt.hidden = !cpu;
+    el.names.hidden = cpu;
+    View.list(el.rules, RULES);
+  }
+  function renderBar() {
+    const n = G.counts(game);
+    [G.BLACK, G.WHITE].forEach(c => {
+      el.name[c].textContent = nameOf(c);
+      const level = match.cpu && c !== match.human ? `${LEVELS[match.level]}・` : "";
+      el.count[c].textContent = `${level}石 ${c === G.BLACK ? n.black : n.white}`;
+      el.side[c].classList.toggle("on", ui.phase === "play" && game.turn === c);
+      el.side[c].classList.toggle("think", ui.thinking && game.turn === c);
+      el.side[c].classList.toggle("won", ui.phase === "over" && game.winner === c);
+    });
+    el.moves.textContent = `${game.moves.length}手`;
+  }
+  function pointClass(i, last, win, ghost) {
+    const v = game.board[i];
+    const stone = v === G.BLACK ? "b" : v === G.WHITE ? "w" : "";
+    const pv = i !== ghost ? "" : v ? "cursor" : `pv ${game.turn === G.BLACK ? "pv-b" : "pv-w"}`;
+    return ["g-pt", stone, i === last ? "last" : "", win.has(i) ? "win" : "", pv].filter(Boolean).join(" ");
+  }
+  function renderBoard() {
+    const last = G.lastMove(game);
+    const win = new Set(game.line);
+    const ghost = ui.phase === "play" ? ui.preview : -1;
+    cells.forEach((cell, i) => {
+      const cls = pointClass(i, last, win, ghost);
+      if (cell.className !== cls) cell.className = cls;
+    });
+    const live = ui.phase === "play" && humanTurn() && !ui.thinking && !ui.confirm;
+    el.board.classList.toggle("live", live);
+    el.board.classList.toggle("turn-w", game.turn === G.WHITE);
+    renderGuides(ghost);
+  }
+  /* Faint row and column lines through the previewed point, so small points are easy to check. */
+  function renderGuides(ghost) {
+    const [across, down] = guides;
+    const on = ghost >= 0;
+    [across, down].forEach(g => g.setAttribute("visibility", on ? "visible" : "hidden"));
+    if (!on) return;
+    const y = G.rowOf(ghost) + 0.5, x = G.colOf(ghost) + 0.5;
+    [["y1", y], ["y2", y]].forEach(([k, v]) => across.setAttribute(k, String(v)));
+    [["x1", x], ["x2", x]].forEach(([k, v]) => down.setAttribute(k, String(v)));
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else { renderBar(); renderBoard(); }
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  /* ---------- board ---------- */
+  function svgEl(tag, attrs) {
+    const node = document.createElementNS(SVG_NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+    return node;
+  }
+  function buildLines() {
+    const max = G.SIZE - 0.5;
+    const svg = svgEl("svg", { viewBox: `0 0 ${G.SIZE} ${G.SIZE}`, class: "g-lines", "aria-hidden": "true" });
+    for (let k = 1; k < G.SIZE - 1; k++) {
+      svg.appendChild(svgEl("line", { x1: k + 0.5, y1: 0.5, x2: k + 0.5, y2: max }));
+      svg.appendChild(svgEl("line", { x1: 0.5, y1: k + 0.5, x2: max, y2: k + 0.5 }));
+    }
+    svg.appendChild(svgEl("rect", { x: 0.5, y: 0.5, width: G.SIZE - 1, height: G.SIZE - 1, class: "edge" }));
+    G.STARS.forEach(i => svg.appendChild(svgEl("circle", { cx: G.colOf(i) + 0.5, cy: G.rowOf(i) + 0.5, r: 0.12 })));
+    guides = [
+      svgEl("line", { x1: 0.5, y1: 0.5, x2: max, y2: 0.5, class: "guide", visibility: "hidden" }),
+      svgEl("line", { x1: 0.5, y1: 0.5, x2: 0.5, y2: max, class: "guide", visibility: "hidden" })
+    ];
+    guides.forEach(g => svg.appendChild(g));
+    return svg;
+  }
+  function buildBoard() {
+    cells = Array.from({ length: G.CELLS }, (_, i) => {
+      const d = document.createElement("div");
+      d.className = "g-pt";
+      d.dataset.i = String(i);
+      return d;
+    });
+    el.grid.replaceChildren(buildLines(), ...cells);
+    el.grid.addEventListener("click", (e) => {
+      const cell = e.target.closest(".g-pt");
+      if (cell) choose(Number(cell.dataset.i));
+    });
+    el.board.addEventListener("keydown", onKey);
+  }
+  function onKey(e) {
+    if (ui.phase !== "play" || ui.thinking || ui.confirm || !humanTurn()) return;
+    if (ARROWS[e.key]) {
+      e.preventDefault();
+      const last = G.lastMove(game);
+      const from = ui.preview >= 0 ? ui.preview : last >= 0 ? last : G.CENTER;
+      const [dr, dc] = ARROWS[e.key];
+      const next = G.at(G.rowOf(from) + dr, G.colOf(from) + dc);
+      if (next >= 0) { previewSound(); go({ preview: next }); }
+    } else if ((e.key === "Enter" || e.key === " ") && ui.preview >= 0) {
+      e.preventDefault();
+      choose(ui.preview);
+    }
+  }
+
+  function init() {
+    settings = normalize(Store.load(KEY, {}));
+    Duo.fill(el.nameInputs);
+    buildBoard();
+    render();
+  }
+  function leave() {
+    clearTimeout(cpuTimer);
+    if (stopConfetti) stopConfetti();
+    stopConfetti = null;
+    if (ui.thinking || ui.confirm) ui = { ...ui, thinking: false, confirm: false };
+  }
+  function onShow() {
+    if (ui.phase !== "play") { render(); return; }
+    Music.play("think");
+    nextTurn();
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
+<script>
+/* mancala-rules.js */
+/* Mancala (Kalah) rules: 6 pits and a store per side. Sow counter-clockwise, skip the other store, land in your
+ * store to go again, land in your own empty pit to capture the pit across. When one side is empty the game ends
+ * and the other side keeps its stones. Also holds the CPU (random / minimax / alpha-beta with extra turns). */
+const MancalaRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+
+  const PITS = 6;
+  const SIZE = 14;
+  const STORES = Object.freeze([6, 13]);
+  const SIDES = Object.freeze([Object.freeze([0, 1, 2, 3, 4, 5]), Object.freeze([7, 8, 9, 10, 11, 12])]);
+  const SEEDS = Object.freeze([3, 4]);
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+
+  /* CPU tuning. Scores are from the mover's view: store difference, or WIN for a decided game (sooner is better). */
+  const WIN = 100000;
+  const PLY = 100;
+  const NORMAL_DEPTH = 4;
+  const HARD_MIN_DEPTH = 8;
+  const HARD_MAX_DEPTH = 14;
+  const HARD_NODE_BUDGET = 30000;
+  const EASY_EXTRA_CHANCE = 0.5;
+
+  const opposite = (i) => 12 - i;
+  const sideOf = (i) => (i >= 0 && i <= 5 ? 0 : i >= 7 && i <= 12 ? 1 : -1);
+  const sum = (list) => list.reduce((a, b) => a + b, 0);
+  /* Plain loops below: these run hundreds of thousands of times inside the CPU search. */
+  function sideTotal(pits, player) {
+    const base = player === 0 ? 0 : 7;
+    let total = 0;
+    for (let i = base; i < base + PITS; i++) total += pits[i];
+    return total;
+  }
+
+  /* ---------- validation ---------- */
+  function checkState(s) {
+    const ok = s && Array.isArray(s.pits) && s.pits.length === SIZE &&
+      s.pits.every(n => Number.isInteger(n) && n >= 0) && (s.turn === 0 || s.turn === 1) && typeof s.over === "boolean";
+    if (!ok) throw new Error("盤面が正しくありません");
+  }
+
+  /* ---------- core move (pure: returns a fresh array, never touches the input) ---------- */
+  /* Ends the game when a side is empty. Only ever called on sowCore's private copy of the board. */
+  function sweepIfDone(p) {
+    const left = [sideTotal(p, 0), sideTotal(p, 1)];
+    if (left[0] > 0 && left[1] > 0) return null;
+    for (let i = 0; i < SIZE; i++) {
+      if (!STORES.includes(i)) p[i] = 0;
+    }
+    p[STORES[0]] += left[0];
+    p[STORES[1]] += left[1];
+    return left;
+  }
+
+  function sowCore(pits, player, pit, trace) {
+    const p = pits.slice();
+    const own = STORES[player];
+    const skip = STORES[1 - player];
+    const path = trace ? [] : null;
+    let hand = p[pit];
+    let at = pit;
+    p[pit] = 0;
+    while (hand > 0) {
+      at = (at + 1) % SIZE;
+      if (at === skip) continue;
+      p[at] += 1;
+      hand -= 1;
+      if (path) path.push(at);
+    }
+    const extra = at === own;
+    let capture = null;
+    if (!extra && sideOf(at) === player && p[at] === 1 && p[opposite(at)] > 0) {
+      capture = { pit: at, opposite: opposite(at), count: p[opposite(at)] + 1 };
+      p[own] += capture.count;
+      p[at] = 0;
+      p[opposite(at)] = 0;
+    }
+    const sweep = sweepIfDone(p);
+    return { pits: p, end: at, extra, capture, sweep, path, over: sweep !== null };
+  }
+
+  /* ---------- public game API ---------- */
+  function newGame(seeds = 4, first = 0) {
+    if (!SEEDS.includes(seeds)) throw new Error("石の数は3個か4個です");
+    if (first !== 0 && first !== 1) throw new Error("先攻の指定が正しくありません");
+    const pits = Object.freeze(Array.from({ length: SIZE }, (_, i) => (STORES.includes(i) ? 0 : seeds)));
+    return Object.freeze({ pits, turn: first, first, seeds, over: false, winner: null, moves: 0, last: null });
+  }
+
+  const isLegal = (s, pit) => Number.isInteger(pit) && !s.over && sideOf(pit) === s.turn && s.pits[pit] > 0;
+  const legalMoves = (s) => (s.over ? [] : SIDES[s.turn].filter(i => s.pits[i] > 0));
+  const scores = (s) => [s.pits[STORES[0]], s.pits[STORES[1]]];
+
+  function winnerOf(pits) {
+    const [a, b] = [pits[STORES[0]], pits[STORES[1]]];
+    return a > b ? 0 : b > a ? 1 : null;
+  }
+
+  function move(s, pit) {
+    checkState(s);
+    if (s.over) throw new Error("もう決着しています");
+    if (!isLegal(s, pit)) throw new Error("その穴は選べません");
+    const r = sowCore(s.pits, s.turn, pit, true);
+    const extra = r.extra && !r.over;
+    const last = Object.freeze({
+      player: s.turn, pit, count: s.pits[pit], path: Object.freeze(r.path), end: r.end, extra,
+      capture: r.capture ? Object.freeze(r.capture) : null, sweep: r.sweep ? Object.freeze(r.sweep) : null
+    });
+    return Object.freeze({
+      ...s, pits: Object.freeze(r.pits), turn: r.over || extra ? s.turn : 1 - s.turn,
+      over: r.over, winner: r.over ? winnerOf(r.pits) : null, moves: s.moves + 1, last
+    });
+  }
+
+  /* ---------- CPU ---------- */
+  const diffFor = (p, me) => p[STORES[me]] - p[STORES[1 - me]];
+
+  /* A finished game, or a store holding more than half of all stones (that side can no longer lose). */
+  function decided(p, me, total, ply, over) {
+    const diff = diffFor(p, me);
+    const doom = WIN - ply * PLY;
+    if (over) return diff > 0 ? doom + diff : diff < 0 ? -doom + diff : 0;
+    if (p[STORES[me]] * 2 > total) return doom + diff;
+    if (p[STORES[1 - me]] * 2 > total) return -doom + diff;
+    return null;
+  }
+
+  /* Extra-turn moves first, then captures, then the rest (pits nearer the store first). */
+  function rank(p, me, i) {
+    const n = p[i];
+    const dist = STORES[me] - i;
+    if (n === dist || n === dist + 13) return 1000;
+    const land = i + n;
+    if (n < dist && p[land] === 0 && p[opposite(land)] > 0) return 500 + p[opposite(land)];
+    return i;
+  }
+  function ordered(p, me) {
+    const list = [];
+    const keys = [];
+    for (const i of SIDES[me]) {
+      if (p[i] === 0) continue;
+      const k = rank(p, me, i);
+      let j = list.length;
+      while (j > 0 && keys[j - 1] < k) {
+        list[j] = list[j - 1];
+        keys[j] = keys[j - 1];
+        j -= 1;
+      }
+      list[j] = i;
+      keys[j] = k;
+    }
+    return list;
+  }
+
+  function child(p, me, m, depth, alpha, beta, ply, ctx) {
+    const r = sowCore(p, me, m, false);
+    const fixed = decided(r.pits, me, ctx.total, ply + 1, r.over);
+    if (fixed !== null) return fixed;
+    if (depth <= 1) return diffFor(r.pits, me);
+    if (r.extra) return negamax(r.pits, me, depth - 1, alpha, beta, ply + 1, ctx);
+    return -negamax(r.pits, 1 - me, depth - 1, -beta, -alpha, ply + 1, ctx);
+  }
+
+  function negamax(p, me, depth, alpha, beta, ply, ctx) {
+    ctx.nodes += 1;
+    if (ctx.nodes > ctx.budget) {
+      ctx.aborted = true;
+      return 0;
+    }
+    let best = -Infinity;
+    let a = alpha;
+    for (const m of ordered(p, me)) {
+      const v = child(p, me, m, depth, a, beta, ply, ctx);
+      if (v > best) best = v;
+      if (v > a) a = v;
+      if (a >= beta || ctx.aborted) break;
+    }
+    return best;
+  }
+
+  /* Exact scores for the best root moves (window just below the best keeps ties exact). */
+  function searchRoot(s, moves, depth, ctx) {
+    let best = -Infinity;
+    const scored = moves.map(m => {
+      const v = child(s.pits, s.turn, m, depth, best === -Infinity ? -Infinity : best - 1, Infinity, 0, ctx);
+      if (v > best) best = v;
+      return { m, v };
+    });
+    return { best, scored };
+  }
+
+  function pickBest(result, r) {
+    const top = result.scored.filter(x => x.v === result.best).map(x => x.m);
+    return R.pick(top, r);
+  }
+
+  function deepen(s, moves, r) {
+    const ctx = { nodes: 0, budget: Infinity, aborted: false, total: sum(s.pits) };
+    let order = moves;
+    let done = null;
+    for (let depth = 1; depth <= HARD_MAX_DEPTH; depth++) {
+      if (depth > HARD_MIN_DEPTH) ctx.budget = HARD_NODE_BUDGET;
+      const result = searchRoot(s, order, depth, ctx);
+      if (ctx.aborted) break;
+      done = result;
+      if (Math.abs(result.best) > WIN / 2) break;
+      order = [...result.scored].sort((x, y) => y.v - x.v).map(x => x.m);
+    }
+    return pickBest(done, r);
+  }
+
+  function winsNow(s, m) {
+    const r = sowCore(s.pits, s.turn, m, false);
+    const v = decided(r.pits, s.turn, sum(s.pits), 1, r.over);
+    return v !== null && v > WIN / 2;
+  }
+
+  function easyMove(s, moves, r) {
+    const win = moves.find(m => winsNow(s, m));
+    if (win !== undefined) return win;
+    const extras = moves.filter(m => {
+      const res = sowCore(s.pits, s.turn, m, false);
+      return res.extra && !res.over;
+    });
+    if (extras.length && r() < EASY_EXTRA_CHANCE) return R.pick(extras, r);
+    return R.pick(moves, r);
+  }
+
+  /* Returns the pit index the CPU plays for whoever's turn it is. */
+  function cpuMove(s, level, r = Math.random) {
+    checkState(s);
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    const moves = legalMoves(s);
+    if (!moves.length) throw new Error("動かせる穴がありません");
+    if (moves.length === 1) return moves[0];
+    if (level === "easy") return easyMove(s, moves, r);
+    if (level === "normal") {
+      const ctx = { nodes: 0, budget: Infinity, aborted: false, total: sum(s.pits) };
+      return pickBest(searchRoot(s, moves, NORMAL_DEPTH, ctx), r);
+    }
+    return deepen(s, moves, r);
+  }
+
+  return {
+    PITS, SIZE, STORES, SIDES, SEEDS, LEVELS,
+    newGame, isLegal, legalMoves, move, scores, opposite, sideOf, cpuMove
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = MancalaRules;
+</script>
+<script>
+/* mancala.js */
+/* Mancala screen: Kalah on a wooden board. Stones are sown one by one; play the CPU or a friend on one phone. */
+const Mancala = (() => {
+  const M = MancalaRules;
+  const KEY = "mancala.settings";
+  const MS = Object.freeze({ lift: 160, step: 120, capture: 320, sweep: 420, cpu: 450, callout: 1150, guard: 250 });
+  const CAP = Object.freeze({ pit: 12, store: 24 });
+  const STONE_TONES = 5;
+  const VS = Object.freeze({ cpu: "CPUと", duo: "2人で" });
+  const LEVEL = Object.freeze({ easy: "よわい", normal: "ふつう", hard: "つよい" });
+  const ORDER = Object.freeze({ first: "先攻", second: "後攻", random: "ランダム" });
+  const DEFAULTS = Object.freeze({ vs: "cpu", level: "normal", order: "first", seeds: 4 });
+  const NO_MARKS = Object.freeze({ from: -1, land: -1, steal: Object.freeze([]) });
+
+  const el = {
+    mode: $("modeMancala"), setup: $("mSetup"), play: $("mPlay"), stage: $("mStage"), label: $("mLabel"), title: $("mTitle"),
+    hint: $("mHint"), actions: $("mActions"),
+    sides: [$("mSide0"), $("mSide1")], who: [$("mWho0"), $("mWho1")], pts: [$("mPts0"), $("mPts1")],
+    board: $("mBoard"), callout: $("mCallout"), levelOpt: $("mLevelOpt"), orderOpt: $("mOrderOpt"),
+    names: $("mNames"), nameInputs: [$("mName0"), $("mName1")]
+  };
+
+  let settings = DEFAULTS;
+  let match = null;          // { vs, level, names } fixed when a game starts
+  let game = null;
+  let past = [];             // states before each human move, for 1手もどす
+  let outcome = null;        // { winner, resigned }
+  let shown = null;          // pits on screen while a move is animating (null = the real state)
+  let marks = NO_MARKS;
+  let ui = { phase: "setup", busy: false, thinking: false, confirm: false, note: "" };
+  let anim = { token: 0, skip: false, wake: null, since: 0 };
+  let timers = { cpu: 0, callout: 0 };
+
+  /* Pebble spots: a sunflower spiral, so a few stones sit in the middle and more spread outward. */
+  const spiral = (cap, sx, sy) => Object.freeze(Array.from({ length: cap }, (_, i) => {
+    const r = Math.sqrt((i + 0.6) / cap);
+    const a = i * 2.39996 + 0.6;
+    return Object.freeze([50 + sx * r * Math.cos(a), 50 + sy * r * Math.sin(a)]);
+  }));
+  const SPOTS = Object.freeze({ pit: spiral(CAP.pit, 30, 30), store: spiral(CAP.store, 24, 40) });
+
+  const keysOf = (o) => Object.keys(o);
+  const isCpu = (p) => match !== null && match.vs === "cpu" && p === 1;
+  const mover = () => (ui.busy && game.last ? game.last.player : game.turn);
+  const canTouch = () => ui.phase === "play" && !game.over && !isCpu(game.turn) && !ui.busy && !ui.thinking;
+  const call = (p) => (match.vs === "duo" ? `${match.names[p]}さん` : match.names[p]);
+  const reduced = () => Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const withCount = (pits, i, n) => pits.map((v, k) => (k === i ? n : v));
+  const plus = (pits, i, n) => withCount(pits, i, pits[i] + n);
+  const sown = (before, L) => L.path.reduce((p, i) => plus(p, i, 1), withCount(before.pits, L.pit, 0));
+
+  function normalize(s) {
+    const v = s && typeof s === "object" ? s : {};
+    const pick = (list, key) => (list.includes(v[key]) ? v[key] : DEFAULTS[key]);
+    return Object.freeze({
+      vs: pick(keysOf(VS), "vs"), level: pick(M.LEVELS, "level"), order: pick(keysOf(ORDER), "order"), seeds: pick(M.SEEDS, "seeds")
+    });
+  }
+  const update = (patch) => { settings = normalize({ ...settings, ...patch }); Store.save(KEY, settings); render(); };
+  const go = (patch) => { ui = { ...ui, ...patch }; render(); };
+
+  /* ---------- sounds: wooden tok per stone, a rattle when stones are picked up, a chime for もう1回 ---------- */
+  const clock = (fn) => { const c = Sound.ctx(); if (c) fn(c.currentTime); };
+  const tok = (step, store) => clock(t => {
+    const f = (store ? 290 : 680) * Math.pow(2, Math.min(step, 12) / 36);
+    Sound.tone({ freq: f, glide: f * 0.62, glideTime: 0.05, type: "triangle", t, dur: store ? 0.16 : 0.09,
+      vol: store ? 0.22 : 0.17, filter: { freq: 2600 }, send: store ? 0.14 : 0 });
+    Sound.tone({ freq: f * 0.5, type: "sine", t, dur: 0.06, vol: 0.12 });
+    Sound.hiss({ t, dur: 0.02, vol: 0.05, type: "bandpass", freq: 2800, q: 1.4 });
+  });
+  const rattle = (n) => clock(t => {
+    for (let i = 0; i < Math.min(n, 5); i++) Sound.hiss({ t: t + i * 0.03, dur: 0.035, vol: 0.06, type: "bandpass", freq: 2600 + i * 400, q: 2.5 });
+  });
+  const chime = () => clock(t => [79, 84, 88, 91].forEach((m, i) =>
+    Sound.tone({ freq: Sound.hz(m), type: "triangle", t: t + i * 0.07, dur: 0.26, vol: 0.11, send: 0.25 })));
+  const thud = () => clock(t => Sound.tone({ freq: 150, glide: 110, type: "sine", t, dur: 0.1, vol: 0.18 }));
+  const nope = (i) => { thud(); Fx.replay(cells[i].bowl, "m-nope"); };
+
+  const CALLOUT_SOUND = Object.freeze({ extra: () => chime(), steal: () => Sound.sfx("coin"), info: () => {} });
+  function callout(text, kind) {
+    CALLOUT_SOUND[kind]();
+    clearTimeout(timers.callout);
+    el.callout.textContent = text;
+    el.callout.className = `m-callout ${kind}`;
+    el.callout.hidden = false;
+    Fx.replay(el.callout, "m-show");
+    timers = { ...timers, callout: setTimeout(() => { el.callout.hidden = true; }, MS.callout) };
+  }
+
+  /* ---------- animation timing: a tap (not a double tap's second half) or reduced motion skips; a new token cancels ---------- */
+  function wait(ms) {
+    if (anim.skip) return Promise.resolve();
+    return new Promise(resolve => {
+      const id = setTimeout(() => { anim = { ...anim, wake: null }; resolve(); }, ms);
+      anim = { ...anim, wake: () => { clearTimeout(id); resolve(); } };
+    });
+  }
+  const beat = async (ms, token) => { await wait(ms); return token === anim.token; };
+  /* Swaps in the next animation state and releases a pending wait (it then sees skip or a stale token). */
+  function wakeWith(next) {
+    const wake = anim.wake;
+    anim = next;
+    if (wake) wake();
+  }
+  function skip() {
+    if (ui.busy && !anim.skip && performance.now() - anim.since > MS.guard) wakeWith({ ...anim, skip: true, wake: null });
+  }
+  function stopAll() {
+    [timers.cpu, timers.callout].forEach(clearTimeout);
+    timers = { cpu: 0, callout: 0 };
+    wakeWith({ token: anim.token + 1, skip: false, wake: null, since: 0 });
+    el.callout.hidden = true;
+    shown = null;
+  }
+
+  /* ---------- flow ---------- */
+  const firstPlayer = () => (settings.vs === "duo" || settings.order === "random" ? (Math.random() < 0.5 ? 0 : 1)
+    : settings.order === "first" ? 0 : 1);
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    stopAll();
+    const names = settings.vs === "duo" ? Duo.read(el.nameInputs) : ["あなた", "CPU"];
+    match = Object.freeze({ vs: settings.vs, level: settings.level, names: Object.freeze(names) });
+    game = M.newGame(settings.seeds, firstPlayer());
+    [past, outcome, marks] = [[], null, NO_MARKS];
+    Sound.sfx("confirm");
+    Music.play("think");
+    go({ phase: "play", busy: false, thinking: false, confirm: false, note: "" });
+    callout(`${call(game.turn)}が先攻`, "info");
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+
+  /* choose() returns the pit to play; any error (bad pit, CPU failure) ends up in one friendly message. */
+  function run(choose) {
+    playMove(choose).catch(e => {
+      console.error("mancala move failed", e);
+      shown = null;
+      go({ busy: false, thinking: false, note: "うまく動かせませんでした。盤をタップしてね" });
+    });
+  }
+  async function playMove(choose) {
+    const before = game;
+    game = M.move(before, choose());
+    if (match.vs === "cpu" && !isCpu(before.turn)) past = [...past, before];
+    const token = anim.token + 1;
+    anim = { token, skip: reduced(), wake: null, since: performance.now() };
+    if (await animate(before, game, token)) settle();
+  }
+  async function animate(before, after, token) {
+    const L = after.last;
+    const store = M.STORES[L.player];
+    marks = { ...NO_MARKS, from: L.pit };
+    shown = withCount(before.pits, L.pit, 0);
+    go({ busy: true, note: "" });
+    rattle(L.count);
+    for (let k = 0; k < L.path.length && !anim.skip; k++) {
+      await wait(k === 0 ? MS.lift : MS.step);
+      if (token !== anim.token) return false;
+      if (anim.skip) break;
+      shown = plus(shown, L.path[k], 1);
+      tok(k, L.path[k] === store);
+      paint(true);
+      Fx.replay(cells[L.path[k]].bowl, "m-drop");
+    }
+    if (token !== anim.token) return false;
+    if (anim.skip) tok(0, L.end === store);
+    shown = sown(before, L);
+    marks = { ...marks, land: L.end };
+    paint(false);
+    if (L.capture && !(await showCapture(L, token))) return false;
+    if (L.sweep && !(await showSweep(after, token))) return false;
+    return token === anim.token;
+  }
+  async function showCapture(L, token) {
+    const c = L.capture;
+    const store = M.STORES[L.player];
+    marks = { ...marks, steal: [c.pit, c.opposite] };
+    paint(false);
+    if (!(await beat(MS.capture, token))) return false;
+    shown = plus(withCount(withCount(shown, c.pit, 0), c.opposite, 0), store, c.count);
+    marks = { ...marks, steal: [] };
+    callout(`横取り！ +${c.count}`, "steal");
+    paint(true);
+    Fx.replay(cells[store].bowl, "m-drop");
+    return beat(MS.capture, token);
+  }
+  async function showSweep(after, token) {
+    if (!(await beat(MS.sweep, token))) return false;
+    shown = after.pits;
+    rattle(6);
+    tok(0, true);
+    go({ note: "残りの石は、それぞれのゴールへ" });
+    return beat(MS.sweep * 2, token);
+  }
+  function settle() {
+    shown = null;
+    if (game.over) return finish(null);
+    const L = game.last;
+    if (L.extra) callout("もう1回！", "extra");
+    else Sound.sfx("whoosh");
+    const note = L.extra ? `ゴールにぴったり！ ${call(L.player)}がもう1回`
+      : L.capture ? `${call(L.player)}が${L.capture.count}個を横取り！` : "";
+    go({ busy: false, note });
+    Fx.pop(el.title);
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+  function scheduleCpu() {
+    clearTimeout(timers.cpu);
+    go({ thinking: true });
+    timers = { ...timers, cpu: setTimeout(cpuTurn, MS.cpu) };
+  }
+  function cpuTurn() {
+    ui = { ...ui, thinking: false };
+    if (ui.phase !== "play" || game.over || !isCpu(game.turn)) return render();
+    run(() => M.cpuMove(game, match.level));
+  }
+  /* Only after a failed move is nothing pending here: a tap then finishes the game or wakes the CPU. */
+  function recover() {
+    if (ui.phase !== "play" || ui.thinking) return;
+    if (game.over) finish(null);
+    else if (isCpu(game.turn)) scheduleCpu();
+  }
+  function onBoard(e) {
+    e.stopPropagation();
+    if (ui.busy) return skip();
+    if (!canTouch()) return recover();
+    const btn = e.target.closest(".m-pit");
+    if (!btn) return;
+    const i = Number(btn.dataset.i);
+    if (!M.isLegal(game, i)) return nope(i);
+    ui = { ...ui, confirm: false };
+    run(() => i);
+  }
+  function undo() {
+    if (!past.length || ui.busy) return;
+    stopAll();
+    game = past[past.length - 1];
+    [past, marks] = [past.slice(0, -1), NO_MARKS];
+    Sound.sfx("back");
+    go({ thinking: false, confirm: false, note: "1手もどしました" });
+  }
+  function resign() {
+    if (!ui.confirm) return go({ confirm: true });
+    finish(match.vs === "cpu" ? 0 : mover());
+  }
+  function finish(resigned) {
+    stopAll();
+    outcome = Object.freeze({ winner: resigned === null ? game.winner : 1 - resigned, resigned });
+    Music.stop();
+    go({ phase: "over", busy: false, thinking: false, confirm: false, note: "" });
+    Fx.pop(el.title);
+    if (outcome.winner === null) return Sound.sfx("reveal");
+    if (isCpu(outcome.winner)) return Sound.sfx("lose");
+    Sound.sfx(match.vs === "cpu" ? "victory" : "fanfare");
+    Fx.confetti();
+  }
+  const toSetup = () => { stopAll(); go({ phase: "setup", confirm: false }); };
+
+  /* ---------- screens ---------- */
+  const turnTitle = () => (ui.thinking ? "CPUが考え中…"
+    : match.vs === "duo" ? `${call(mover())}の番` : isCpu(mover()) ? "CPUの番" : "あなたの番");
+  function playHint() {
+    if (ui.busy) return ui.note || "タップでとばせます";
+    if (ui.note || ui.thinking || isCpu(game.turn)) return ui.note;
+    if (match.vs === "duo") return `${call(game.turn)}は${game.turn === 0 ? "下" : "上"}の列。光っている穴をタップ`;
+    return "光っている穴をタップ。最後の1個がゴールに入ると、もう1回！";
+  }
+  function playActions() {
+    if (ui.confirm) return [makeButton("やめない", () => go({ confirm: false }), "small"), makeButton("投了する", resign, "primary danger")];
+    const quit = makeButton("投了", resign, "small");
+    return match.vs === "cpu" ? [makeButton("1手もどす", undo, "small", !past.length || ui.busy), quit] : [quit];
+  }
+  function resultTitle() {
+    const { winner, resigned } = outcome;
+    if (resigned !== null) return match.vs === "cpu" ? "投了… CPUの勝ち" : `${call(resigned)}が投了。${call(winner)}の勝ち！`;
+    if (winner === null) return "引き分け！";
+    if (match.vs === "cpu") return winner === 0 ? "あなたの勝ち！" : "CPUの勝ち…";
+    return `${call(winner)}の勝ち！`;
+  }
+  function resultHint() {
+    const [a, b] = M.scores(game);
+    if (outcome.resigned !== null) return "次は最後まで粘ってみよう";
+    if (a === b) return "ゴールの石がぴったり同じ数でした";
+    const tip = match.vs === "cpu" && outcome.winner === 1 ? "ゴールにぴったり入る穴を先に使うのがコツ" : "";
+    return `${Math.abs(a - b)}個差で決着。${tip}`;
+  }
+
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: () => ({
+      label: match.vs === "cpu" ? `CPU ${LEVEL[match.level]}・石${game.seeds}個` : `2人で対戦・石${game.seeds}個`,
+      title: turnTitle(), hint: playHint(), actions: playActions()
+    }),
+    over: () => ({
+      label: outcome.resigned !== null ? "投了" : "対局終了", title: resultTitle(), hint: resultHint(),
+      actions: [makeButton("設定", toSetup, "small"), makeButton("もう一回", start, "primary")]
+    })
+  };
+
+  /* ---------- board ---------- */
+  /* The 14 cells are in the markup (data-i = board index); this reads one into a lookup record. */
+  function readCell(root) {
+    const index = Number(root.dataset.i);
+    const store = M.STORES.includes(index);
+    return Object.freeze({
+      root, index, store, player: index > M.STORES[0] ? 1 : 0, count: root.querySelector(".m-count"),
+      bowl: root.querySelector(".m-bowl"), cap: store ? CAP.store : CAP.pit, spots: store ? SPOTS.store : SPOTS.pit
+    });
+  }
+  const cells = Object.freeze([...el.board.children].map(readCell).sort((a, b) => a.index - b.index));
+
+  function stone(c, k, fresh) {
+    const s = Object.assign(document.createElement("span"), { className: `m-stone t${(k + c.index * 2) % STONE_TONES}${fresh ? " m-new" : ""}` });
+    s.style.cssText = `left:${c.spots[k][0]}%;top:${c.spots[k][1]}%`;
+    return s;
+  }
+  function paintStones(c, n, fresh) {
+    const want = Math.min(n, c.cap);
+    const have = c.bowl.childElementCount;
+    if (want < have) c.bowl.replaceChildren(...Array.from({ length: want }, (_, k) => stone(c, k, false)));
+    else if (want > have) c.bowl.append(...Array.from({ length: want - have }, (_, k) => stone(c, have + k, fresh)));
+  }
+  function paintCell(c, n, legal) {
+    if (c.count.textContent !== String(n)) c.count.textContent = String(n);
+    ["from", "land"].forEach(k => c.root.classList.toggle(k, marks[k] === c.index));
+    c.root.classList.toggle("steal", marks.steal.includes(c.index));
+    if (c.store) return c.root.classList.toggle("turn", ui.phase === "play" && mover() === c.player);
+    const where = c.player === 0 ? `下の列の左から${c.index + 1}番目` : `上の列の左から${13 - c.index}番目`;
+    c.root.classList.toggle("legal", legal);
+    c.root.setAttribute("aria-disabled", String(!legal));
+    c.root.setAttribute("aria-label", `${where}の穴、石${n}個`);
+  }
+  function paint(fresh) {
+    const pits = shown || game.pits;
+    const legal = canTouch() ? M.legalMoves(game) : [];
+    cells.forEach((c, i) => {
+      paintStones(c, pits[i], fresh);
+      paintCell(c, pits[i], legal.includes(i));
+    });
+    [0, 1].forEach(p => paintScore(p, pits[M.STORES[p]]));
+  }
+  function paintScore(p, n) {
+    const playing = ui.phase === "play";
+    el.sides[p].classList.toggle("turn", playing && mover() === p);
+    el.sides[p].classList.toggle("won", ui.phase === "over" && outcome.winner === p);
+    el.sides[p].classList.toggle("think", playing && ui.thinking && isCpu(p));
+    el.who[p].textContent = match.names[p];
+    el.pts[p].textContent = String(n);
+  }
+
+  /* ---------- setup ---------- */
+  function renderSetup() {
+    View.chips($("mVsChips"), View.options(keysOf(VS), k => VS[k]), settings.vs, v => update({ vs: v }));
+    View.chips($("mLevelChips"), View.options(M.LEVELS, k => LEVEL[k]), settings.level, v => update({ level: v }));
+    View.chips($("mOrderChips"), View.options(keysOf(ORDER), k => ORDER[k]), settings.order, v => update({ order: v }));
+    View.chips($("mSeedChips"), View.options(M.SEEDS, n => `${n}個`), settings.seeds, v => update({ seeds: v }));
+    [el.levelOpt, el.orderOpt].forEach(o => { o.hidden = settings.vs !== "cpu"; });
+    el.names.hidden = settings.vs !== "duo";
+    View.list($("mRules"), [
+      "自分の列の穴を1つ選び、石を全部取って反時計回りに1個ずつ置いていく",
+      "自分のゴールにも置く。相手のゴールはとばす",
+      "最後の1個が自分のゴールに入ったら、もう1回！",
+      "最後の1個が自分の列の空の穴に入り、向かいに石があれば、両方まとめて自分のゴールへ",
+      "どちらかの列が空になったら終了。残りの石はその列の人のもの。ゴールの石が多い方の勝ち"
+    ]);
+  }
+  function render() {
+    const playing = ui.phase !== "setup";
+    el.setup.hidden = playing;
+    el.play.hidden = !playing;
+    el.stage.classList.toggle("m-playing", playing);
+    el.stage.classList.toggle("m-turns", ui.phase === "play");
+    if (!playing) renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (playing) paint(false);
+  }
+  function init() {
+    settings = normalize(Store.load(KEY, {}));
+    el.board.addEventListener("click", onBoard);
+    el.play.addEventListener("click", () => { if (ui.busy) skip(); });
+    el.board.addEventListener("animationend", e => e.target.classList.remove("m-new", "m-drop", "m-nope"));
+    Duo.fill(el.nameInputs);
+    render();
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.nameInputs);
+    if (ui.phase !== "play") return;
+    if (game.over) return finish(null); /* left during the last move: settle it now */
+    Music.play("think");
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+  function leave() {
+    if (ui.phase === "play" && !el.mode.hidden) Music.stop();
+    stopAll();
+    if (ui.phase === "play") go({ busy: false, thinking: false, confirm: false });
+  }
+
+  return { init, onShow, leave };
+})();
+</script>
 <!-- games:scripts -->
 <script>
 /* main.js */
@@ -9101,6 +12852,10 @@ const Eshiritori = (() => {
     { id: "katakana", title: "カタカナ禁止トーク", players: "3〜8人", desc: "カタカナを言ったらブブー。少ない人が勝ち", color: "--c-rose", el: "modeKatakana", game: Katakana, group: "party" },
     { id: "henteko", title: "ヘンテコ名づけ", players: "2〜8人", desc: "変な生き物に名前をつけて、早い者勝ち", color: "--c-lime", el: "modeHenteko", game: Henteko, group: "party" },
     { id: "eshiritori", title: "絵しりとり", players: "2人〜", desc: "前の人の絵を見て、絵でしりとり", color: "--c-sky", el: "modeEshiritori", game: Eshiritori, group: "party" },
+    { id: "connect4", title: "四目並べ", players: "2人・CPU", desc: "コマを落として、先に4つ並べたら勝ち", color: "--c-cyan", el: "modeConnect4", game: Connect4, group: "classic" },
+    { id: "reversi", title: "リバーシ", players: "2人・CPU", desc: "石をはさんでひっくり返す陣取り", color: "--c-mint", el: "modeReversi", game: Reversi, group: "classic" },
+    { id: "gomoku", title: "五目ならべ", players: "2人・CPU", desc: "先に5つならべたら勝ち", color: "--c-brown", el: "modeGomoku", game: Gomoku, group: "classic" },
+    { id: "mancala", title: "マンカラ", players: "2人・CPU", desc: "石をまいて、ゴールにたくさん集める", color: "--c-gold", el: "modeMancala", game: Mancala, group: "classic" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

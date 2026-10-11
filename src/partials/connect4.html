@@ -1,0 +1,25 @@
+<!-- ===== 四目並べ ===== -->
+<div class="mode" id="modeConnect4" hidden>
+  <div class="c4-scores" id="cScores" hidden></div>
+  <main class="stage" id="cStage" aria-live="polite">
+    <section class="panel" id="cSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="cVsChips"></div></div>
+        <div class="opt" id="cLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="cLevelChips"></div></div>
+        <div class="opt" id="cOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="cOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="cNames" hidden>
+        <label for="cName1">1人目<input class="name-input" id="cName1" maxlength="12" autocomplete="off"></label>
+        <label for="cName2">2人目<input class="name-input" id="cName2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <ul class="rules" id="cRules"></ul>
+    </section>
+    <section class="panel" id="cPlay" hidden>
+      <span class="label" id="cLabel"></span>
+      <p class="d-title" id="cTitle"></p>
+      <div class="c4-board" id="cBoard" role="group" aria-label="四目並べの盤"></div>
+      <p class="hint" id="cHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="cActions"></div>
+</div>

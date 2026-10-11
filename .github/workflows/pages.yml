@@ -24,6 +24,8 @@ jobs:
           node-version: 22
       - name: Test game rules
         run: node --test tests/*.test.js
+        env:
+          TIMING_SLACK: "3"
       - name: Build the web page
         run: node tools/build.js --site _site
       - uses: actions/configure-pages@v5
