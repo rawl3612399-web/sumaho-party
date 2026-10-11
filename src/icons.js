@@ -47,6 +47,7 @@ const Icons = (() => {
     iq: svg('<path d="M9.5 17.5h5M10.5 20.5h3"/><path d="M12 3.5a5.5 5.5 0 0 0-3.2 10c.5.4.7.9.7 1.5v.5h5V15c0-.6.2-1.1.7-1.5a5.5 5.5 0 0 0-3.2-10z"/><path d="M10.5 9.5l1.5 1.5 1.5-1.5"/>'),
     anzan: svg('<rect x="2.5" y="4.5" width="19" height="13" rx="2.5"/><path d="M6.5 11h4M8.5 9v4"/><path d="M15.5 7.5l-2 3.5h3l-2 3.5"/><path d="M9 21h6"/>'),
     dots: svg('<path d="M5 5h7v7H5z" fill="currentColor" fill-opacity=".3"/><path d="M12 12v7M19 5v7M12 19h7"/><g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/><circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/></g>'),
+    klondike: svg('<path d="M8 6.2 5 6.8a2 2 0 0 0-1.6 2.3l1.9 10.2a2 2 0 0 0 2.3 1.6l2.6-.5"/><rect x="9" y="3" width="11.5" height="16" rx="2"/><path d="M14.75 14.2s-3-1.8-3-3.9a1.5 1.5 0 0 1 3-.6 1.5 1.5 0 0 1 3 .6c0 2.1-3 3.9-3 3.9z"/>'),
     /* games:icons */
   };
 })();

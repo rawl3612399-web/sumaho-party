@@ -1,0 +1,42 @@
+<!-- ===== クロンダイク ===== -->
+<div class="mode" id="modeKlondike" hidden>
+  <main class="stage" id="klStage">
+    <section class="panel" id="klSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">めくる枚数</span><div class="chips" id="klDrawChips"></div></div>
+      </div>
+      <ul class="rules" id="klRules"></ul>
+      <p class="hint klondike-record" id="klRecord" hidden></p>
+    </section>
+    <section class="panel klondike-play" id="klPlay" hidden>
+      <div class="klondike-bar">
+        <span class="klondike-tag" id="klMode"></span>
+        <span class="klondike-stat" id="klMoves"></span>
+        <span class="klondike-stat klondike-time" id="klTime"></span>
+      </div>
+      <span class="label" id="klLabel" hidden></span>
+      <p class="d-title" id="klTitle" hidden></p>
+      <div class="klondike-board" id="klBoard" role="group" aria-label="クロンダイクの場">
+        <div class="klondike-top">
+          <div class="klondike-stock" id="klStock" role="button" tabindex="0" aria-label="山札をめくる"></div>
+          <div class="klondike-waste" id="klWaste" aria-label="めくった札"></div>
+          <div class="klondike-found" id="klF0"></div>
+          <div class="klondike-found" id="klF1"></div>
+          <div class="klondike-found" id="klF2"></div>
+          <div class="klondike-found" id="klF3"></div>
+        </div>
+        <div class="klondike-tableau">
+          <div class="klondike-col" id="klT0"></div>
+          <div class="klondike-col" id="klT1"></div>
+          <div class="klondike-col" id="klT2"></div>
+          <div class="klondike-col" id="klT3"></div>
+          <div class="klondike-col" id="klT4"></div>
+          <div class="klondike-col" id="klT5"></div>
+          <div class="klondike-col" id="klT6"></div>
+        </div>
+      </div>
+      <p class="hint klondike-msg" id="klHint" aria-live="polite"></p>
+    </section>
+  </main>
+  <div class="actions klondike-actions" id="klActions"></div>
+</div>
