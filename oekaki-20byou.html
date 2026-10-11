@@ -5061,6 +5061,104 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   .anzan-pad .key.anzan-key:active:not(:disabled) { transform: none; }
 }
 </style>
+<style>
+/* ドット&ボックス: score bar, the dot board (inline SVG), pen lines, claimed boxes and the "もう1本！" callout.
+   Player pens use the app's color tokens: the first person is blue, the second red, in both themes. */
+.dots-c0 { --dots-ink: var(--c-blue); }
+.dots-c1 { --dots-ink: var(--c-red); }
+
+/* ---------- layout ---------- */
+#modeDotsBoxes .stage { padding-inline: 8px; padding-block: 12px; }
+#oSetup { padding-inline: 8px; box-sizing: border-box; }
+.dots-play { gap: 10px; }
+.dots-title { font-size: 1.25rem; min-height: 1.35em; }
+.dots-actions { justify-content: center; }
+
+/* ---------- score bar ---------- */
+.dots-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.dots-side {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; min-width: 0;
+  padding: 6px 8px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--paper);
+  text-align: left; transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+.dots-side.dots-on { border-color: var(--dots-ink); box-shadow: 0 3px 0 var(--dots-ink); transform: translateY(-2px); }
+.dots-side.dots-won { background: var(--dots-ink); border-color: var(--dots-ink); color: var(--on-tile); }
+.dots-mark {
+  width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; box-sizing: border-box;
+  font-family: var(--display); font-size: .9rem; line-height: 1; color: var(--dots-ink);
+  background: color-mix(in srgb, var(--dots-ink) 22%, transparent); border: 2.5px solid var(--dots-ink);
+}
+.dots-side.dots-won .dots-mark { color: var(--on-tile); border-color: var(--on-tile); }
+.dots-side.dots-on.dots-think .dots-mark { animation: dotsThink .9s ease-in-out infinite; }
+@keyframes dotsThink { 50% { transform: scale(.82); } }
+.dots-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dots-name { font-weight: 700; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dots-state { font-size: .72rem; color: var(--muted); min-height: 1.25em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dots-side.dots-on .dots-state { color: var(--dots-ink); font-weight: 700; }
+.dots-side.dots-won .dots-state { color: var(--on-tile); font-weight: 700; }
+.dots-count {
+  font-family: var(--display); font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums;
+  min-width: 1.1em; text-align: right;
+}
+
+/* ---------- board ---------- */
+.dots-wrap { position: relative; width: min(100%, 420px); }
+/* On short phones (375x667) the board shrinks so the buttons below it stay on screen. */
+@supports (height: 100svh) {
+  .dots-wrap { width: min(100%, 420px, max(260px, 100svh - 375px)); }
+}
+.dots-board {
+  width: 100%; aspect-ratio: 1; border-radius: 16px; outline: none;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.dots-board.dots-live { cursor: pointer; }
+.dots-board:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.dots-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.dots-guide { stroke: var(--muted); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1 13; opacity: .45; }
+.dots-line, .dots-preview, .dots-halo { stroke: var(--dots-ink); stroke-linecap: round; fill: none; }
+.dots-line { stroke-width: 13; }
+.dots-line.dots-draw { stroke-dasharray: 100 100; animation: dotsDraw .24s cubic-bezier(.3, .7, .4, 1) both; }
+@keyframes dotsDraw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.dots-preview { stroke-width: 13; opacity: .42; stroke-dasharray: 12 12; }
+.dots-preview.dots-press { opacity: .72; stroke-dasharray: none; }
+.dots-halo { stroke-width: 30; opacity: .16; }
+.dots-off { display: none; }
+.dots-dot { fill: var(--ink); }
+
+.dots-box rect { fill: transparent; transition: fill .2s; }
+.dots-box text {
+  fill: var(--dots-ink); font-family: var(--display); font-size: 46px; opacity: 0;
+  pointer-events: none; user-select: none; -webkit-user-select: none;
+}
+.dots-box.dots-on rect { fill: color-mix(in srgb, var(--dots-ink) 24%, transparent); }
+.dots-box.dots-on text { opacity: 1; }
+.dots-box.dots-new { transform-box: fill-box; transform-origin: center; animation: dotsClaim .36s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes dotsClaim { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+.dots-box.dots-warn rect { fill: color-mix(in srgb, var(--alert) 12%, transparent); stroke: var(--alert); stroke-width: 3; stroke-dasharray: 8 7; }
+.dots-board.dots-over .dots-box:not(.dots-on) rect { fill: var(--line); }
+
+/* ---------- "もう1本！" callout ---------- */
+.dots-callout {
+  position: absolute; left: 50%; top: 50%; z-index: 2; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(2rem, 11vw, 3rem); line-height: 1;
+  padding: 8px 24px 12px; border-radius: 18px; border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink);
+  background: var(--dots-ink); color: var(--on-tile); transform: translate(-50%, -50%) rotate(-4deg);
+}
+.dots-callout.dots-show { animation: dotsCallout .95s ease-out both; }
+@keyframes dotsCallout {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-4deg) scale(1.9); }
+  20% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+  72% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -70%) rotate(-4deg) scale(.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots-line.dots-draw, .dots-box.dots-new, .dots-callout.dots-show, .dots-side.dots-on.dots-think .dots-mark { animation: none; }
+  .dots-side, .dots-box rect { transition: none; }
+  .dots-side.dots-on { transform: none; }
+}
+</style>
 <!-- games:styles -->
 
 <div class="app">
@@ -6321,6 +6419,48 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   </main>
   <div class="actions" id="azActions"></div>
 </div>
+  <!-- ===== ドット&ボックス ===== -->
+<div class="mode" id="modeDotsBoxes" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="oSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="oVsChips"></div></div>
+        <div class="opt" id="oLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="oLevelChips"></div></div>
+        <div class="opt" id="oOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="oOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="oNames" hidden>
+        <label for="oInput1">1人目（青）<input class="name-input" id="oInput1" maxlength="12" autocomplete="off"></label>
+        <label for="oInput2">2人目（赤）<input class="name-input" id="oInput2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">盤の大きさ</span><div class="chips" id="oSizeChips"></div></div>
+      </div>
+      <ul class="rules" id="oRules"></ul>
+    </section>
+    <section class="panel dots-play" id="oPlay" hidden>
+      <div class="dots-scores">
+        <div class="dots-side dots-c0" id="oSide0">
+          <span class="dots-mark" id="oMark0" aria-hidden="true"></span>
+          <span class="dots-who"><span class="dots-name" id="oWho0"></span><span class="dots-state" id="oState0"></span></span>
+          <span class="dots-count" id="oCount0">0</span>
+        </div>
+        <div class="dots-side dots-c1" id="oSide1">
+          <span class="dots-mark" id="oMark1" aria-hidden="true"></span>
+          <span class="dots-who"><span class="dots-name" id="oWho1"></span><span class="dots-state" id="oState1"></span></span>
+          <span class="dots-count" id="oCount1">0</span>
+        </div>
+      </div>
+      <span class="label" id="oLabel"></span>
+      <p class="d-title dots-title" id="oTitle"></p>
+      <div class="dots-wrap">
+        <div class="dots-board" id="oBoard" tabindex="0" role="application" aria-label="ドット&amp;ボックスの盤。矢印キーで線をえらび、Enterで引く"></div>
+        <div class="dots-callout" id="oCallout" hidden>もう1本！</div>
+      </div>
+      <p class="hint" id="oHint"></p>
+    </section>
+  </main>
+  <div class="actions dots-actions" id="oActions"></div>
+</div>
   <!-- games:partials -->
 </div>
 
@@ -7307,6 +7447,7 @@ const Icons = (() => {
     simon: svg('<path d="M3.14 10.4A9 9 0 0 1 10.4 3.14V8.78A3.6 3.6 0 0 0 8.78 10.4z" fill="currentColor"/><path d="M13.6 3.14A9 9 0 0 1 20.86 10.4H15.22A3.6 3.6 0 0 0 13.6 8.78z"/><path d="M20.86 13.6A9 9 0 0 1 13.6 20.86V15.22A3.6 3.6 0 0 0 15.22 13.6z"/><path d="M10.4 20.86A9 9 0 0 1 3.14 13.6H8.78A3.6 3.6 0 0 0 10.4 15.22z"/>'),
     iq: svg('<path d="M9.5 17.5h5M10.5 20.5h3"/><path d="M12 3.5a5.5 5.5 0 0 0-3.2 10c.5.4.7.9.7 1.5v.5h5V15c0-.6.2-1.1.7-1.5a5.5 5.5 0 0 0-3.2-10z"/><path d="M10.5 9.5l1.5 1.5 1.5-1.5"/>'),
     anzan: svg('<rect x="2.5" y="4.5" width="19" height="13" rx="2.5"/><path d="M6.5 11h4M8.5 9v4"/><path d="M15.5 7.5l-2 3.5h3l-2 3.5"/><path d="M9 21h6"/>'),
+    dots: svg('<path d="M5 5h7v7H5z" fill="currentColor" fill-opacity=".3"/><path d="M12 12v7M19 5v7M12 19h7"/><g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/><circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/></g>'),
     /* games:icons */
   };
 })();
@@ -30146,6 +30287,1139 @@ const Anzan = (() => {
   return { init, leave };
 })();
 </script>
+<script>
+/* dots-rules.js */
+/* Dots and Boxes (ドット&ボックス): a square of N x N boxes (N = 3, 4 or 5). Players take turns drawing one line
+ * between two neighboring dots. Whoever draws the fourth side of a box claims it and must draw again.
+ * When every line is drawn, more boxes wins; equal is a draw. Player 0 moves first.
+ * Lines are numbered: horizontal lines row by row (r = 0..N, c = 0..N-1), then vertical ones (r = 0..N-1, c = 0..N).
+ * Also holds the CPU: よわい (takes boxes half the time, else random), ふつう (always takes, avoids third sides,
+ * gives away the least), つよい (chain and loop endgame solver with the all-but-two decline to keep control, and
+ * box sacrifices to win the fight over who must open the first long chain). */
+const DotsBoxesRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const SIZES = Object.freeze([3, 4, 5]);
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+  const GROUND = -1;
+
+  /* ---------- geometry (built once per size; typed arrays stay private) ---------- */
+  const geoms = new Map();
+  function xorshift(seed) {
+    let x = seed | 0;
+    return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return x | 0; };
+  }
+  function buildGeometry(n) {
+    const hCount = (n + 1) * n;
+    const lines = 2 * n * (n + 1);
+    const boxes = n * n;
+    const sides = new Int16Array(lines * 2);
+    for (let l = 0; l < lines; l++) {
+      const h = l < hCount;
+      const k = h ? l : l - hCount;
+      const w = h ? n : n + 1;
+      const r = Math.floor(k / w);
+      const c = k % w;
+      sides[l * 2] = h ? (r > 0 ? (r - 1) * n + c : GROUND) : (c > 0 ? r * n + c - 1 : GROUND);
+      sides[l * 2 + 1] = h ? (r < n ? r * n + c : GROUND) : (c < n ? r * n + c : GROUND);
+    }
+    const boxLines = new Int16Array(boxes * 4);
+    for (let b = 0; b < boxes; b++) {
+      const r = Math.floor(b / n);
+      const c = b % n;
+      const left = hCount + r * (n + 1) + c;
+      boxLines.set([r * n + c, (r + 1) * n + c, left, left + 1], b * 4);
+    }
+    const next = xorshift(0x2545f491 + n * 7919);
+    return { n, hCount, lines, boxes, sides, boxLines, z1: Int32Array.from({ length: lines }, next), z2: Int32Array.from({ length: lines }, next) };
+  }
+  function geometry(size) {
+    if (!SIZES.includes(size)) throw new Error("盤の大きさが正しくありません");
+    if (!geoms.has(size)) geoms.set(size, buildGeometry(size));
+    return geoms.get(size);
+  }
+  const isLine = (g, line) => Number.isInteger(line) && line >= 0 && line < g.lines;
+  function checkLine(g, line) {
+    if (!isLine(g, line)) throw new Error("線の番号が正しくありません");
+  }
+  const sidesOf = (g, line) => [g.sides[line * 2], g.sides[line * 2 + 1]].filter(b => b !== GROUND);
+
+  const lineCount = (size) => geometry(size).lines;
+  const boxCount = (size) => geometry(size).boxes;
+  function lineInfo(size, line) {
+    const g = geometry(size);
+    checkLine(g, line);
+    const h = line < g.hCount;
+    const k = h ? line : line - g.hCount;
+    const w = h ? g.n : g.n + 1;
+    return Object.freeze({ dir: h ? "h" : "v", r: Math.floor(k / w), c: k % w });
+  }
+  /* The two dots a line joins, in dot units (x = column, y = row). */
+  function lineEnds(size, line) {
+    const { dir, r, c } = lineInfo(size, line);
+    return Object.freeze(dir === "h" ? { x1: c, y1: r, x2: c + 1, y2: r } : { x1: c, y1: r, x2: c, y2: r + 1 });
+  }
+  function boxesOfLine(size, line) {
+    const g = geometry(size);
+    checkLine(g, line);
+    return Object.freeze(sidesOf(g, line));
+  }
+  /* [top, bottom, left, right] */
+  function linesOfBox(size, box) {
+    const g = geometry(size);
+    if (!Number.isInteger(box) || box < 0 || box >= g.boxes) throw new Error("箱の番号が正しくありません");
+    return Object.freeze(Array.from(g.boxLines.subarray(box * 4, box * 4 + 4)));
+  }
+  /* The line whose diamond-shaped touch area holds the point (x, y) in dot units, or -1. The diamonds (each line,
+   * its two dots and the centers of the boxes beside it) tile the board, so every point inside picks one line. */
+  function lineNear(size, x, y) {
+    const n = geometry(size).n;
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return -1;
+    const hr = Math.round(y);
+    const hc = Math.floor(x);
+    const vc = Math.round(x);
+    const vr = Math.floor(y);
+    const dh = hr >= 0 && hr <= n && hc >= 0 && hc < n ? Math.abs(x - hc - 0.5) + Math.abs(y - hr) : Infinity;
+    const dv = vc >= 0 && vc <= n && vr >= 0 && vr < n ? Math.abs(x - vc) + Math.abs(y - vr - 0.5) : Infinity;
+    if (Math.min(dh, dv) > 0.5 + 1e-9) return -1;
+    return dh <= dv ? hr * n + hc : (n + 1) * n + vr * (n + 1) + vc;
+  }
+
+  /* ---------- game state ---------- */
+  function freezeState(s) {
+    return Object.freeze({
+      ...s, lines: Object.freeze(s.lines), boxes: Object.freeze(s.boxes), moves: Object.freeze(s.moves),
+      movers: Object.freeze(s.movers), scores: Object.freeze(s.scores), claimed: Object.freeze(s.claimed)
+    });
+  }
+  function validState(s) {
+    if (!s || typeof s !== "object" || !SIZES.includes(s.size)) return false;
+    const g = geometry(s.size);
+    return Array.isArray(s.lines) && s.lines.length === g.lines && Array.isArray(s.boxes) && s.boxes.length === g.boxes
+      && Array.isArray(s.moves) && Array.isArray(s.movers) && Array.isArray(s.scores) && (s.turn === 0 || s.turn === 1);
+  }
+  function checkState(s) {
+    if (!validState(s)) throw new Error("盤面が正しくありません");
+  }
+
+  function newGame(size = 4) {
+    const g = geometry(size);
+    return freezeState({
+      size, lines: Array(g.lines).fill(null), boxes: Array(g.boxes).fill(null), turn: 0, moves: [], movers: [],
+      scores: [0, 0], last: null, claimed: [], winner: null, draw: false
+    });
+  }
+  const isOver = (s) => s.moves.length === geometry(s.size).lines;
+  function drawnSides(g, lines, box) {
+    let n = 0;
+    for (let k = box * 4; k < box * 4 + 4; k++) if (lines[g.boxLines[k]] !== null) n++;
+    return n;
+  }
+
+  function moveError(s, line) {
+    if (!validState(s)) return "盤面が正しくありません";
+    if (!isLine(geometry(s.size), line)) return "線の番号が正しくありません";
+    if (isOver(s)) return "もう勝負がついています";
+    if (s.lines[line] !== null) return "その線はもう引かれています";
+    return null;
+  }
+  const canPlay = (s, line) => moveError(s, line) === null;
+
+  /* Draws a line for the player to move. Boxes it finishes go to that player, who then draws again. */
+  function play(s, line) {
+    const err = moveError(s, line);
+    if (err) throw new Error(err);
+    const g = geometry(s.size);
+    const p = s.turn;
+    const lines = s.lines.map((v, i) => (i === line ? p : v));
+    const claimed = sidesOf(g, line).filter(b => drawnSides(g, lines, b) === 4);
+    const scores = s.scores.map((v, i) => (i === p ? v + claimed.length : v));
+    const moves = [...s.moves, line];
+    const over = moves.length === g.lines;
+    const winner = over && scores[0] !== scores[1] ? (scores[0] > scores[1] ? 0 : 1) : null;
+    return freezeState({
+      size: s.size, lines, scores, moves, claimed, winner,
+      boxes: s.boxes.map((v, b) => (claimed.includes(b) ? p : v)),
+      movers: [...s.movers, p], last: line, turn: claimed.length > 0 || over ? p : 1 - p, draw: over && winner === null
+    });
+  }
+  /* True when the last line finished a box and the same player draws again. */
+  const extraTurn = (s) => s.claimed.length > 0 && !isOver(s);
+
+  function fromMoves(size, moves) {
+    if (!Array.isArray(moves)) throw new Error("手順が正しくありません");
+    return moves.reduce((s, line) => play(s, line), newGame(size));
+  }
+  /* Takes back the last n lines. */
+  function undo(s, n = 1) {
+    checkState(s);
+    if (!Number.isInteger(n) || n < 1 || n > s.moves.length) throw new Error("もどせる手がありません");
+    return fromMoves(s.size, s.moves.slice(0, -n));
+  }
+  /* Goes back to just before the latest line drawn by `player` (taking back everything after it too). */
+  function undoLastBy(s, player) {
+    checkState(s);
+    const at = s.movers.lastIndexOf(player);
+    if (at < 0) throw new Error("もどせる手がありません");
+    return fromMoves(s.size, s.moves.slice(0, at));
+  }
+
+  function legalMoves(s) {
+    checkState(s);
+    return s.lines.map((v, i) => (v === null ? i : -1)).filter(i => i >= 0);
+  }
+  /* How many sides of the box are drawn (0 to 4). */
+  function sides(s, box) {
+    checkState(s);
+    const g = geometry(s.size);
+    if (!Number.isInteger(box) || box < 0 || box >= g.boxes) throw new Error("箱の番号が正しくありません");
+    return drawnSides(g, s.lines, box);
+  }
+  /* Open lines that finish at least one box, the ones finishing two first. */
+  function captureMoves(s) {
+    const g = geometry(s.size);
+    const gain = (l) => sidesOf(g, l).filter(b => drawnSides(g, s.lines, b) === 3).length;
+    return legalMoves(s).filter(l => gain(l) > 0).sort((a, b) => gain(b) - gain(a));
+  }
+  /* Open lines that neither finish a box nor leave a box with three sides. */
+  function safeMoves(s) {
+    const g = geometry(s.size);
+    return legalMoves(s).filter(l => sidesOf(g, l).every(b => drawnSides(g, s.lines, b) <= 1));
+  }
+  /* Would this line hand the opponent a box (a third side, finishing nothing)? */
+  function givesAway(s, line) {
+    if (!canPlay(s, line)) return false;
+    const g = geometry(s.size);
+    const counts = sidesOf(g, line).map(b => drawnSides(g, s.lines, b));
+    return !counts.includes(3) && counts.includes(2);
+  }
+
+  /* ---------- CPU: scratch board ---------- */
+  /* The CPU draws and erases lines on its own scratch board: deg[b] is how many sides of box b are still open and
+   * loose counts boxes with exactly one open side (ready to take). The game state is never touched. */
+  function scratch(s, tableBits = 0, sacrificeAt = 0) {
+    const g = geometry(s.size);
+    const ctx = {
+      g, drawn: new Uint8Array(g.lines), deg: new Int8Array(g.boxes).fill(4), left: g.lines, loose: 0, sacrificeAt,
+      h1: 0, h2: 0, nodes: 0, limit: Infinity, table: tableBits ? newTable(tableBits) : null,
+      seen: new Int32Array(g.lines), stamp: 0, stack: new Int16Array(g.lines), sp: 0
+    };
+    s.lines.forEach((v, l) => { if (v !== null) draw(ctx, l); });
+    return ctx;
+  }
+  function touch(ctx, b, step) {
+    const was = ctx.deg[b];
+    const now = was + step;
+    ctx.deg[b] = now;
+    ctx.loose += (now === 1 ? 1 : 0) - (was === 1 ? 1 : 0);
+    return now;
+  }
+  function draw(ctx, l) {
+    const g = ctx.g;
+    ctx.drawn[l] = 1;
+    ctx.left--;
+    ctx.h1 ^= g.z1[l];
+    ctx.h2 ^= g.z2[l];
+    const a = g.sides[l * 2];
+    const b = g.sides[l * 2 + 1];
+    return (a >= 0 && touch(ctx, a, -1) === 0 ? 1 : 0) + (b >= 0 && touch(ctx, b, -1) === 0 ? 1 : 0);
+  }
+  function erase(ctx, l) {
+    const g = ctx.g;
+    ctx.drawn[l] = 0;
+    ctx.left++;
+    ctx.h1 ^= g.z1[l];
+    ctx.h2 ^= g.z2[l];
+    if (g.sides[l * 2] >= 0) touch(ctx, g.sides[l * 2], 1);
+    if (g.sides[l * 2 + 1] >= 0) touch(ctx, g.sides[l * 2 + 1], 1);
+  }
+  const across = (g, l, b) => (g.sides[l * 2] === b ? g.sides[l * 2 + 1] : g.sides[l * 2]);
+  function openSide(ctx, b, except) {
+    for (let k = b * 4; k < b * 4 + 4; k++) {
+      const l = ctx.g.boxLines[k];
+      if (!ctx.drawn[l] && l !== except) return l;
+    }
+    return -1;
+  }
+  function eraseAll(ctx, lines) {
+    for (let i = lines.length - 1; i >= 0; i--) erase(ctx, lines[i]);
+  }
+
+  /* A box ready to take whose last line hands nothing new to anyone: taking it is always right. */
+  function freeCapture(ctx) {
+    if (!ctx.loose) return -1;
+    for (let b = 0; b < ctx.g.boxes; b++) {
+      if (ctx.deg[b] !== 1) continue;
+      const l = openSide(ctx, b, -1);
+      const o = across(ctx.g, l, b);
+      if (o === GROUND || ctx.deg[o] !== 2) return l;
+    }
+    return -1;
+  }
+  /* The all-but-two decline (all-but-four in a loop): draw the far side of the next box instead of taking it,
+   * so the opponent gets the last boxes but must move next. Only offered at the very end of what is being eaten. */
+  function declineLine(ctx, a) {
+    const { g, deg } = ctx;
+    const l = openSide(ctx, a, -1);
+    const b = across(g, l, a);
+    if (b === GROUND || deg[b] !== 2) return -1;
+    const t = openSide(ctx, b, l);
+    const o = across(g, t, b);
+    if (ctx.loose === 1 && (o === GROUND || deg[o] >= 3)) return t;
+    if (ctx.loose === 2 && o !== GROUND && deg[o] === 2) {
+      const d = across(g, openSide(ctx, o, t), o);
+      if (d !== GROUND && deg[d] === 1) return t;
+    }
+    return -1;
+  }
+  /* Every loose box leads into a chain or loop being eaten: take one, or decline at the very end. */
+  function captureChoices(ctx) {
+    const out = [];
+    let first = -1;
+    for (let b = 0; b < ctx.g.boxes; b++) {
+      if (ctx.deg[b] !== 1) continue;
+      const l = openSide(ctx, b, -1);
+      if (!out.includes(l)) out.push(l);
+      if (first < 0) first = b;
+    }
+    const t = declineLine(ctx, first);
+    return t >= 0 ? [...out, t] : out;
+  }
+  function isSafe(ctx, l) {
+    const a = ctx.g.sides[l * 2];
+    const b = ctx.g.sides[l * 2 + 1];
+    return (a === GROUND || ctx.deg[a] >= 3) && (b === GROUND || ctx.deg[b] >= 3);
+  }
+  function openLines(ctx, keep) {
+    const out = [];
+    for (let l = 0; l < ctx.g.lines; l++) if (!ctx.drawn[l] && keep(l)) out.push(l);
+    return out;
+  }
+  const safeLines = (ctx) => openLines(ctx, l => isSafe(ctx, l));
+  /* With nothing to take, every other open line hands the opponent at least one box. */
+  const sacrificeLines = (ctx) => openLines(ctx, l => !isSafe(ctx, l));
+
+  /* ---------- CPU: chains and loops ---------- */
+  /* Follows boxes with two open sides, starting across line l0 into box `from`, and marks the lines it passes. */
+  function walk(ctx, l0, from, stamp) {
+    let boxes = 0;
+    let line = l0;
+    let b = from;
+    while (b !== GROUND && ctx.deg[b] === 2) {
+      boxes++;
+      line = openSide(ctx, b, line);
+      if (line === l0) return { boxes, end: b, last: l0, loop: true };
+      ctx.seen[line] = stamp;
+      b = across(ctx.g, line, b);
+    }
+    return { boxes, end: b, last: line, loop: false };
+  }
+  /* One chain or loop through line l0: its end lines, box count, and whether it runs edge to edge. */
+  function trace(ctx, l0, stamp) {
+    const g = ctx.g;
+    ctx.seen[l0] = stamp;
+    const fwd = walk(ctx, l0, g.sides[l0 * 2 + 1], stamp);
+    if (fwd.loop) return { first: l0, last: l0, boxes: fwd.boxes, loop: true, simple: true };
+    const back = walk(ctx, l0, g.sides[l0 * 2], stamp);
+    return { first: back.last, last: fwd.last, boxes: back.boxes + fwd.boxes, loop: false, simple: back.end === GROUND && fwd.end === GROUND };
+  }
+  /* The openings worth trying in one chain or loop: one line of a loop, every line of a chain of one or two
+   * boxes (a two-box chain can be opened in the middle), the two ends of a longer chain. */
+  function openings(ctx, seg) {
+    if (seg.loop || (seg.boxes >= 3 && seg.simple)) return [seg.first];
+    if (seg.boxes !== 2) return [seg.first, seg.last];
+    const g = ctx.g;
+    const a = g.sides[seg.first * 2];
+    const inner = a !== GROUND && ctx.deg[a] === 2 ? a : g.sides[seg.first * 2 + 1];
+    return [seg.first, openSide(ctx, inner, seg.first), seg.last];
+  }
+  /* With no safe line and nothing to take, the open lines split into chains and loops (smallest first). */
+  function traceAll(ctx) {
+    const stamp = ++ctx.stamp;
+    const list = [];
+    for (let l0 = 0; l0 < ctx.g.lines; l0++) {
+      if (!ctx.drawn[l0] && ctx.seen[l0] !== stamp) list.push(trace(ctx, l0, stamp));
+    }
+    return list.sort((a, b) => a.boxes - b.boxes);
+  }
+  const allOpenings = (ctx) => traceAll(ctx).flatMap(s => openings(ctx, s));
+  /* `simple` means every chain runs edge to edge (no junction boxes), so the exact value has a formula;
+   * otherwise `picks` lists the openings to search. */
+  function segments(ctx) {
+    const list = traceAll(ctx);
+    if (!list.every(s => s.simple)) return { simple: false, picks: list.flatMap(s => openings(ctx, s)) };
+    const sizes = (loop) => list.filter(s => s.loop === loop).map(s => s.boxes);
+    return { simple: true, chains: sizes(false), loops: sizes(true) };
+  }
+
+  /* Net boxes for the player who must open next in a simple endgame (chains sorted, loops sorted). The other player
+   * takes short chains; of a long chain they take all, or all but two to keep control (all but four of a loop). */
+  const loonyMemo = new Map(); /* a pure cache: the same chains and loops always give the same value */
+  const without = (list, i) => list.filter((_, k) => k !== i);
+  function loonyValue(chains, loops) {
+    if (!chains.length && !loops.length) return 0;
+    const key = `${chains.join(".")}|${loops.join(".")}`;
+    const known = loonyMemo.get(key);
+    if (known !== undefined) return known;
+    let best = -Infinity;
+    chains.forEach((k, i) => {
+      if (i > 0 && chains[i - 1] === k) return;
+      const rest = loonyValue(without(chains, i), loops);
+      best = Math.max(best, -(k <= 2 ? k + rest : Math.max(k + rest, k - 4 - rest)));
+    });
+    loops.forEach((k, i) => {
+      if (i > 0 && loops[i - 1] === k) return;
+      const rest = loonyValue(chains, without(loops, i));
+      best = Math.max(best, -Math.max(k + rest, k - 8 - rest));
+    });
+    if (loonyMemo.size > 50000) loonyMemo.clear();
+    loonyMemo.set(key, best);
+    return best;
+  }
+
+  /* ---------- CPU: exact search ---------- */
+  const ABORT = Object.freeze({ abort: true });
+  const EXACT = 1;
+  const LOWER = 2;
+  const UPPER = 3;
+  function newTable(bits) {
+    const n = 1 << bits;
+    return { mask: n - 1, key: new Int32Array(n), flag: new Int8Array(n), value: new Int8Array(n), move: new Int8Array(n) };
+  }
+  function probe(ctx, slot, alpha, beta) {
+    const t = ctx.table;
+    if (!t || !t.flag[slot] || t.key[slot] !== ctx.h2) return null;
+    const v = t.value[slot];
+    const f = t.flag[slot];
+    return f === EXACT || (f === LOWER && v >= beta) || (f === UPPER && v <= alpha) ? v : null;
+  }
+  function store(ctx, slot, value, flag, move = -1) {
+    const t = ctx.table;
+    if (!t) return;
+    t.key[slot] = ctx.h2;
+    t.flag[slot] = flag;
+    t.value[slot] = value;
+    t.move[slot] = move;
+  }
+  /* The best line found here before (searched first, which makes cutoffs come sooner), or -1. */
+  function hintMove(ctx, slot) {
+    const t = ctx.table;
+    return t && t.flag[slot] && t.key[slot] === ctx.h2 ? t.move[slot] : -1;
+  }
+
+  /* Net boxes (mover minus the other player) from here on, with best play. Free boxes are taken first. */
+  function solve(ctx, alpha, beta) {
+    if (++ctx.nodes > ctx.limit) throw ABORT;
+    const base = ctx.sp;
+    let gain = 0;
+    for (let l = freeCapture(ctx); l >= 0; l = freeCapture(ctx)) {
+      gain += draw(ctx, l);
+      ctx.stack[ctx.sp++] = l;
+    }
+    const value = gain + (ctx.left > 0 ? choose(ctx, alpha - gain, beta - gain) : 0);
+    while (ctx.sp > base) erase(ctx, ctx.stack[--ctx.sp]);
+    return value;
+  }
+  /* The lines worth trying here, or the exact value of a simple endgame (then moves is null). While safe lines are
+   * left only they are tried, unless at most ctx.sacrificeAt remain: then giving a box away (to win the fight over
+   * who must open the first long chain) is tried too. */
+  function options(ctx) {
+    if (ctx.loose) return { moves: captureChoices(ctx), value: 0 };
+    const safe = safeLines(ctx);
+    if (safe.length) return { moves: safe.length <= ctx.sacrificeAt ? [...safe, ...sacrificeLines(ctx)] : safe, value: 0 };
+    const seg = segments(ctx);
+    return seg.simple ? { moves: null, value: loonyValue(seg.chains, seg.loops) } : { moves: seg.picks, value: 0 };
+  }
+  /* A line that finishes a box keeps the turn; any other line passes it. */
+  function tryLine(ctx, m, alpha, beta) {
+    const got = draw(ctx, m);
+    const score = got > 0 ? got + solve(ctx, alpha - got, beta - got) : -solve(ctx, -beta, -alpha);
+    erase(ctx, m);
+    return score;
+  }
+  function choose(ctx, alpha, beta) {
+    const slot = ctx.h1 & (ctx.table ? ctx.table.mask : 0);
+    const hit = probe(ctx, slot, alpha, beta);
+    if (hit !== null) return hit;
+    const plan = options(ctx);
+    if (!plan.moves) {
+      store(ctx, slot, plan.value, EXACT);
+      return plan.value;
+    }
+    const hint = hintMove(ctx, slot);
+    const moves = hint >= 0 && plan.moves.includes(hint) ? [hint, ...plan.moves.filter(m => m !== hint)] : plan.moves;
+    const alpha0 = alpha;
+    let best = -Infinity;
+    let bestMove = -1;
+    for (let i = 0; i < moves.length && alpha < beta; i++) {
+      const score = tryLine(ctx, moves[i], alpha, beta);
+      if (score > best) {
+        best = score;
+        bestMove = moves[i];
+      }
+      alpha = Math.max(alpha, best);
+    }
+    store(ctx, slot, best, best <= alpha0 ? UPPER : best >= beta ? LOWER : EXACT, bestMove);
+    return best;
+  }
+  /* The first best root line and its value, beating `start` only when strictly better (the caller shuffles the
+   * lines to vary its play). */
+  function searchRoot(ctx, moves, start = { move: moves[0], value: -Infinity }) {
+    return moves.reduce((best, m) => {
+      const value = tryLine(ctx, m, best.value, Infinity);
+      return value > best.value ? { move: m, value } : best;
+    }, start);
+  }
+  /* Runs a search within `limit` nodes in all (counted on ctx); null when it runs out. */
+  function bounded(ctx, limit, run) {
+    ctx.limit = limit;
+    try {
+      return run();
+    } catch (e) {
+      if (e !== ABORT) throw e;
+      return null;
+    }
+  }
+
+  /* ---------- CPU: levels ---------- */
+  /* The node budget bounds the think time (about 1.2 microseconds per node in Node, a few times more on a phone).
+   * Above safeMax safe lines the CPU plays like ふつう. With at most deepSafe safe lines, a first search (deepNodes)
+   * lets both sides give boxes away once at most sacrificeAt safe lines remain; if it runs out, the plain search
+   * (nobody gives a box away while a safe line is left, except the CPU right now) gets the rest of the budget. */
+  const HARD = Object.freeze({
+    nodes: 25000, deepNodes: 8000, deepSafe: 10, sacrificeAt: 3, tableBits: 16,
+    safeMax: Object.freeze({ 3: 17, 4: 15, 5: 13 })
+  });
+
+  function anyLoose(ctx) {
+    if (!ctx.loose) return -1;
+    for (let b = 0; b < ctx.g.boxes; b++) if (ctx.deg[b] === 1) return openSide(ctx, b, -1);
+    return -1;
+  }
+  /* How many boxes the next player gets by taking everything they can. */
+  function greedyTake(ctx) {
+    const taken = [];
+    let boxes = 0;
+    for (let l = anyLoose(ctx); l >= 0; l = anyLoose(ctx)) {
+      boxes += draw(ctx, l);
+      taken.push(l);
+    }
+    eraseAll(ctx, taken);
+    return boxes;
+  }
+  /* With no safe line left: the line that hands over the fewest boxes (the smallest chain). */
+  function leastGiveaway(s, r) {
+    const ctx = scratch(s);
+    const scored = legalMoves(s).map(l => {
+      draw(ctx, l);
+      const lost = greedyTake(ctx);
+      erase(ctx, l);
+      return { l, lost };
+    });
+    const min = Math.min(...scored.map(x => x.lost));
+    return R.pick(scored.filter(x => x.lost === min).map(x => x.l), r);
+  }
+  function easyMove(s, r) {
+    const takes = captureMoves(s);
+    if (takes.length && r() < 0.5) return R.pick(takes, r);
+    return R.pick(legalMoves(s), r);
+  }
+  function normalMove(s, r) {
+    const takes = captureMoves(s);
+    if (takes.length) return takes[0];
+    const safe = safeMoves(s);
+    return safe.length ? R.pick(safe, r) : leastGiveaway(s, r);
+  }
+  function rootMoves(ctx) {
+    if (ctx.loose) return { kind: "take", moves: captureChoices(ctx) };
+    const safe = safeLines(ctx);
+    if (safe.length) return { kind: "safe", moves: safe };
+    return { kind: "open", moves: allOpenings(ctx) };
+  }
+  /* Taking is listed before declining, so a tie takes: it looks natural and costs nothing. */
+  const firstLines = (root, r) => (root.kind === "take" ? root.moves : R.shuffle(root.moves, r));
+  /* The best first line (run inside `bounded`): a safe line, or giving a box away now when that is strictly better. */
+  function searchAll(ctx, root, r) {
+    const best = searchRoot(ctx, firstLines(root, r));
+    return root.kind === "safe" ? searchRoot(ctx, R.shuffle(sacrificeLines(ctx), r), best) : best;
+  }
+  function deepSearch(s, root, r) {
+    const ctx = scratch(s, HARD.tableBits, HARD.sacrificeAt);
+    const found = bounded(ctx, HARD.deepNodes, () => searchAll(ctx, root, r));
+    return { move: found ? found.move : -1, nodes: ctx.nodes };
+  }
+  /* The plain search keeps its best safe line when the give-away lines do not fit the budget. */
+  function plainSearch(ctx, root, r, limit) {
+    const best = bounded(ctx, limit, () => searchRoot(ctx, firstLines(root, r)));
+    if (!best || root.kind !== "safe") return best ? best.move : -1;
+    const better = bounded(ctx, limit, () => searchRoot(ctx, R.shuffle(sacrificeLines(ctx), r), best));
+    return (better || best).move;
+  }
+  /* つよい: free boxes at once; otherwise search exactly (chains, loops, the all-but-two decline, and the fight over
+   * who must open the first long chain, giving boxes away to win it) when it fits the node budget; else ふつう. */
+  function hardMove(s, r) {
+    const ctx = scratch(s, HARD.tableBits);
+    const free = freeCapture(ctx);
+    if (free >= 0) return free;
+    const root = rootMoves(ctx);
+    if (root.moves.length === 1 && root.kind !== "safe") return root.moves[0];
+    const safe = safeLines(ctx).length;
+    if (safe > HARD.safeMax[s.size]) return normalMove(s, r);
+    const deep = root.kind !== "open" && safe <= HARD.deepSafe ? deepSearch(s, root, r) : { move: -1, nodes: 0 };
+    if (deep.move >= 0) return deep.move;
+    const move = plainSearch(ctx, root, r, HARD.nodes - deep.nodes);
+    return move >= 0 ? move : normalMove(s, r);
+  }
+
+  function cpuMove(s, level, r = Math.random) {
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    if (typeof r !== "function") throw new Error("乱数の関数が正しくありません");
+    checkState(s);
+    if (isOver(s)) throw new Error("もう勝負がついています");
+    if (level === "easy") return easyMove(s, r);
+    return level === "normal" ? normalMove(s, r) : hardMove(s, r);
+  }
+
+  return {
+    SIZES, LEVELS, lineCount, boxCount, lineInfo, lineEnds, boxesOfLine, linesOfBox, lineNear,
+    newGame, play, fromMoves, undo, undoLastBy, canPlay, moveError, isOver, extraTurn,
+    legalMoves, captureMoves, safeMoves, givesAway, sides, cpuMove
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = DotsBoxesRules;
+</script>
+<script>
+/* dots.js */
+/* ドット&ボックス screen: draw lines between dots and claim boxes, against the CPU or a friend on one phone. */
+const DotsBoxes = (() => {
+  const R = DotsBoxesRules;
+  const KEY = "dots.settings";
+  const NS = "http://www.w3.org/2000/svg";
+  const U = 100; /* SVG units between two dots (a drawn line is exactly 100 long, matching the CSS dash animation) */
+  const PAD = 42; /* margin around the dots, so lines on the edge can be touched from outside too */
+  const INSET = 7;
+  const DOT_R = 11;
+  const CPU_WAIT_MS = 450;
+  const CPU_AGAIN_MS = 360; /* after taking a box the CPU draws again a little quicker */
+  const END_MS = 650;
+  const CALLOUT_MS = 950;
+  const ARM_MS = 3000;
+  const VS = Object.freeze({ cpu: "CPUと", duo: "2人で" });
+  const LEVEL_LABELS = Object.freeze({ easy: "よわい", normal: "ふつう", hard: "つよい" });
+  const LEVEL_NOTES = Object.freeze({
+    easy: "取れる箱を見のがすことも多い。まずはここから",
+    normal: "取れる箱は必ず取って、3本目はなるべく引かない",
+    hard: "長い列のゆずり合いまで読んでくる本気モード"
+  });
+  const ORDER = Object.freeze({ first: "先攻", second: "後攻", random: "ランダム" });
+  const COLOR = Object.freeze(["青", "赤"]);
+  const DEFAULTS = Object.freeze({ vs: "cpu", level: "normal", order: "first", size: 4 });
+
+  const side = (mark, who, state, count, box) => ({ mark: $(mark), who: $(who), state: $(state), count: $(count), box: $(box) });
+  const el = {
+    setup: $("oSetup"), play: $("oPlay"), label: $("oLabel"), title: $("oTitle"), card: null,
+    hint: $("oHint"), actions: $("oActions"), board: $("oBoard"), callout: $("oCallout"), rules: $("oRules"),
+    levelOpt: $("oLevelOpt"), orderOpt: $("oOrderOpt"), names: $("oNames"), nameInputs: [$("oInput1"), $("oInput2")],
+    sides: [side("oMark0", "oWho0", "oState0", "oCount0", "oSide0"), side("oMark1", "oWho1", "oState1", "oCount1", "oSide1")]
+  };
+
+  let settings = DEFAULTS;
+  let game = null;
+  let match = null; /* { people: [{ name, cpu, mark }], first: person index moving first, wins: [n, n], draws } */
+  let ui = { phase: "setup", aim: -1, pressed: false, busy: false, thinking: false, armed: false, result: null };
+  let timers = [];
+  let arms = 0; /* counts 投了 presses, so an older disarm timer leaves a newer press alone */
+  let board = null; /* SVG parts for the current size */
+  let shown = 0; /* moves already drawn on screen; the next one animates */
+  let anim = { line: -1, boxes: [] };
+
+  const cls = (...names) => names.filter(Boolean).join(" ");
+  const reduced = () => !!window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const options = (map) => Object.entries(map).map(([value, label]) => ({ value, label }));
+  const personOf = (player) => (player === 0 ? match.first : 1 - match.first);
+  const isCpu = (player) => match.people[personOf(player)].cpu;
+  const vsCpu = () => match.people.some(p => p.cpu);
+  const humanPlayer = () => [0, 1].find(p => !isCpu(p));
+  const ink = (player) => `dots-c${personOf(player)}`;
+  const live = () => ui.phase === "play" && !ui.busy && !R.isOver(game) && !isCpu(game.turn);
+  const left = () => game.lines.filter(x => x === null).length;
+
+  function who(player) {
+    if (isCpu(player)) return "CPU";
+    return vsCpu() ? "あなた" : `${match.people[personOf(player)].name}さん`;
+  }
+  /* One letter per person for the claimed boxes: first letters, or last letters when the first ones match. */
+  function marks(names) {
+    const pick = (fromEnd) => names.map(n => {
+      const chars = Array.from(n);
+      return chars[fromEnd ? chars.length - 1 : 0] || "?";
+    });
+    const first = pick(false);
+    if (first[0] !== first[1]) return first;
+    const last = pick(true);
+    return last[0] !== last[1] ? last : ["A", "B"];
+  }
+
+  /* ---------- settings and timers ---------- */
+  function normalize(s) {
+    const src = s && typeof s === "object" ? s : {};
+    return {
+      vs: Object.keys(VS).includes(src.vs) ? src.vs : DEFAULTS.vs,
+      level: R.LEVELS.includes(src.level) ? src.level : DEFAULTS.level,
+      order: Object.keys(ORDER).includes(src.order) ? src.order : DEFAULTS.order,
+      size: R.SIZES.includes(src.size) ? src.size : DEFAULTS.size
+    };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function later(fn, ms) {
+    const id = setTimeout(() => {
+      timers = timers.filter(t => t !== id);
+      fn();
+    }, ms);
+    timers = [...timers, id];
+  }
+  function clearTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+    el.callout.hidden = true;
+  }
+
+  /* ---------- sounds ---------- */
+  /* A felt pen scratching across paper: band-passed noise sweeping up, a hiss on top, a soft lift at the end. */
+  function penSound() {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const f = 2300 + Math.random() * 900;
+    Sound.hiss({ t, dur: 0.16, vol: 0.13, type: "bandpass", freq: f, to: f * 1.7, q: 4, attack: 0.015 });
+    Sound.hiss({ t: t + 0.02, dur: 0.12, vol: 0.05, type: "highpass", freq: 6000, attack: 0.02 });
+    Sound.hiss({ t: t + 0.14, dur: 0.05, vol: 0.06, type: "bandpass", freq: f * 0.6, q: 2 });
+  }
+  function extraSound() {
+    const ctx = Sound.ctx();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    Sound.tone({ freq: Sound.hz(79), type: "triangle", t, dur: 0.09, vol: 0.13 });
+    Sound.tone({ freq: Sound.hz(84), type: "triangle", t: t + 0.08, dur: 0.1, vol: 0.13 });
+    Sound.tone({ freq: Sound.hz(91), type: "square", t: t + 0.16, dur: 0.2, vol: 0.05, filter: { freq: 3000 }, send: 0.2 });
+  }
+  const aimSound = () => Sound.tone({ freq: 1700, type: "sine", dur: 0.025, vol: 0.05 });
+  const nopeSound = () => Sound.tone({ freq: 150, type: "square", dur: 0.08, vol: 0.05, filter: { freq: 800 } });
+
+  /* ---------- flow ---------- */
+  function firstFor(prev) {
+    if (settings.vs === "duo") return prev === null ? 0 : 1 - prev;
+    if (settings.order === "random") return Math.random() < 0.5 ? 0 : 1;
+    return settings.order === "first" ? 0 : 1;
+  }
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    const cpu = settings.vs === "cpu";
+    const names = cpu ? ["あなた", "CPU"] : Duo.read(el.nameInputs);
+    const letters = marks(names);
+    match = { people: names.map((name, i) => ({ name, cpu: cpu && i === 1, mark: letters[i] })), first: firstFor(null), wins: [0, 0], draws: 0 };
+    newRound();
+  }
+  function rematch() {
+    match = { ...match, first: firstFor(match.first) };
+    newRound();
+  }
+  function newRound() {
+    clearTimers();
+    game = R.newGame(settings.size);
+    shown = 0;
+    anim = { line: -1, boxes: [] };
+    ui = { phase: "play", aim: -1, pressed: false, busy: false, thinking: false, armed: false, result: null };
+    buildBoard(settings.size);
+    Sound.sfx("confirm");
+    Music.play("think");
+    render();
+    Fx.pop(el.board);
+    if (isCpu(game.turn)) cpuTurn(CPU_WAIT_MS);
+  }
+  function toSetup() {
+    clearTimers();
+    Music.stop();
+    go({ phase: "setup", busy: false, thinking: false, armed: false, aim: -1, pressed: false });
+  }
+
+  function commit(line) {
+    const player = game.turn;
+    game = R.play(game, line);
+    penSound();
+    const over = R.isOver(game);
+    go({ aim: -1, pressed: false, armed: false, busy: over, thinking: false });
+    if (game.claimed.length) claimed(player, over);
+    if (over) later(() => finish(game.winner, false), END_MS);
+    else if (isCpu(game.turn)) cpuTurn(R.extraTurn(game) ? CPU_AGAIN_MS : CPU_WAIT_MS);
+  }
+  function claimed(player, over) {
+    Sound.sfx("coin");
+    if (game.claimed.length > 1) later(() => Sound.sfx("coin"), 120);
+    Fx.pop(el.sides[personOf(player)].count);
+    if (over) return;
+    later(() => {
+      extraSound();
+      el.callout.className = cls("dots-callout", ink(player));
+      el.callout.hidden = false;
+      Fx.replay(el.callout, "dots-show");
+      later(() => { el.callout.hidden = true; }, CALLOUT_MS);
+    }, 130);
+  }
+  function cpuTurn(wait) {
+    go({ busy: true, thinking: true });
+    later(() => {
+      const line = safeCpuMove();
+      go({ aim: line });
+      later(() => commit(line), Math.round(wait * 0.45));
+    }, Math.round(wait * 0.55));
+  }
+  function safeCpuMove() {
+    try {
+      return R.cpuMove(game, settings.level);
+    } catch (e) {
+      console.error("DotsBoxes: CPU move failed, drawing the first open line", e);
+      return R.legalMoves(game)[0];
+    }
+  }
+  /* winner is a rules player (0 moves first) or null for a draw. */
+  function finish(winner, resigned) {
+    clearTimers();
+    Music.stop();
+    const wins = match.wins.map((w, i) => (winner !== null && i === personOf(winner) ? w + 1 : w));
+    match = { ...match, wins, draws: match.draws + (winner === null ? 1 : 0) };
+    go({ phase: "over", busy: false, thinking: false, armed: false, aim: -1, pressed: false, result: { winner, resigned } });
+    celebrate(winner);
+    Fx.pop(el.title);
+  }
+  function celebrate(winner) {
+    if (winner === null) return Sound.sfx("reveal");
+    if (vsCpu() && isCpu(winner)) return Sound.sfx("lose");
+    Sound.sfx(vsCpu() ? "victory" : "fanfare");
+    Fx.confetti();
+  }
+  /* Nothing to resign before the first line; this also keeps a double tap on もう一回 from arming 投了. */
+  const canResign = () => ui.phase === "play" && !R.isOver(game) && game.moves.length > 0;
+  function resign() {
+    if (!canResign()) return;
+    if (!ui.armed) {
+      arms += 1;
+      const stamp = arms;
+      go({ armed: stamp });
+      later(() => { if (ui.armed === stamp) go({ armed: false }); }, ARM_MS);
+      return;
+    }
+    const loser = vsCpu() ? humanPlayer() : game.turn;
+    finish(1 - loser, true);
+  }
+  /* Vs the CPU, undo goes back to just before your latest line (the CPU's replies go too). */
+  function canUndo() {
+    if (ui.phase !== "play" || ui.busy || R.isOver(game)) return false;
+    return vsCpu() ? game.movers.includes(humanPlayer()) : game.moves.length > 0;
+  }
+  function takeBack() {
+    if (!canUndo()) return;
+    game = vsCpu() ? R.undoLastBy(game, humanPlayer()) : R.undo(game, 1);
+    clearTimers(); /* the coin and "もう1本！" of a box just taken back must not play */
+    shown = game.moves.length;
+    anim = { line: -1, boxes: [] };
+    Sound.sfx("back");
+    go({ armed: false, aim: -1 });
+  }
+
+  /* ---------- touch and keys ---------- */
+  function lineAt(e) {
+    const rect = el.board.getBoundingClientRect();
+    if (!board || !rect.width || !rect.height) return -1;
+    const span = board.n * U + 2 * PAD;
+    const x = ((e.clientX - rect.left) / rect.width) * span - PAD;
+    const y = ((e.clientY - rect.top) / rect.height) * span - PAD;
+    return R.lineNear(board.n, x / U, y / U);
+  }
+  function aimAt(line, pressed) {
+    const aim = line >= 0 && R.canPlay(game, line) ? line : -1;
+    if (aim === ui.aim && pressed === ui.pressed) return;
+    if (aim >= 0 && aim !== ui.aim && pressed) aimSound();
+    go({ aim, pressed });
+  }
+  function onDown(e) {
+    if (!live() || (e.pointerType === "mouse" && e.button !== 0)) return;
+    Sound.ensure();
+    try { el.board.setPointerCapture(e.pointerId); } catch (err) { /* capture unsupported: moves still arrive while over the board */ }
+    aimAt(lineAt(e), true);
+  }
+  function onMove(e) {
+    if (live() && (ui.pressed || e.pointerType === "mouse")) aimAt(lineAt(e), ui.pressed);
+  }
+  /* Lifting the finger draws the line under it; sliding off the board cancels. */
+  function onUp(e) {
+    if (!ui.pressed) return;
+    const line = lineAt(e);
+    ui = { ...ui, pressed: false };
+    if (!live()) return render();
+    if (line >= 0 && R.canPlay(game, line)) return commit(line);
+    if (line >= 0) nopeSound();
+    aimAt(e.pointerType === "mouse" ? line : -1, false);
+  }
+  function onLeave() {
+    if (!ui.pressed && ui.aim >= 0 && live()) aimAt(-1, false);
+  }
+  function onCancel() {
+    if (ui.pressed) go({ pressed: false, aim: -1 });
+  }
+  function midpoint(line) {
+    const e = R.lineEnds(game.size, line);
+    return [(e.x1 + e.x2) / 2, (e.y1 + e.y2) / 2];
+  }
+  /* The nearest open line in the arrow's direction. */
+  function stepAim(dx, dy) {
+    const legal = R.legalMoves(game);
+    if (ui.aim < 0) return legal[0];
+    const [x, y] = midpoint(ui.aim);
+    const scored = legal.map(l => {
+      const [lx, ly] = midpoint(l);
+      const along = (lx - x) * dx + (ly - y) * dy;
+      return { l, along, score: along + 2 * (Math.abs((lx - x) * dy) + Math.abs((ly - y) * dx)) };
+    }).filter(c => c.along > 0.01).sort((a, b) => a.score - b.score);
+    return scored.length ? scored[0].l : ui.aim;
+  }
+  function onKey(e) {
+    if (!live()) return;
+    const step = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key];
+    if (step) {
+      e.preventDefault();
+      aimAt(stepAim(...step), false);
+    } else if ((e.key === "Enter" || e.key === " ") && ui.aim >= 0) {
+      e.preventDefault();
+      commit(ui.aim);
+    }
+  }
+  function keyboardFocus() {
+    try { return el.board.matches(":focus-visible"); } catch (e) { return false; }
+  }
+  function bindBoard() {
+    el.board.addEventListener("pointerdown", onDown);
+    el.board.addEventListener("pointermove", onMove);
+    el.board.addEventListener("pointerup", onUp);
+    el.board.addEventListener("pointercancel", onCancel);
+    el.board.addEventListener("pointerleave", onLeave);
+    el.board.addEventListener("keydown", onKey);
+    el.board.addEventListener("contextmenu", (e) => e.preventDefault());
+    el.board.addEventListener("focus", () => { if (keyboardFocus() && live() && ui.aim < 0) aimAt(stepAim(0, 0), false); });
+    el.board.addEventListener("blur", () => { if (!ui.pressed && ui.aim >= 0 && live()) aimAt(-1, false); });
+  }
+
+  /* ---------- board (SVG, built once per size) ---------- */
+  function svg(tag, attrs, className) {
+    const node = document.createElementNS(NS, tag);
+    Object.entries(attrs).forEach(([k, v]) => node.setAttribute(k, String(v)));
+    if (className) node.setAttribute("class", className);
+    return node;
+  }
+  const group = (nodes) => {
+    const g = svg("g", {});
+    g.append(...nodes);
+    return g;
+  };
+  function place(node, line) {
+    const e = R.lineEnds(board.n, line);
+    [["x1", e.x1], ["y1", e.y1], ["x2", e.x2], ["y2", e.y2]].forEach(([k, v]) => node.setAttribute(k, String(v * U)));
+  }
+  function buildBox(n, b) {
+    const x = (b % n) * U;
+    const y = Math.floor(b / n) * U;
+    const g = svg("g", {}, "dots-box");
+    const text = svg("text", { x: x + U / 2, y: y + U / 2 + 2, "text-anchor": "middle", "dominant-baseline": "central" });
+    g.append(svg("rect", { x: x + INSET, y: y + INSET, width: U - 2 * INSET, height: U - 2 * INSET, rx: 12 }), text);
+    return { g, text };
+  }
+  function buildBoard(n) {
+    if (board && board.n === n) return;
+    const span = n * U + 2 * PAD;
+    const root = svg("svg", { viewBox: `${-PAD} ${-PAD} ${span} ${span}`, "aria-hidden": "true", focusable: "false" }, "dots-svg");
+    const lines = Array.from({ length: R.lineCount(n) }, (_, l) => l);
+    const boxes = Array.from({ length: R.boxCount(n) }, (_, b) => buildBox(n, b));
+    const strokes = lines.map(() => svg("line", {}, "dots-line dots-off"));
+    const halo = svg("line", {}, "dots-halo dots-off");
+    const preview = svg("line", {}, "dots-preview dots-off");
+    const dots = Array.from({ length: (n + 1) * (n + 1) }, (_, i) =>
+      svg("circle", { cx: (i % (n + 1)) * U, cy: Math.floor(i / (n + 1)) * U, r: DOT_R }, "dots-dot"));
+    const guides = lines.map(() => svg("line", {}, "dots-guide"));
+    root.append(group(boxes.map(b => b.g)), group(guides), halo, group(strokes), preview, group(dots));
+    board = { n, boxes, strokes, halo, preview };
+    lines.forEach(l => { place(guides[l], l); place(strokes[l], l); });
+    el.board.replaceChildren(root);
+  }
+  function setClass(node, value) {
+    if (node.getAttribute("class") !== value) node.setAttribute("class", value);
+  }
+  /* Boxes that would get a third side from the aimed line (shown as a warning on your turn). */
+  function warned() {
+    if (!live() || ui.aim < 0 || !R.givesAway(game, ui.aim)) return [];
+    return R.boxesOfLine(game.size, ui.aim).filter(b => R.sides(game, b) === 2);
+  }
+  function renderBoard() {
+    if (game.moves.length !== shown) {
+      anim = game.moves.length === shown + 1 && !reduced() ? { line: game.last, boxes: game.claimed } : { line: -1, boxes: [] };
+      shown = game.moves.length;
+    }
+    const warn = warned();
+    setClass(el.board, cls("dots-board", live() && "dots-live", ui.phase === "over" && "dots-over"));
+    board.strokes.forEach((node, l) => {
+      const owner = game.lines[l];
+      setClass(node, owner === null ? "dots-line dots-off" : cls("dots-line", ink(owner), l === anim.line && "dots-draw"));
+    });
+    board.boxes.forEach((box, b) => {
+      const owner = game.boxes[b];
+      setClass(box.g, cls("dots-box", owner !== null && `dots-on ${ink(owner)}`, anim.boxes.includes(b) && "dots-new", warn.includes(b) && "dots-warn"));
+      box.text.textContent = owner === null ? "" : match.people[personOf(owner)].mark;
+    });
+    const aimed = ui.phase === "play" && ui.aim >= 0 && R.canPlay(game, ui.aim) && (live() || ui.thinking);
+    if (aimed) place(board.preview, ui.aim);
+    setClass(board.preview, aimed ? cls("dots-preview", ink(game.turn), (ui.pressed || ui.thinking) && "dots-press") : "dots-preview dots-off");
+    if (game.last !== null) place(board.halo, game.last);
+    setClass(board.halo, game.last !== null && ui.phase === "play" ? cls("dots-halo", ink(game.lines[game.last])) : "dots-halo dots-off");
+  }
+
+  /* ---------- text for each screen ---------- */
+  const levelTag = () => (vsCpu() ? `CPU ${LEVEL_LABELS[settings.level]}・` : "");
+  const sizeTag = () => `${game.size}×${game.size}`;
+  function playHint() {
+    if (R.isOver(game)) return "最後の箱が決まった！";
+    if (ui.thinking) return "どこに線を引くか考えています";
+    if (warned().length) return "その線は3本目。相手に箱を取られちゃうかも";
+    if (R.extraTurn(game)) return "箱を取ったので、続けてもう1本！";
+    if (game.moves.length < 2) return "点と点のあいだをタップ。指をすべらせて選んで、はなすと線が引ける";
+    return "箱の4辺目を引いた人が、その箱をもらえる";
+  }
+  function playTitle() {
+    if (R.isOver(game)) return "そこまで！";
+    if (ui.thinking) return "CPUが考え中…";
+    return `${who(game.turn)}の番${R.extraTurn(game) ? "（もう1本）" : ""}`;
+  }
+  function tally() {
+    const [a, b] = match.people;
+    const draws = match.draws ? `・引き分け${match.draws}` : "";
+    return `通算 ${a.name}${match.wins[0]}勝・${b.name}${match.wins[1]}勝${draws}`;
+  }
+  function overTitle() {
+    const w = ui.result.winner;
+    if (w === null) return "引き分け！";
+    if (vsCpu()) return isCpu(w) ? "CPUの勝ち…" : "あなたの勝ち！";
+    return `${who(w)}の勝ち！`;
+  }
+  function overReason() {
+    const { winner, resigned } = ui.result;
+    if (resigned) return `${who(1 - winner)}が投了しました。`;
+    const [a, b] = [0, 1].map(person => game.scores[match.first === person ? 0 : 1]);
+    return winner === null ? `箱は${a}対${b}で同じ数。` : `箱は${a}対${b}。`;
+  }
+
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: () => ({
+      label: `${levelTag()}${sizeTag()}・残り${left()}本`,
+      title: playTitle(),
+      hint: playHint(),
+      actions: [
+        makeButton("1手もどす", takeBack, "small", !canUndo()),
+        makeButton(ui.armed ? "本当に投了する" : "投了", resign, ui.armed ? "primary danger" : "small", !canResign())
+      ]
+    }),
+    over: () => ({
+      label: `${levelTag()}${sizeTag()}・${game.moves.length}本で決着`,
+      title: overTitle(),
+      hint: `${overReason()}　${tally()}`,
+      actions: [makeButton("設定", toSetup, "small"), makeButton("もう一回", rematch, "primary")]
+    })
+  };
+
+  /* ---------- rendering ---------- */
+  function renderSetup() {
+    const cpu = settings.vs === "cpu";
+    View.chips($("oVsChips"), options(VS), settings.vs, v => update({ vs: v }));
+    View.chips($("oLevelChips"), options(LEVEL_LABELS), settings.level, v => update({ level: v }));
+    View.chips($("oOrderChips"), options(ORDER), settings.order, v => update({ order: v }));
+    View.chips($("oSizeChips"), R.SIZES.map(n => ({ value: n, label: `${n}×${n}` })), settings.size, v => update({ size: v }));
+    el.levelOpt.hidden = !cpu;
+    el.orderOpt.hidden = !cpu;
+    el.names.hidden = cpu;
+    View.list(el.rules, [
+      "交代で、となり合う点と点のあいだに線を1本ずつ引く",
+      "箱の4辺目を引いた人がその箱をもらい、続けてもう1本引ける",
+      "線が全部引かれたら終わり。箱が多いほうの勝ち（同じ数なら引き分け）",
+      "3本目の線は相手へのプレゼントになりがち。最後は長い列のゆずり合い",
+      cpu ? `CPU（${LEVEL_LABELS[settings.level]}）は${LEVEL_NOTES[settings.level]}` : "1台のスマホを交代で持って遊ぶ。もう一回のたびに先攻が入れかわる"
+    ]);
+  }
+  function stateText(person, player, turn) {
+    if (ui.phase === "over") {
+      const w = ui.result.winner;
+      if (w === player) return "勝ち！";
+      if (w === null) return "引き分け";
+    }
+    if (turn) return ui.thinking ? "考え中…" : "いまの番";
+    return `${COLOR[person]}・${match.wins[person]}勝`;
+  }
+  function renderScores() {
+    [0, 1].forEach(person => {
+      const s = el.sides[person];
+      const player = match.first === person ? 0 : 1;
+      const turn = ui.phase === "play" && !R.isOver(game) && game.turn === player;
+      const won = ui.phase === "over" && ui.result.winner === player;
+      setClass(s.box, cls("dots-side", `dots-c${person}`, turn && "dots-on", turn && ui.thinking && "dots-think", won && "dots-won"));
+      s.who.textContent = match.people[person].name;
+      s.mark.textContent = match.people[person].mark;
+      s.state.textContent = stateText(person, player, turn);
+      s.count.textContent = String(game.scores[player]);
+    });
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else {
+      renderScores();
+      renderBoard();
+    }
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function init() {
+    settings = normalize(Store.load(KEY, null));
+    Duo.fill(el.nameInputs);
+    bindBoard();
+    render();
+  }
+  function leave() {
+    clearTimers();
+    if (ui.phase === "play") ui = { ...ui, busy: false, thinking: false, armed: false, pressed: false, aim: -1 };
+  }
+  function onShow() {
+    if (ui.phase === "setup") Duo.fill(el.nameInputs);
+    if (ui.phase !== "play") return;
+    leave(); /* a second onShow must not start a second CPU turn */
+    Music.play("think");
+    if (R.isOver(game)) {
+      finish(game.winner, false); /* left during the last box: settle it now */
+      return;
+    }
+    render();
+    if (isCpu(game.turn)) cpuTurn(CPU_WAIT_MS);
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
 <!-- games:scripts -->
 <script>
 /* main.js */
@@ -30191,6 +31465,7 @@ const Anzan = (() => {
     { id: "simon", title: "サイモン", players: "1人", desc: "光る順番を覚えて同じ順にタップ", color: "--c-green", el: "modeSimon", game: Simon, group: "brain" },
     { id: "iq", title: "IQチャレンジ", players: "1人", desc: "数列と図形の20問。IQ目安が出る", color: "--c-violet", el: "modeIqChallenge", game: IqChallenge, group: "brain" },
     { id: "anzan", title: "フラッシュ暗算", players: "1人", desc: "パッと消える数字を頭の中で足し算", color: "--c-gold", el: "modeAnzan", game: Anzan, group: "brain" },
+    { id: "dots", title: "ドット&ボックス", players: "2人・CPU", desc: "線を引いて、4辺目で箱を取り合う", color: "--c-lime", el: "modeDotsBoxes", game: DotsBoxes, group: "classic" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

@@ -1,0 +1,96 @@
+/* ドット&ボックス: score bar, the dot board (inline SVG), pen lines, claimed boxes and the "もう1本！" callout.
+   Player pens use the app's color tokens: the first person is blue, the second red, in both themes. */
+.dots-c0 { --dots-ink: var(--c-blue); }
+.dots-c1 { --dots-ink: var(--c-red); }
+
+/* ---------- layout ---------- */
+#modeDotsBoxes .stage { padding-inline: 8px; padding-block: 12px; }
+#oSetup { padding-inline: 8px; box-sizing: border-box; }
+.dots-play { gap: 10px; }
+.dots-title { font-size: 1.25rem; min-height: 1.35em; }
+.dots-actions { justify-content: center; }
+
+/* ---------- score bar ---------- */
+.dots-scores { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.dots-side {
+  display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 6px; min-width: 0;
+  padding: 6px 8px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--paper);
+  text-align: left; transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+.dots-side.dots-on { border-color: var(--dots-ink); box-shadow: 0 3px 0 var(--dots-ink); transform: translateY(-2px); }
+.dots-side.dots-won { background: var(--dots-ink); border-color: var(--dots-ink); color: var(--on-tile); }
+.dots-mark {
+  width: 24px; height: 24px; border-radius: 7px; display: grid; place-items: center; box-sizing: border-box;
+  font-family: var(--display); font-size: .9rem; line-height: 1; color: var(--dots-ink);
+  background: color-mix(in srgb, var(--dots-ink) 22%, transparent); border: 2.5px solid var(--dots-ink);
+}
+.dots-side.dots-won .dots-mark { color: var(--on-tile); border-color: var(--on-tile); }
+.dots-side.dots-on.dots-think .dots-mark { animation: dotsThink .9s ease-in-out infinite; }
+@keyframes dotsThink { 50% { transform: scale(.82); } }
+.dots-who { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.dots-name { font-weight: 700; font-size: .85rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dots-state { font-size: .72rem; color: var(--muted); min-height: 1.25em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dots-side.dots-on .dots-state { color: var(--dots-ink); font-weight: 700; }
+.dots-side.dots-won .dots-state { color: var(--on-tile); font-weight: 700; }
+.dots-count {
+  font-family: var(--display); font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums;
+  min-width: 1.1em; text-align: right;
+}
+
+/* ---------- board ---------- */
+.dots-wrap { position: relative; width: min(100%, 420px); }
+/* On short phones (375x667) the board shrinks so the buttons below it stay on screen. */
+@supports (height: 100svh) {
+  .dots-wrap { width: min(100%, 420px, max(260px, 100svh - 375px)); }
+}
+.dots-board {
+  width: 100%; aspect-ratio: 1; border-radius: 16px; outline: none;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.dots-board.dots-live { cursor: pointer; }
+.dots-board:focus-visible { box-shadow: 0 0 0 3px var(--accent); }
+.dots-svg { display: block; width: 100%; height: 100%; overflow: visible; }
+
+.dots-guide { stroke: var(--muted); stroke-width: 5; stroke-linecap: round; stroke-dasharray: 1 13; opacity: .45; }
+.dots-line, .dots-preview, .dots-halo { stroke: var(--dots-ink); stroke-linecap: round; fill: none; }
+.dots-line { stroke-width: 13; }
+.dots-line.dots-draw { stroke-dasharray: 100 100; animation: dotsDraw .24s cubic-bezier(.3, .7, .4, 1) both; }
+@keyframes dotsDraw { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+.dots-preview { stroke-width: 13; opacity: .42; stroke-dasharray: 12 12; }
+.dots-preview.dots-press { opacity: .72; stroke-dasharray: none; }
+.dots-halo { stroke-width: 30; opacity: .16; }
+.dots-off { display: none; }
+.dots-dot { fill: var(--ink); }
+
+.dots-box rect { fill: transparent; transition: fill .2s; }
+.dots-box text {
+  fill: var(--dots-ink); font-family: var(--display); font-size: 46px; opacity: 0;
+  pointer-events: none; user-select: none; -webkit-user-select: none;
+}
+.dots-box.dots-on rect { fill: color-mix(in srgb, var(--dots-ink) 24%, transparent); }
+.dots-box.dots-on text { opacity: 1; }
+.dots-box.dots-new { transform-box: fill-box; transform-origin: center; animation: dotsClaim .36s cubic-bezier(.2, 1.4, .4, 1) both; }
+@keyframes dotsClaim { from { transform: scale(.3); opacity: 0; } to { transform: none; opacity: 1; } }
+.dots-box.dots-warn rect { fill: color-mix(in srgb, var(--alert) 12%, transparent); stroke: var(--alert); stroke-width: 3; stroke-dasharray: 8 7; }
+.dots-board.dots-over .dots-box:not(.dots-on) rect { fill: var(--line); }
+
+/* ---------- "もう1本！" callout ---------- */
+.dots-callout {
+  position: absolute; left: 50%; top: 50%; z-index: 2; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(2rem, 11vw, 3rem); line-height: 1;
+  padding: 8px 24px 12px; border-radius: 18px; border: 3px solid var(--ink); box-shadow: 0 6px 0 var(--ink);
+  background: var(--dots-ink); color: var(--on-tile); transform: translate(-50%, -50%) rotate(-4deg);
+}
+.dots-callout.dots-show { animation: dotsCallout .95s ease-out both; }
+@keyframes dotsCallout {
+  0% { opacity: 0; transform: translate(-50%, -50%) rotate(-4deg) scale(1.9); }
+  20% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+  72% { opacity: 1; transform: translate(-50%, -50%) rotate(-4deg) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -70%) rotate(-4deg) scale(.96); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dots-line.dots-draw, .dots-box.dots-new, .dots-callout.dots-show, .dots-side.dots-on.dots-think .dots-mark { animation: none; }
+  .dots-side, .dots-box rect { transition: none; }
+  .dots-side.dots-on { transform: none; }
+}

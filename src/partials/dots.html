@@ -1,0 +1,42 @@
+<!-- ===== ドット&ボックス ===== -->
+<div class="mode" id="modeDotsBoxes" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="oSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="oVsChips"></div></div>
+        <div class="opt" id="oLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="oLevelChips"></div></div>
+        <div class="opt" id="oOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="oOrderChips"></div></div>
+      </div>
+      <div class="setup-form" id="oNames" hidden>
+        <label for="oInput1">1人目（青）<input class="name-input" id="oInput1" maxlength="12" autocomplete="off"></label>
+        <label for="oInput2">2人目（赤）<input class="name-input" id="oInput2" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">盤の大きさ</span><div class="chips" id="oSizeChips"></div></div>
+      </div>
+      <ul class="rules" id="oRules"></ul>
+    </section>
+    <section class="panel dots-play" id="oPlay" hidden>
+      <div class="dots-scores">
+        <div class="dots-side dots-c0" id="oSide0">
+          <span class="dots-mark" id="oMark0" aria-hidden="true"></span>
+          <span class="dots-who"><span class="dots-name" id="oWho0"></span><span class="dots-state" id="oState0"></span></span>
+          <span class="dots-count" id="oCount0">0</span>
+        </div>
+        <div class="dots-side dots-c1" id="oSide1">
+          <span class="dots-mark" id="oMark1" aria-hidden="true"></span>
+          <span class="dots-who"><span class="dots-name" id="oWho1"></span><span class="dots-state" id="oState1"></span></span>
+          <span class="dots-count" id="oCount1">0</span>
+        </div>
+      </div>
+      <span class="label" id="oLabel"></span>
+      <p class="d-title dots-title" id="oTitle"></p>
+      <div class="dots-wrap">
+        <div class="dots-board" id="oBoard" tabindex="0" role="application" aria-label="ドット&amp;ボックスの盤。矢印キーで線をえらび、Enterで引く"></div>
+        <div class="dots-callout" id="oCallout" hidden>もう1本！</div>
+      </div>
+      <p class="hint" id="oHint"></p>
+    </section>
+  </main>
+  <div class="actions dots-actions" id="oActions"></div>
+</div>

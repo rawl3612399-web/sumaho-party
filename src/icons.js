@@ -46,6 +46,7 @@ const Icons = (() => {
     simon: svg('<path d="M3.14 10.4A9 9 0 0 1 10.4 3.14V8.78A3.6 3.6 0 0 0 8.78 10.4z" fill="currentColor"/><path d="M13.6 3.14A9 9 0 0 1 20.86 10.4H15.22A3.6 3.6 0 0 0 13.6 8.78z"/><path d="M20.86 13.6A9 9 0 0 1 13.6 20.86V15.22A3.6 3.6 0 0 0 15.22 13.6z"/><path d="M10.4 20.86A9 9 0 0 1 3.14 13.6H8.78A3.6 3.6 0 0 0 10.4 15.22z"/>'),
     iq: svg('<path d="M9.5 17.5h5M10.5 20.5h3"/><path d="M12 3.5a5.5 5.5 0 0 0-3.2 10c.5.4.7.9.7 1.5v.5h5V15c0-.6.2-1.1.7-1.5a5.5 5.5 0 0 0-3.2-10z"/><path d="M10.5 9.5l1.5 1.5 1.5-1.5"/>'),
     anzan: svg('<rect x="2.5" y="4.5" width="19" height="13" rx="2.5"/><path d="M6.5 11h4M8.5 9v4"/><path d="M15.5 7.5l-2 3.5h3l-2 3.5"/><path d="M9 21h6"/>'),
+    dots: svg('<path d="M5 5h7v7H5z" fill="currentColor" fill-opacity=".3"/><path d="M12 12v7M19 5v7M12 19h7"/><g fill="currentColor" stroke="none"><circle cx="5" cy="5" r="1.7"/><circle cx="12" cy="5" r="1.7"/><circle cx="19" cy="5" r="1.7"/><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/><circle cx="5" cy="19" r="1.7"/><circle cx="12" cy="19" r="1.7"/><circle cx="19" cy="19" r="1.7"/></g>'),
     /* games:icons */
   };
 })();
