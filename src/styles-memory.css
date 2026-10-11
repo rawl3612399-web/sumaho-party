@@ -1,0 +1,109 @@
+/* 神経衰弱: phone-sized card grid (cards from styles-cards.css), flip / match / miss motion, score bar, results.
+   Card width comes from --memory-w and the column count from --memory-cols, both set by memory.js. */
+
+/* ---------- layout ---------- */
+.memory-stage { padding: 14px 8px; }
+#sSetup { padding-inline: 8px; box-sizing: border-box; }
+.memory-play { gap: 10px; }
+.memory-title { font-size: 1.25rem; min-height: 1.35em; }
+.memory-hint { min-height: 1.4em; }
+.memory-actions { justify-content: center; }
+.memory-record { font-size: .85rem; }
+.memory-result { margin-block: 4px; }
+
+/* ---------- score bar ---------- */
+.memory-scores {
+  display: grid; grid-template-columns: repeat(var(--memory-n, 2), minmax(0, 1fr)); gap: 6px; width: 100%;
+}
+.memory-side {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0;
+  padding: 5px 9px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--paper);
+  transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+.memory-side.on { border-color: var(--c-rose); box-shadow: 0 3px 0 var(--c-rose); transform: translateY(-2px); }
+.memory-side.won { background: var(--c-rose); border-color: var(--c-rose); color: var(--on-tile); }
+.memory-name {
+  font-weight: 700; font-size: .8rem; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.memory-side.on .memory-name { color: var(--c-rose); }
+.memory-side.won .memory-name { color: var(--on-tile); }
+.memory-count {
+  font-family: var(--display); font-weight: 400; font-size: 1.45rem; line-height: 1.15;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Three or four boxes: name above the number so nothing gets cut off at 375px. */
+.memory-scores.memory-stack .memory-side { flex-direction: column; justify-content: center; gap: 0; padding: 3px 4px; }
+.memory-scores.memory-stack .memory-name { font-size: .72rem; max-width: 100%; }
+.memory-scores.memory-stack .memory-count { font-size: 1.3rem; }
+.memory-side.thinking .memory-count { animation: memoryThink .9s ease-in-out infinite; }
+@keyframes memoryThink { 50% { opacity: .35; } }
+
+/* ---------- grid ---------- */
+.memory-grid {
+  --memory-gap: 6px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--memory-gap);
+  width: calc(var(--memory-cols, 4) * var(--memory-w, 56px) + (var(--memory-cols, 4) - 1) * var(--memory-gap));
+  max-width: 100%;
+  touch-action: manipulation;
+}
+.memory-slot {
+  position: relative; flex: none; width: var(--memory-w, 56px); aspect-ratio: 5 / 7;
+  margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer;
+  border-radius: calc(var(--memory-w, 56px) * .1);
+  -webkit-user-select: none; user-select: none;
+}
+.memory-slot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.memory-grid .pcard { --w: var(--memory-w, 56px); transition: transform .18s ease-out; }
+.memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):active .pcard { transform: scale(.93); }
+@media (hover: hover) {
+  .memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):hover .pcard { transform: translateY(-3px); }
+}
+.memory-grid.memory-locked .memory-slot { cursor: default; }
+.memory-slot.memory-open .pcard { transform: translateY(-4px); }
+.memory-slot.memory-open .pc-front { box-shadow: 0 0 0 2.5px var(--c-rose), 0 6px 10px var(--pc-shadow); }
+.memory-slot.memory-hit .pc-front { box-shadow: 0 0 0 3px var(--go), 0 6px 12px var(--pc-shadow); }
+.memory-slot.memory-miss .pc-front { box-shadow: 0 0 0 3px var(--alert), 0 4px 8px var(--pc-shadow); }
+.memory-slot.memory-hit .pcard { animation: memoryHit .42s cubic-bezier(.2, 1.4, .4, 1) .12s; }
+.memory-slot.memory-miss { animation: memoryMiss .34s ease-in-out .3s; }
+
+/* Taken: an empty dashed spot keeps the grid steady. */
+.memory-slot.memory-gone { cursor: default; }
+.memory-slot.memory-gone::before {
+  content: ""; position: absolute; inset: 2px; border-radius: inherit;
+  border: 2px dashed var(--line);
+}
+.memory-slot.memory-gone .pcard { visibility: hidden; }
+
+/* A matched pair lifts and flies into the player's score box (offset set by memory.js). */
+.memory-slot.memory-fly { z-index: 5; }
+.memory-slot.memory-fly .pcard { animation: memoryFly .64s cubic-bezier(.45, 0, .7, .2) forwards; }
+
+/* Deal: cards drop in one after another. */
+.memory-slot.memory-deal .pcard {
+  animation: memoryDeal .36s cubic-bezier(.2, 1.2, .4, 1) both;
+  animation-delay: calc(var(--memory-i, 0) * 22ms);
+}
+
+@keyframes memoryHit { 40% { transform: translateY(-9px) scale(1.08); } 100% { transform: translateY(-4px); } }
+@keyframes memoryMiss {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-4px) rotate(-2deg); }
+  75% { transform: translateX(4px) rotate(2deg); }
+}
+@keyframes memoryFly {
+  0% { transform: translateY(-4px); opacity: 1; }
+  30% { transform: translateY(-18px) scale(1.12); opacity: 1; }
+  100% { transform: translate(var(--memory-dx, 0px), var(--memory-dy, -120px)) scale(.3); opacity: 0; }
+}
+@keyframes memoryDeal { from { transform: translateY(-26px) scale(.6) rotate(-10deg); opacity: 0; } }
+@keyframes memoryFade { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-grid .pcard, .memory-side { transition: none; }
+  .memory-slot.memory-deal .pcard, .memory-slot.memory-hit .pcard, .memory-slot.memory-miss,
+  .memory-side.thinking .memory-count { animation: none; }
+  .memory-slot.memory-fly .pcard { animation: memoryFade .3s ease-out forwards; }
+  .memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):hover .pcard { transform: none; }
+  .memory-side.on, .memory-slot.memory-open .pcard { transform: none; }
+}

@@ -28,6 +28,9 @@
     { id: "aim", title: "的当てタップ", players: "1人", desc: "出てくる的をすばやくタップ。命中率も勝負", color: "--c-orange", el: "modeAim", game: Aim, group: "reflex" },
     { id: "snake", title: "スネーク", players: "1人", desc: "エサを食べてのびるヘビ。壁と体に注意", color: "--c-lime", el: "modeSnake", game: Snake, group: "reflex" },
     { id: "blockfall", title: "ブロックおとし", players: "1人", desc: "横一列そろえて消す落ちものパズル", color: "--c-indigo", el: "modeBlockfall", game: Blockfall, group: "reflex" },
+    { id: "memory", title: "神経衰弱", players: "1〜4人・CPU", desc: "めくって覚えて、同じ数字と色をそろえる", color: "--c-rose", el: "modeMemory", game: Memory, group: "classic" },
+    { id: "yacht", title: "ヨット", players: "1〜4人・CPU", desc: "サイコロ5個で役をそろえて高得点を目指す", color: "--c-violet", el: "modeYacht", game: Yacht, group: "classic" },
+    { id: "blackjack", title: "ブラックジャック", players: "1人", desc: "21に近づけてディーラーに勝とう", color: "--c-sky", el: "modeBlackjack", game: Blackjack, group: "classic" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };
@@ -149,7 +152,7 @@
   /* Small click sounds for every button, so the whole app feels responsive. */
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button");
-    if (!t || t.disabled || t.classList.contains("menu-card") || t.id === "soundBtn") return;
+    if (!t || t.disabled || t.classList.contains("menu-card") || t.id === "soundBtn" || "silent" in t.dataset) return;
     if (t.classList.contains("chip")) Sound.sfx("select");
     else if (!t.classList.contains("key")) Sound.sfx("tap");
   });

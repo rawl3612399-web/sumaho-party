@@ -1,0 +1,193 @@
+/* ヨット: ivory dice with CSS pips on a felt tray, and a score sheet that fits 375px. Colors come from tokens only;
+   the felt, dice and shadow tokens below are defined for light, dark (system) and dark (forced). Dice stay ivory in both themes. */
+:root {
+  --y-felt: #1d7550; --y-felt-hi: #2a9467; --y-felt-deep: #11573a; --y-rim: #8a5527;
+  --y-die: #fbf9f2; --y-die-hi: #ffffff; --y-die-shade: #ddd7c8; --y-die-edge: #b9b09b;
+  --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(8, 28, 18, .38); --y-dot-off: rgba(255, 255, 255, .22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --y-felt: #165a3e; --y-felt-hi: #1f7352; --y-felt-deep: #0c3b28; --y-rim: #5a3618;
+    --y-die: #f0ede3; --y-die-hi: #fbf9f2; --y-die-shade: #c9c2b1; --y-die-edge: #948b76;
+    --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(0, 0, 0, .55); --y-dot-off: rgba(255, 255, 255, .16);
+  }
+}
+:root[data-theme="dark"] {
+  --y-felt: #165a3e; --y-felt-hi: #1f7352; --y-felt-deep: #0c3b28; --y-rim: #5a3618;
+  --y-die: #f0ede3; --y-die-hi: #fbf9f2; --y-die-shade: #c9c2b1; --y-die-edge: #948b76;
+  --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(0, 0, 0, .55); --y-dot-off: rgba(255, 255, 255, .16);
+}
+
+/* ---------- play view ---------- */
+.stage.yacht-playing { padding: 12px 6px 14px; gap: 10px; }
+.stage.yacht-playing .panel { gap: 10px; }
+.word-card.yacht-final .wc-main { font-variant-numeric: tabular-nums; }
+.result-list.yacht-ranking { max-width: none; }
+
+/* ---------- bottom dock: dice tray, hint and buttons stay under the thumb ---------- */
+.yacht-dock {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-inline: -16px; padding: 14px 16px max(6px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--paper) 82%, transparent);
+}
+.yacht-dock-setup { position: static; background: none; padding-top: 0; }
+.yacht-dock-setup .yacht-hintbox { display: none; }
+.yacht-hintbox { min-height: 2.5em; display: grid; place-items: center; text-align: center; }
+.yacht-hintbox .hint { font-size: .86rem; line-height: 1.25; }
+#yActions { justify-content: center; }
+
+.yacht-tray {
+  position: relative; box-sizing: border-box; width: min(100%, 420px); align-self: center;
+  padding: 20px 6px 4px; border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 35%, var(--y-felt-hi), var(--y-felt) 62%, var(--y-felt-deep));
+  border: 2.5px solid var(--ink);
+  box-shadow: inset 0 0 0 5px var(--y-rim), inset 0 9px 16px var(--y-shadow), 0 5px 0 var(--ink);
+}
+.yacht-rolls { position: absolute; top: 9px; left: 50%; translate: -50% 0; display: flex; gap: 5px; }
+.yacht-rolls span { width: 8px; height: 8px; border-radius: 50%; background: var(--y-dot-off); transition: background .2s; }
+.yacht-rolls span.on { background: var(--zap); }
+
+/* ---------- dice ---------- */
+.yacht-dice { --die: min(13.6vw, 56px); display: flex; justify-content: center; gap: min(2.2vw, 10px); }
+.yacht-die {
+  position: relative; display: grid; justify-items: center; flex: none;
+  width: var(--die); padding: 12px 0 20px; margin: 0;
+  border: 0; background: none; font: inherit; cursor: default; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
+.yacht-die.can { cursor: pointer; }
+.yacht-die::before {
+  content: ""; position: absolute; left: 14%; right: 14%; bottom: 17px; height: 9px; border-radius: 50%;
+  background: var(--y-shadow); filter: blur(3px); transition: transform .2s, opacity .2s;
+}
+.yacht-die.held::before { transform: scale(.7); opacity: .55; }
+.yacht-die:focus-visible { outline: none; }
+.yacht-die:focus-visible .yacht-cube { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.yacht-cube {
+  position: relative; box-sizing: border-box; width: var(--die); aspect-ratio: 1;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 15%;
+  border-radius: 24%;
+  background: radial-gradient(circle at 28% 22%, var(--y-die-hi) 0 16%, var(--y-die) 52%, var(--y-die-shade));
+  box-shadow: inset -3px -4px 0 var(--y-die-shade), inset 2px 2px 0 var(--y-die-hi), 0 4px 0 var(--y-die-edge), 0 7px 8px var(--y-shadow);
+  transition: translate .2s cubic-bezier(.3, 1.5, .5, 1), box-shadow .2s;
+}
+.yacht-cube[data-face="0"] { opacity: .5; }
+.yacht-die.held .yacht-cube {
+  translate: 0 -12px;
+  box-shadow: inset -3px -4px 0 var(--y-die-shade), inset 2px 2px 0 var(--y-die-hi), 0 4px 0 var(--y-die-edge), 0 0 0 3px var(--zap), 0 14px 14px var(--y-shadow);
+}
+.yacht-cube i {
+  width: 74%; aspect-ratio: 1; place-self: center; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 40% 35%, var(--y-pip) 55%, var(--y-pip));
+  box-shadow: inset 0 2px 2px var(--y-shadow);
+}
+.yacht-cube[data-face="1"] i:nth-child(5),
+.yacht-cube[data-face="2"] i:is(:nth-child(3), :nth-child(7)),
+.yacht-cube[data-face="3"] i:is(:nth-child(3), :nth-child(5), :nth-child(7)),
+.yacht-cube[data-face="4"] i:is(:nth-child(1), :nth-child(3), :nth-child(7), :nth-child(9)),
+.yacht-cube[data-face="5"] i:is(:nth-child(1), :nth-child(3), :nth-child(5), :nth-child(7), :nth-child(9)),
+.yacht-cube[data-face="6"] i:is(:nth-child(1), :nth-child(3), :nth-child(4), :nth-child(6), :nth-child(7), :nth-child(9)) { opacity: 1; }
+.yacht-cube[data-face="1"] i:nth-child(5) { background: var(--y-pip-one); transform: scale(1.75); }
+
+.yacht-tag {
+  position: absolute; left: 50%; bottom: 0; translate: -50% 0;
+  font-size: .64rem; font-weight: 900; letter-spacing: .04em; line-height: 1.5; white-space: nowrap;
+  padding: 0 7px; border-radius: 999px; background: var(--zap); color: var(--on-zap);
+  opacity: 0; transform: scale(.6); transition: opacity .15s, transform .2s cubic-bezier(.3, 1.6, .5, 1); pointer-events: none;
+}
+.yacht-die.held .yacht-tag { opacity: 1; transform: none; }
+
+.yacht-tumble { animation: yTumble var(--dur, 520ms) cubic-bezier(.3, .6, .4, 1) both; }
+@keyframes yTumble {
+  0% { transform: none; }
+  22% { transform: translateY(-38%) rotate(calc(var(--spin, 1) * 150deg)) scale(1.08); }
+  46% { transform: translateY(-4%) rotate(calc(var(--spin, 1) * 280deg)) scale(.95, 1.04); }
+  66% { transform: translateY(-16%) rotate(calc(var(--spin, 1) * 335deg)) scale(1.03); }
+  86% { transform: translateY(0) rotate(calc(var(--spin, 1) * 362deg)) scale(1.04, .96); }
+  100% { transform: rotate(calc(var(--spin, 1) * 360deg)); }
+}
+.yacht-land { animation: yLand .2s ease-out; }
+@keyframes yLand { 40% { transform: scale(1.07, .93); } }
+
+.yacht-callout {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; pointer-events: none;
+  padding: 4px 18px; border-radius: 999px; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(1.3rem, 6.5vw, 1.9rem); line-height: 1.3;
+  background: var(--card); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+}
+.yacht-callout.hand { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); box-shadow: 0 4px 0 var(--accent-deep); }
+.yacht-callout.bonus { background: var(--go); color: var(--on-go); }
+.yacht-callout.yacht { background: var(--zap); color: var(--on-zap); font-size: clamp(1.8rem, 10vw, 2.6rem); }
+.yacht-show { animation: yCallout 1.3s ease-out both; }
+@keyframes yCallout {
+  0% { opacity: 0; transform: scale(.4); }
+  14% { opacity: 1; transform: scale(1.14); }
+  24% { transform: scale(1); }
+  80% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+/* ---------- score sheet ---------- */
+.yacht-sheet {
+  --n: 2;
+  width: 100%; box-sizing: border-box; display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 14px; background: var(--card);
+  font-variant-numeric: tabular-nums; text-align: left;
+}
+.yacht-row {
+  display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(var(--n), minmax(0, 1fr));
+  width: 100%; min-height: 44px; box-sizing: border-box; margin: 0; padding: 0;
+  border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: default; touch-action: manipulation; transition: background .2s;
+}
+.yacht-row:first-child { border-top: 0; border-radius: 12px 12px 0 0; overflow: hidden; }
+.yacht-row:last-child { border-radius: 0 0 12px 12px; overflow: hidden; }
+.yacht-row.open { cursor: pointer; }
+.yacht-row.open:active { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.yacht-row:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.yacht-row.used .yacht-cat { opacity: .45; }
+.yacht-row.armed { background: color-mix(in srgb, var(--alert) 15%, transparent); }
+.yacht-row.armed .yacht-cell.turn { color: var(--alert); font-weight: 900; opacity: 1; }
+.yacht-row.pick { background: color-mix(in srgb, var(--accent) 20%, transparent); animation: yPick .35s ease-in-out infinite alternate; }
+@keyframes yPick { to { background: color-mix(in srgb, var(--accent) 8%, transparent); } }
+
+.yacht-cat { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; padding: 3px 4px 3px 9px; }
+.yacht-cat-name { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.yacht-cat small { font-size: .62rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yacht-cube.yacht-mini {
+  --die: 15px; flex: none; padding: 2px; border-radius: 4px;
+  background: var(--y-die); box-shadow: inset 0 0 0 1px var(--y-die-edge); transition: none;
+}
+.yacht-cube.yacht-mini i { width: 80%; box-shadow: none; }
+
+.yacht-cell {
+  display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;
+  border-left: 1px solid var(--line); font-size: 1.05rem; white-space: nowrap; transition: background .2s;
+}
+.yacht-cell.turn { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.yacht-cell.done { font-weight: 900; }
+.yacht-cell.preview { color: var(--muted); font-weight: 500; }
+.yacht-row.open .yacht-cell.preview { text-decoration: underline dotted; text-underline-offset: 4px; }
+.yacht-cell.zero { opacity: .55; }
+.yacht-fresh { animation: yFresh .6s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes yFresh { 0% { transform: scale(1.7); background: var(--hl); } 60% { background: var(--hl); } }
+
+.yacht-head { min-height: 36px; background: var(--paper); }
+.yacht-head .yacht-cell { font-weight: 900; font-size: .85rem; padding-inline: 2px; }
+.yacht-head .yacht-cell.turn { background: var(--accent); color: var(--on-accent); }
+.yacht-sum { min-height: 30px; background: var(--paper); }
+.yacht-sum .yacht-cat, .yacht-sum .yacht-cat-name { font-size: .74rem; font-weight: 700; color: var(--muted); }
+.yacht-sum .yacht-cell { font-size: .9rem; font-weight: 700; }
+.yacht-sum .yacht-cell.need { font-size: .7rem; font-weight: 500; color: var(--muted); }
+.yacht-sum .yacht-cell.got { color: var(--go); font-weight: 900; }
+.yacht-total { min-height: 44px; background: var(--paper); border-top: 2px solid var(--ink); }
+.yacht-total .yacht-cat { font-weight: 900; }
+.yacht-total .yacht-cell { font-family: var(--display); font-size: 1.35rem; }
+.yacht-head .yacht-cell.lead, .yacht-total .yacht-cell.lead { background: var(--go); color: var(--on-go); }
+
+@media (prefers-reduced-motion: reduce) {
+  .yacht-tumble, .yacht-land, .yacht-show, .yacht-fresh, .yacht-row.pick { animation: none; }
+  .yacht-cube, .yacht-tag, .yacht-die::before, .yacht-row, .yacht-cell { transition: none; }
+}

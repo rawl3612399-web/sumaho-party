@@ -1,0 +1,56 @@
+<!-- ===== ブラックジャック ===== -->
+<div class="mode" id="modeBlackjack" hidden>
+  <main class="stage blackjack-stage" aria-live="polite">
+    <section class="panel blackjack-setup" id="jSetup">
+      <div class="blackjack-purse">
+        <span class="blackjack-purse-label">手持ちのチップ</span>
+        <span class="blackjack-purse-num"><span id="jPurse">1,000</span><small>枚</small></span>
+      </div>
+      <div class="opts">
+        <div class="opt">
+          <span class="row-label">ヒント</span>
+          <div class="chips" id="jHintChips"></div>
+          <p class="blackjack-note">ありにすると、その場でいちばん得な手（基本戦略）を教えてくれます</p>
+        </div>
+      </div>
+      <ul class="rules" id="jRules"></ul>
+      <p class="hint" id="jRecord" hidden></p>
+    </section>
+    <section class="panel blackjack-play" id="jPlay" hidden>
+      <div class="blackjack-bank" aria-live="off">
+        <div class="blackjack-bank-cell"><span class="blackjack-bank-label">手持ち</span><span class="blackjack-bank-num" id="jChips">1,000</span></div>
+        <div class="blackjack-bank-cell"><span class="blackjack-bank-label">ベット</span><span class="blackjack-bank-num" id="jBet">0</span></div>
+      </div>
+      <div class="blackjack-table">
+        <div class="blackjack-shoe" id="jShoe" aria-hidden="true">
+          <span class="blackjack-shoe-box"></span>
+          <span class="blackjack-meter"><span id="jShoeFill"></span></span>
+          <span class="blackjack-shoe-left" id="jShoeLeft"></span>
+        </div>
+        <div class="blackjack-seat blackjack-dealer">
+          <div class="blackjack-seat-head"><span>ディーラー</span><span class="blackjack-total" id="jDealerTotal" hidden></span></div>
+          <div class="blackjack-cards" id="jDealerCards" role="group" aria-label="ディーラーのカード"></div>
+        </div>
+        <svg class="blackjack-print" viewBox="0 0 320 58" aria-hidden="true">
+          <path id="jArcMain" d="M 24 10 Q 160 52 296 10" fill="none"></path>
+          <path id="jArcSub" d="M 58 30 Q 160 64 262 30" fill="none"></path>
+          <text class="blackjack-print-main"><textPath href="#jArcMain" startOffset="50%" text-anchor="middle">ブラックジャックは 3 : 2</textPath></text>
+          <text class="blackjack-print-sub"><textPath href="#jArcSub" startOffset="50%" text-anchor="middle">ディーラーは17以上でストップ</textPath></text>
+        </svg>
+        <div class="blackjack-hands" id="jHands" role="group" aria-label="あなたのカード"></div>
+        <div class="blackjack-shuffle" id="jShuffle" hidden>
+          <span class="blackjack-riffle" aria-hidden="true"><i></i><i></i></span>
+          <b>シャッフル</b>
+        </div>
+      </div>
+      <div class="blackjack-talk">
+        <span class="label" id="jLabel"></span>
+        <p class="d-title blackjack-title" id="jTitle"></p>
+        <div class="blackjack-chipbar" id="jChipBar" hidden></div>
+        <div class="blackjack-betops" id="jBetOps" hidden></div>
+        <p class="hint" id="jHint"></p>
+      </div>
+    </section>
+  </main>
+  <div class="actions blackjack-actions" id="jActions"></div>
+</div>

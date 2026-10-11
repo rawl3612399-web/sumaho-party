@@ -14,6 +14,7 @@ const Fx = (() => {
   const shake = (el = document.querySelector(".app")) => { if (!reduced()) replay(el, "fx-shake"); };
 
   function flash(colorToken = "--alert", ms = 450) {
+    if (reduced()) return;
     const layer = document.createElement("div");
     layer.className = "fx-flash";
     layer.style.background = token(colorToken) || "#fff";

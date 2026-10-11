@@ -1,0 +1,31 @@
+<!-- ===== ヨット ===== -->
+<div class="mode" id="modeYacht" hidden>
+  <main class="stage" id="yStage" aria-live="polite">
+    <section class="panel" id="ySetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="yVsChips"></div></div>
+        <div class="opt" id="yLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="yLevelChips"></div></div>
+        <div class="opt" id="yOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="yOrderChips"></div></div>
+        <div class="opt" id="yCountOpt"><span class="row-label">人数</span><div class="chips" id="yCountChips"></div></div>
+      </div>
+      <p class="hint" id="yBest" hidden></p>
+      <ul class="rules" id="yRules"></ul>
+    </section>
+    <section class="panel" id="yPlay" hidden>
+      <span class="label" id="yLabel"></span>
+      <p class="d-title" id="yTitle"></p>
+      <div class="word-card" id="yCard" hidden></div>
+      <ol class="result-list yacht-ranking" id="yRanking" hidden></ol>
+      <div class="yacht-sheet" id="ySheet" aria-live="off" aria-label="スコア表"></div>
+    </section>
+  </main>
+  <div class="yacht-dock" id="yDock">
+    <div class="yacht-tray" id="yTray" hidden>
+      <div class="yacht-dice" id="yDice" role="group" aria-label="サイコロ。タップでキープ"></div>
+      <div class="yacht-rolls" id="yRolls" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="yacht-callout" id="yCallout" aria-hidden="true" hidden></div>
+    </div>
+    <div class="yacht-hintbox"><p class="hint" id="yHint"></p></div>
+    <div class="actions" id="yActions"></div>
+  </div>
+</div>

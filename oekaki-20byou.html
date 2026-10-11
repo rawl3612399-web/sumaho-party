@@ -2983,6 +2983,661 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
 }
 @keyframes bfCalloutPlain { 0% { opacity: 1; } 100% { opacity: 0; } }
 </style>
+<style>
+/* Playing cards (src/cards.js). Card faces stay paper-white with red/black suits in both themes, like real cards. */
+:root {
+  --pc-face: #fdfdfb;
+  --pc-edge: #c9ced6;
+  --pc-black: #1b1f27;
+  --pc-red: #d2332b;
+  --pc-back: #2c58c9;
+  --pc-back-2: #3c6be0;
+  --pc-shadow: rgba(20, 30, 50, .22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pc-face: #f4f3ee; --pc-edge: #8d96a3; --pc-black: #1b1f27; --pc-red: #d2332b;
+    --pc-back: #3a64d6; --pc-back-2: #4d78ea; --pc-shadow: rgba(0, 0, 0, .45);
+  }
+}
+:root[data-theme="dark"] {
+  --pc-face: #f4f3ee; --pc-edge: #8d96a3; --pc-black: #1b1f27; --pc-red: #d2332b;
+  --pc-back: #3a64d6; --pc-back-2: #4d78ea; --pc-shadow: rgba(0, 0, 0, .45);
+}
+
+.pcard {
+  --w: 64px;
+  position: relative; width: var(--w); aspect-ratio: 5 / 7; flex: none;
+  perspective: 600px; font-family: var(--body); color: var(--pc-black);
+}
+.pcard-sm { --w: 46px; }
+.pcard-lg { --w: 84px; }
+.pcard.red { color: var(--pc-red); }
+.pc-inner {
+  position: absolute; inset: 0; transform-style: preserve-3d;
+  transition: transform .32s cubic-bezier(.3, .7, .3, 1);
+}
+.pcard.down .pc-inner { transform: rotateY(180deg); }
+.pc-front, .pc-back {
+  position: absolute; inset: 0; border-radius: calc(var(--w) * .1);
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border: 1.5px solid var(--pc-edge); box-shadow: 0 2px 4px var(--pc-shadow);
+}
+.pc-front { background: var(--pc-face); }
+.pc-back {
+  transform: rotateY(180deg);
+  background-color: var(--pc-back);
+  background-image:
+    repeating-linear-gradient(45deg, var(--pc-back-2) 0 4px, transparent 4px 9px),
+    repeating-linear-gradient(-45deg, var(--pc-back-2) 0 4px, transparent 4px 9px);
+  border: 3px solid var(--pc-face);
+  outline: 1.5px solid var(--pc-edge);
+}
+.pc-corner {
+  position: absolute; display: flex; flex-direction: column; align-items: center; line-height: 1;
+  font-size: calc(var(--w) * .2); font-weight: 900; letter-spacing: -.04em;
+}
+.pc-corner svg { width: calc(var(--w) * .16); height: calc(var(--w) * .16); margin-top: 1px; }
+.pc-corner.tl { top: 6%; left: 7%; }
+.pc-corner.br { bottom: 6%; right: 7%; transform: rotate(180deg); }
+.pc-center { position: absolute; inset: 0; display: grid; place-items: center; }
+.pc-center > * { grid-area: 1 / 1; }
+.pc-pip { width: calc(var(--w) * .42); height: calc(var(--w) * .42); }
+.pc-court { font-family: var(--display); font-weight: 400; font-size: calc(var(--w) * .5); opacity: .9; }
+.pc-court + .pc-pip { width: calc(var(--w) * .2); height: calc(var(--w) * .2); transform: translate(calc(var(--w) * .26), calc(var(--w) * -.36)); }
+.pcard-sm .pc-corner.br { display: none; }
+.pcard-sm .pc-pip { width: calc(var(--w) * .38); height: calc(var(--w) * .38); transform: translateY(12%); }
+.pcard-sm .pc-court + .pc-pip { display: none; }
+.pcard-sm .pc-court { transform: translateY(10%); }
+
+@media (prefers-reduced-motion: reduce) {
+  .pc-inner { transition: none; }
+}
+</style>
+<style>
+/* 神経衰弱: phone-sized card grid (cards from styles-cards.css), flip / match / miss motion, score bar, results.
+   Card width comes from --memory-w and the column count from --memory-cols, both set by memory.js. */
+
+/* ---------- layout ---------- */
+.memory-stage { padding: 14px 8px; }
+#sSetup { padding-inline: 8px; box-sizing: border-box; }
+.memory-play { gap: 10px; }
+.memory-title { font-size: 1.25rem; min-height: 1.35em; }
+.memory-hint { min-height: 1.4em; }
+.memory-actions { justify-content: center; }
+.memory-record { font-size: .85rem; }
+.memory-result { margin-block: 4px; }
+
+/* ---------- score bar ---------- */
+.memory-scores {
+  display: grid; grid-template-columns: repeat(var(--memory-n, 2), minmax(0, 1fr)); gap: 6px; width: 100%;
+}
+.memory-side {
+  display: flex; align-items: center; justify-content: space-between; gap: 4px; min-width: 0;
+  padding: 5px 9px; border-radius: 14px; border: 2.5px solid var(--line); background: var(--paper);
+  transition: border-color .2s, background-color .2s, transform .2s, box-shadow .2s;
+}
+.memory-side.on { border-color: var(--c-rose); box-shadow: 0 3px 0 var(--c-rose); transform: translateY(-2px); }
+.memory-side.won { background: var(--c-rose); border-color: var(--c-rose); color: var(--on-tile); }
+.memory-name {
+  font-weight: 700; font-size: .8rem; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.memory-side.on .memory-name { color: var(--c-rose); }
+.memory-side.won .memory-name { color: var(--on-tile); }
+.memory-count {
+  font-family: var(--display); font-weight: 400; font-size: 1.45rem; line-height: 1.15;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+/* Three or four boxes: name above the number so nothing gets cut off at 375px. */
+.memory-scores.memory-stack .memory-side { flex-direction: column; justify-content: center; gap: 0; padding: 3px 4px; }
+.memory-scores.memory-stack .memory-name { font-size: .72rem; max-width: 100%; }
+.memory-scores.memory-stack .memory-count { font-size: 1.3rem; }
+.memory-side.thinking .memory-count { animation: memoryThink .9s ease-in-out infinite; }
+@keyframes memoryThink { 50% { opacity: .35; } }
+
+/* ---------- grid ---------- */
+.memory-grid {
+  --memory-gap: 6px;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: var(--memory-gap);
+  width: calc(var(--memory-cols, 4) * var(--memory-w, 56px) + (var(--memory-cols, 4) - 1) * var(--memory-gap));
+  max-width: 100%;
+  touch-action: manipulation;
+}
+.memory-slot {
+  position: relative; flex: none; width: var(--memory-w, 56px); aspect-ratio: 5 / 7;
+  margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer;
+  border-radius: calc(var(--memory-w, 56px) * .1);
+  -webkit-user-select: none; user-select: none;
+}
+.memory-slot:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.memory-grid .pcard { --w: var(--memory-w, 56px); transition: transform .18s ease-out; }
+.memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):active .pcard { transform: scale(.93); }
+@media (hover: hover) {
+  .memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):hover .pcard { transform: translateY(-3px); }
+}
+.memory-grid.memory-locked .memory-slot { cursor: default; }
+.memory-slot.memory-open .pcard { transform: translateY(-4px); }
+.memory-slot.memory-open .pc-front { box-shadow: 0 0 0 2.5px var(--c-rose), 0 6px 10px var(--pc-shadow); }
+.memory-slot.memory-hit .pc-front { box-shadow: 0 0 0 3px var(--go), 0 6px 12px var(--pc-shadow); }
+.memory-slot.memory-miss .pc-front { box-shadow: 0 0 0 3px var(--alert), 0 4px 8px var(--pc-shadow); }
+.memory-slot.memory-hit .pcard { animation: memoryHit .42s cubic-bezier(.2, 1.4, .4, 1) .12s; }
+.memory-slot.memory-miss { animation: memoryMiss .34s ease-in-out .3s; }
+
+/* Taken: an empty dashed spot keeps the grid steady. */
+.memory-slot.memory-gone { cursor: default; }
+.memory-slot.memory-gone::before {
+  content: ""; position: absolute; inset: 2px; border-radius: inherit;
+  border: 2px dashed var(--line);
+}
+.memory-slot.memory-gone .pcard { visibility: hidden; }
+
+/* A matched pair lifts and flies into the player's score box (offset set by memory.js). */
+.memory-slot.memory-fly { z-index: 5; }
+.memory-slot.memory-fly .pcard { animation: memoryFly .64s cubic-bezier(.45, 0, .7, .2) forwards; }
+
+/* Deal: cards drop in one after another. */
+.memory-slot.memory-deal .pcard {
+  animation: memoryDeal .36s cubic-bezier(.2, 1.2, .4, 1) both;
+  animation-delay: calc(var(--memory-i, 0) * 22ms);
+}
+
+@keyframes memoryHit { 40% { transform: translateY(-9px) scale(1.08); } 100% { transform: translateY(-4px); } }
+@keyframes memoryMiss {
+  0%, 100% { transform: none; }
+  25% { transform: translateX(-4px) rotate(-2deg); }
+  75% { transform: translateX(4px) rotate(2deg); }
+}
+@keyframes memoryFly {
+  0% { transform: translateY(-4px); opacity: 1; }
+  30% { transform: translateY(-18px) scale(1.12); opacity: 1; }
+  100% { transform: translate(var(--memory-dx, 0px), var(--memory-dy, -120px)) scale(.3); opacity: 0; }
+}
+@keyframes memoryDeal { from { transform: translateY(-26px) scale(.6) rotate(-10deg); opacity: 0; } }
+@keyframes memoryFade { to { opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .memory-grid .pcard, .memory-side { transition: none; }
+  .memory-slot.memory-deal .pcard, .memory-slot.memory-hit .pcard, .memory-slot.memory-miss,
+  .memory-side.thinking .memory-count { animation: none; }
+  .memory-slot.memory-fly .pcard { animation: memoryFade .3s ease-out forwards; }
+  .memory-grid:not(.memory-locked) .memory-slot:not(.memory-open):not(.memory-gone):hover .pcard { transform: none; }
+  .memory-side.on, .memory-slot.memory-open .pcard { transform: none; }
+}
+</style>
+<style>
+/* ヨット: ivory dice with CSS pips on a felt tray, and a score sheet that fits 375px. Colors come from tokens only;
+   the felt, dice and shadow tokens below are defined for light, dark (system) and dark (forced). Dice stay ivory in both themes. */
+:root {
+  --y-felt: #1d7550; --y-felt-hi: #2a9467; --y-felt-deep: #11573a; --y-rim: #8a5527;
+  --y-die: #fbf9f2; --y-die-hi: #ffffff; --y-die-shade: #ddd7c8; --y-die-edge: #b9b09b;
+  --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(8, 28, 18, .38); --y-dot-off: rgba(255, 255, 255, .22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --y-felt: #165a3e; --y-felt-hi: #1f7352; --y-felt-deep: #0c3b28; --y-rim: #5a3618;
+    --y-die: #f0ede3; --y-die-hi: #fbf9f2; --y-die-shade: #c9c2b1; --y-die-edge: #948b76;
+    --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(0, 0, 0, .55); --y-dot-off: rgba(255, 255, 255, .16);
+  }
+}
+:root[data-theme="dark"] {
+  --y-felt: #165a3e; --y-felt-hi: #1f7352; --y-felt-deep: #0c3b28; --y-rim: #5a3618;
+  --y-die: #f0ede3; --y-die-hi: #fbf9f2; --y-die-shade: #c9c2b1; --y-die-edge: #948b76;
+  --y-pip: #1c2230; --y-pip-one: #d1322a; --y-shadow: rgba(0, 0, 0, .55); --y-dot-off: rgba(255, 255, 255, .16);
+}
+
+/* ---------- play view ---------- */
+.stage.yacht-playing { padding: 12px 6px 14px; gap: 10px; }
+.stage.yacht-playing .panel { gap: 10px; }
+.word-card.yacht-final .wc-main { font-variant-numeric: tabular-nums; }
+.result-list.yacht-ranking { max-width: none; }
+
+/* ---------- bottom dock: dice tray, hint and buttons stay under the thumb ---------- */
+.yacht-dock {
+  position: sticky; bottom: 0; z-index: 5;
+  display: flex; flex-direction: column; gap: 6px;
+  margin-inline: -16px; padding: 14px 16px max(6px, env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, var(--paper) 82%, transparent);
+}
+.yacht-dock-setup { position: static; background: none; padding-top: 0; }
+.yacht-dock-setup .yacht-hintbox { display: none; }
+.yacht-hintbox { min-height: 2.5em; display: grid; place-items: center; text-align: center; }
+.yacht-hintbox .hint { font-size: .86rem; line-height: 1.25; }
+#yActions { justify-content: center; }
+
+.yacht-tray {
+  position: relative; box-sizing: border-box; width: min(100%, 420px); align-self: center;
+  padding: 20px 6px 4px; border-radius: 22px;
+  background: radial-gradient(ellipse at 50% 35%, var(--y-felt-hi), var(--y-felt) 62%, var(--y-felt-deep));
+  border: 2.5px solid var(--ink);
+  box-shadow: inset 0 0 0 5px var(--y-rim), inset 0 9px 16px var(--y-shadow), 0 5px 0 var(--ink);
+}
+.yacht-rolls { position: absolute; top: 9px; left: 50%; translate: -50% 0; display: flex; gap: 5px; }
+.yacht-rolls span { width: 8px; height: 8px; border-radius: 50%; background: var(--y-dot-off); transition: background .2s; }
+.yacht-rolls span.on { background: var(--zap); }
+
+/* ---------- dice ---------- */
+.yacht-dice { --die: min(13.6vw, 56px); display: flex; justify-content: center; gap: min(2.2vw, 10px); }
+.yacht-die {
+  position: relative; display: grid; justify-items: center; flex: none;
+  width: var(--die); padding: 12px 0 20px; margin: 0;
+  border: 0; background: none; font: inherit; cursor: default; touch-action: manipulation;
+  -webkit-user-select: none; user-select: none;
+}
+.yacht-die.can { cursor: pointer; }
+.yacht-die::before {
+  content: ""; position: absolute; left: 14%; right: 14%; bottom: 17px; height: 9px; border-radius: 50%;
+  background: var(--y-shadow); filter: blur(3px); transition: transform .2s, opacity .2s;
+}
+.yacht-die.held::before { transform: scale(.7); opacity: .55; }
+.yacht-die:focus-visible { outline: none; }
+.yacht-die:focus-visible .yacht-cube { outline: 3px solid var(--accent); outline-offset: 3px; }
+
+.yacht-cube {
+  position: relative; box-sizing: border-box; width: var(--die); aspect-ratio: 1;
+  display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); padding: 15%;
+  border-radius: 24%;
+  background: radial-gradient(circle at 28% 22%, var(--y-die-hi) 0 16%, var(--y-die) 52%, var(--y-die-shade));
+  box-shadow: inset -3px -4px 0 var(--y-die-shade), inset 2px 2px 0 var(--y-die-hi), 0 4px 0 var(--y-die-edge), 0 7px 8px var(--y-shadow);
+  transition: translate .2s cubic-bezier(.3, 1.5, .5, 1), box-shadow .2s;
+}
+.yacht-cube[data-face="0"] { opacity: .5; }
+.yacht-die.held .yacht-cube {
+  translate: 0 -12px;
+  box-shadow: inset -3px -4px 0 var(--y-die-shade), inset 2px 2px 0 var(--y-die-hi), 0 4px 0 var(--y-die-edge), 0 0 0 3px var(--zap), 0 14px 14px var(--y-shadow);
+}
+.yacht-cube i {
+  width: 74%; aspect-ratio: 1; place-self: center; border-radius: 50%; opacity: 0;
+  background: radial-gradient(circle at 40% 35%, var(--y-pip) 55%, var(--y-pip));
+  box-shadow: inset 0 2px 2px var(--y-shadow);
+}
+.yacht-cube[data-face="1"] i:nth-child(5),
+.yacht-cube[data-face="2"] i:is(:nth-child(3), :nth-child(7)),
+.yacht-cube[data-face="3"] i:is(:nth-child(3), :nth-child(5), :nth-child(7)),
+.yacht-cube[data-face="4"] i:is(:nth-child(1), :nth-child(3), :nth-child(7), :nth-child(9)),
+.yacht-cube[data-face="5"] i:is(:nth-child(1), :nth-child(3), :nth-child(5), :nth-child(7), :nth-child(9)),
+.yacht-cube[data-face="6"] i:is(:nth-child(1), :nth-child(3), :nth-child(4), :nth-child(6), :nth-child(7), :nth-child(9)) { opacity: 1; }
+.yacht-cube[data-face="1"] i:nth-child(5) { background: var(--y-pip-one); transform: scale(1.75); }
+
+.yacht-tag {
+  position: absolute; left: 50%; bottom: 0; translate: -50% 0;
+  font-size: .64rem; font-weight: 900; letter-spacing: .04em; line-height: 1.5; white-space: nowrap;
+  padding: 0 7px; border-radius: 999px; background: var(--zap); color: var(--on-zap);
+  opacity: 0; transform: scale(.6); transition: opacity .15s, transform .2s cubic-bezier(.3, 1.6, .5, 1); pointer-events: none;
+}
+.yacht-die.held .yacht-tag { opacity: 1; transform: none; }
+
+.yacht-tumble { animation: yTumble var(--dur, 520ms) cubic-bezier(.3, .6, .4, 1) both; }
+@keyframes yTumble {
+  0% { transform: none; }
+  22% { transform: translateY(-38%) rotate(calc(var(--spin, 1) * 150deg)) scale(1.08); }
+  46% { transform: translateY(-4%) rotate(calc(var(--spin, 1) * 280deg)) scale(.95, 1.04); }
+  66% { transform: translateY(-16%) rotate(calc(var(--spin, 1) * 335deg)) scale(1.03); }
+  86% { transform: translateY(0) rotate(calc(var(--spin, 1) * 362deg)) scale(1.04, .96); }
+  100% { transform: rotate(calc(var(--spin, 1) * 360deg)); }
+}
+.yacht-land { animation: yLand .2s ease-out; }
+@keyframes yLand { 40% { transform: scale(1.07, .93); } }
+
+.yacht-callout {
+  position: absolute; left: 50%; top: 50%; translate: -50% -50%; z-index: 2; pointer-events: none;
+  padding: 4px 18px; border-radius: 999px; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(1.3rem, 6.5vw, 1.9rem); line-height: 1.3;
+  background: var(--card); color: var(--ink); border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+}
+.yacht-callout.hand { background: var(--accent); color: var(--on-accent); border-color: var(--accent-deep); box-shadow: 0 4px 0 var(--accent-deep); }
+.yacht-callout.bonus { background: var(--go); color: var(--on-go); }
+.yacht-callout.yacht { background: var(--zap); color: var(--on-zap); font-size: clamp(1.8rem, 10vw, 2.6rem); }
+.yacht-show { animation: yCallout 1.3s ease-out both; }
+@keyframes yCallout {
+  0% { opacity: 0; transform: scale(.4); }
+  14% { opacity: 1; transform: scale(1.14); }
+  24% { transform: scale(1); }
+  80% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+/* ---------- score sheet ---------- */
+.yacht-sheet {
+  --n: 2;
+  width: 100%; box-sizing: border-box; display: flex; flex-direction: column;
+  border: 2px solid var(--ink); border-radius: 14px; background: var(--card);
+  font-variant-numeric: tabular-nums; text-align: left;
+}
+.yacht-row {
+  display: grid; grid-template-columns: minmax(0, 1.8fr) repeat(var(--n), minmax(0, 1fr));
+  width: 100%; min-height: 44px; box-sizing: border-box; margin: 0; padding: 0;
+  border: 0; border-top: 1px solid var(--line); background: transparent; color: var(--ink);
+  font: inherit; text-align: left; cursor: default; touch-action: manipulation; transition: background .2s;
+}
+.yacht-row:first-child { border-top: 0; border-radius: 12px 12px 0 0; overflow: hidden; }
+.yacht-row:last-child { border-radius: 0 0 12px 12px; overflow: hidden; }
+.yacht-row.open { cursor: pointer; }
+.yacht-row.open:active { background: color-mix(in srgb, var(--accent) 16%, transparent); }
+.yacht-row:focus-visible { outline: 3px solid var(--accent); outline-offset: -3px; }
+.yacht-row.used .yacht-cat { opacity: .45; }
+.yacht-row.armed { background: color-mix(in srgb, var(--alert) 15%, transparent); }
+.yacht-row.armed .yacht-cell.turn { color: var(--alert); font-weight: 900; opacity: 1; }
+.yacht-row.pick { background: color-mix(in srgb, var(--accent) 20%, transparent); animation: yPick .35s ease-in-out infinite alternate; }
+@keyframes yPick { to { background: color-mix(in srgb, var(--accent) 8%, transparent); } }
+
+.yacht-cat { display: flex; flex-direction: column; justify-content: center; gap: 1px; min-width: 0; padding: 3px 4px 3px 9px; }
+.yacht-cat-name { display: flex; align-items: center; gap: 5px; min-width: 0; font-size: .88rem; font-weight: 700; white-space: nowrap; overflow: hidden; }
+.yacht-cat small { font-size: .62rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.yacht-cube.yacht-mini {
+  --die: 15px; flex: none; padding: 2px; border-radius: 4px;
+  background: var(--y-die); box-shadow: inset 0 0 0 1px var(--y-die-edge); transition: none;
+}
+.yacht-cube.yacht-mini i { width: 80%; box-shadow: none; }
+
+.yacht-cell {
+  display: flex; align-items: center; justify-content: center; min-width: 0; overflow: hidden;
+  border-left: 1px solid var(--line); font-size: 1.05rem; white-space: nowrap; transition: background .2s;
+}
+.yacht-cell.turn { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+.yacht-cell.done { font-weight: 900; }
+.yacht-cell.preview { color: var(--muted); font-weight: 500; }
+.yacht-row.open .yacht-cell.preview { text-decoration: underline dotted; text-underline-offset: 4px; }
+.yacht-cell.zero { opacity: .55; }
+.yacht-fresh { animation: yFresh .6s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes yFresh { 0% { transform: scale(1.7); background: var(--hl); } 60% { background: var(--hl); } }
+
+.yacht-head { min-height: 36px; background: var(--paper); }
+.yacht-head .yacht-cell { font-weight: 900; font-size: .85rem; padding-inline: 2px; }
+.yacht-head .yacht-cell.turn { background: var(--accent); color: var(--on-accent); }
+.yacht-sum { min-height: 30px; background: var(--paper); }
+.yacht-sum .yacht-cat, .yacht-sum .yacht-cat-name { font-size: .74rem; font-weight: 700; color: var(--muted); }
+.yacht-sum .yacht-cell { font-size: .9rem; font-weight: 700; }
+.yacht-sum .yacht-cell.need { font-size: .7rem; font-weight: 500; color: var(--muted); }
+.yacht-sum .yacht-cell.got { color: var(--go); font-weight: 900; }
+.yacht-total { min-height: 44px; background: var(--paper); border-top: 2px solid var(--ink); }
+.yacht-total .yacht-cat { font-weight: 900; }
+.yacht-total .yacht-cell { font-family: var(--display); font-size: 1.35rem; }
+.yacht-head .yacht-cell.lead, .yacht-total .yacht-cell.lead { background: var(--go); color: var(--on-go); }
+
+@media (prefers-reduced-motion: reduce) {
+  .yacht-tumble, .yacht-land, .yacht-show, .yacht-fresh, .yacht-row.pick { animation: none; }
+  .yacht-cube, .yacht-tag, .yacht-die::before, .yacht-row, .yacht-cell { transition: none; }
+}
+</style>
+<style>
+/* ブラックジャック: felt table, shoe, chip discs and stacks, hand totals, result banners. Chips keep casino colors in both themes. */
+:root {
+  --bj-felt: #1f7a4f;
+  --bj-felt-hi: #2c9864;
+  --bj-rail: #6b4424;
+  --bj-rail-hi: #8f5c33;
+  --bj-print: rgba(255, 232, 160, .62);
+  --bj-on-felt: #f3f7f1;
+  --bj-shade: rgba(0, 0, 0, .28);
+  --bj-glow: rgba(255, 232, 160, .16);
+  --bj-shoe: #262b33;
+  --bj-shoe-hi: #4a525f;
+  --bj-chip-10: #2f6fe4;
+  --bj-chip-50: #d2332b;
+  --bj-chip-100: #23272e;
+  --bj-chip-500: #7b4fd6;
+  --bj-chip-edge: #fbfaf5;
+  --bj-chip-ink: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bj-felt: #17603e;
+    --bj-felt-hi: #1f7a4f;
+    --bj-rail: #4b2f18;
+    --bj-rail-hi: #6c4524;
+    --bj-print: rgba(255, 232, 160, .5);
+    --bj-on-felt: #e9f0ea;
+    --bj-shade: rgba(0, 0, 0, .45);
+    --bj-glow: rgba(255, 232, 160, .12);
+    --bj-shoe: #1b1f25;
+    --bj-shoe-hi: #3b424d;
+    --bj-chip-10: #2f6fe4;
+    --bj-chip-50: #d2332b;
+    --bj-chip-100: #23272e;
+    --bj-chip-500: #7b4fd6;
+    --bj-chip-edge: #efeee8;
+    --bj-chip-ink: #ffffff;
+  }
+}
+:root[data-theme="dark"] {
+  --bj-felt: #17603e;
+  --bj-felt-hi: #1f7a4f;
+  --bj-rail: #4b2f18;
+  --bj-rail-hi: #6c4524;
+  --bj-print: rgba(255, 232, 160, .5);
+  --bj-on-felt: #e9f0ea;
+  --bj-shade: rgba(0, 0, 0, .45);
+  --bj-glow: rgba(255, 232, 160, .12);
+  --bj-shoe: #1b1f25;
+  --bj-shoe-hi: #3b424d;
+  --bj-chip-10: #2f6fe4;
+  --bj-chip-50: #d2332b;
+  --bj-chip-100: #23272e;
+  --bj-chip-500: #7b4fd6;
+  --bj-chip-edge: #efeee8;
+  --bj-chip-ink: #ffffff;
+}
+
+/* ---------- layout ---------- */
+.blackjack-stage { padding: 12px 8px 14px; }
+.blackjack-setup { padding-inline: 8px; box-sizing: border-box; }
+/* the play panel fills the stage with the table on top, so the table does not jump while the text under it comes and goes */
+.blackjack-play { gap: 10px; flex: 1; }
+.blackjack-talk { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.blackjack-title { font-size: 1.25rem; min-height: 1.35em; }
+.blackjack-note { margin: 0; font-size: .8rem; color: var(--muted); }
+.blackjack-purse { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.blackjack-purse-label { font-size: .78rem; color: var(--muted); letter-spacing: .1em; }
+.blackjack-purse-num { font-family: var(--display); font-size: 2.4rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.blackjack-purse-num small { font-family: var(--body); font-size: .9rem; color: var(--muted); margin-left: 4px; }
+
+/* ---------- bank (chips in hand, current bet) ---------- */
+.blackjack-bank { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; }
+.blackjack-bank-cell {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 6px; min-width: 0;
+  border: 2px solid var(--line); border-radius: 12px; padding: 4px 12px; background: var(--paper);
+}
+.blackjack-bank-label { font-size: .75rem; color: var(--muted); font-weight: 700; letter-spacing: .06em; white-space: nowrap; }
+.blackjack-bank-num { font-family: var(--display); font-size: 1.35rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.blackjack-bank-num.blackjack-up { animation: bjUp .9s ease-out; }
+.blackjack-bank-num.blackjack-down { animation: bjDown .9s ease-out; }
+@keyframes bjUp { 0%, 40% { color: var(--go); transform: scale(1.15); } 100% { color: inherit; transform: none; } }
+@keyframes bjDown { 0%, 40% { color: var(--alert); } 100% { color: inherit; } }
+
+/* ---------- felt table ---------- */
+.blackjack-table {
+  --bj-w: clamp(54px, 16vw, 70px);
+  position: relative; width: 100%; box-sizing: border-box; overflow: hidden;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 8px 18px;
+  background: radial-gradient(ellipse at 50% 30%, var(--bj-felt-hi), var(--bj-felt) 72%);
+  border: 6px solid var(--bj-rail); border-top-width: 3px;
+  border-radius: 14px 14px 46% 46% / 14px 14px 18% 18%;
+  box-shadow: inset 0 0 0 2px var(--bj-rail-hi), inset 0 10px 22px var(--bj-shade), 0 3px 0 var(--ink);
+  color: var(--bj-on-felt);
+}
+.blackjack-table .pcard { --w: var(--bj-w); }
+.blackjack-seat { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+.blackjack-seat-head {
+  display: flex; align-items: center; gap: 8px; min-height: 24px;
+  font-size: .75rem; font-weight: 700; letter-spacing: .12em; opacity: .92;
+}
+.blackjack-print { width: min(100%, 320px); height: auto; margin-block: 2px; fill: var(--bj-print); font-family: var(--display); }
+.blackjack-print-main { font-size: 17px; letter-spacing: .06em; }
+.blackjack-print-sub { font-size: 11px; letter-spacing: .12em; }
+
+/* cards in a row, overlapping more as the hand grows (--bj-ov is set from the script) */
+.blackjack-cards {
+  display: flex; justify-content: center; align-items: center;
+  min-height: calc(var(--bj-w) * 1.4); padding-inline: 4px;
+}
+.blackjack-cards > .pcard + .pcard { margin-left: calc(var(--w) * var(--bj-ov, -.15)); }
+.blackjack-dealer .blackjack-cards:empty::before {
+  content: ""; width: var(--bj-w); aspect-ratio: 5 / 7; box-sizing: border-box; border: 2px dashed var(--bj-print); border-radius: 8px; opacity: .55;
+}
+.pcard.blackjack-peek { animation: bjPeek .8s ease-in-out; transform-origin: 50% 100%; }
+@keyframes bjPeek { 30%, 65% { transform: perspective(400px) rotateX(34deg) translateY(-3px); } }
+
+/* ---------- shoe ---------- */
+.blackjack-shoe { position: absolute; top: 8px; right: 10px; z-index: 1; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.blackjack-shoe-box {
+  position: relative; width: 34px; height: 40px; margin-top: 6px;
+  border-radius: 4px 12px 4px 4px; background: linear-gradient(var(--bj-shoe-hi), var(--bj-shoe));
+  box-shadow: 0 2px 0 var(--bj-shade);
+}
+.blackjack-shoe-box::before {
+  content: ""; position: absolute; left: 6px; right: 4px; top: -7px; height: 14px; border-radius: 3px;
+  background: var(--pc-back); border: 1.5px solid var(--pc-face); transform: skewX(-14deg);
+}
+.blackjack-meter { position: relative; width: 34px; height: 5px; border-radius: 3px; background: var(--bj-shade); overflow: hidden; }
+.blackjack-meter > span { position: absolute; inset: 0 auto 0 0; background: var(--bj-on-felt); transition: width .3s; }
+.blackjack-meter::after { content: ""; position: absolute; top: 0; bottom: 0; left: 25%; width: 2px; background: var(--alert); }
+.blackjack-shoe-left { font-size: .58rem; font-weight: 700; opacity: .85; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- player hands ---------- */
+.blackjack-hands { display: flex; justify-content: center; gap: 8px; width: 100%; }
+.blackjack-hands.blackjack-split { --bj-w: clamp(42px, 12vw, 56px); }
+.blackjack-hand {
+  position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  min-width: 0; padding: 6px; border-radius: 14px; border: 2px solid transparent;
+  transition: border-color .2s, opacity .2s, background-color .2s;
+}
+.blackjack-hands.blackjack-split .blackjack-hand { flex: 1 1 0; }
+.blackjack-hand.blackjack-active { border-color: var(--bj-print); background: var(--bj-glow); }
+.blackjack-hand.blackjack-waiting { opacity: .6; }
+.blackjack-hand[data-out="lose"] .blackjack-cards, .blackjack-hand[data-out="bust"] .blackjack-cards { opacity: .6; }
+.blackjack-hand .blackjack-cards:empty::before {
+  content: ""; width: calc(var(--bj-w) * 1.3); aspect-ratio: 1; box-sizing: border-box; border: 2px dashed var(--bj-print); border-radius: 50%;
+}
+.blackjack-foot { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 30px; }
+.blackjack-total {
+  font-weight: 900; font-size: .85rem; line-height: 1; white-space: nowrap; font-variant-numeric: tabular-nums;
+  background: var(--bj-shade); color: var(--bj-on-felt); border-radius: 999px; padding: 5px 10px;
+}
+.blackjack-total.blackjack-bust { background: var(--alert); color: var(--on-accent); }
+.blackjack-total.blackjack-21 { background: var(--go); color: var(--on-go); }
+.blackjack-total.blackjack-bj { background: var(--zap); color: var(--on-zap); }
+.blackjack-stake { display: flex; align-items: center; gap: 4px; }
+.blackjack-stake b { font-family: var(--display); font-weight: 400; font-size: 1rem; font-variant-numeric: tabular-nums; }
+.blackjack-stack { position: relative; width: 24px; height: calc(22px + (var(--bj-n, 1) - 1) * 3px); }
+.blackjack-hands.blackjack-betting .blackjack-stake {
+  position: absolute; left: 50%; top: calc(6px + var(--bj-w) * .7); transform: translate(-50%, -50%);
+  flex-direction: column; gap: 2px;
+}
+.blackjack-hands.blackjack-betting .blackjack-stake b { font-size: 1.15rem; }
+
+/* ---------- chips ---------- */
+.blackjack-disc[data-v="10"], .blackjack-mini[data-v="10"] { --chip: var(--bj-chip-10); }
+.blackjack-disc[data-v="50"], .blackjack-mini[data-v="50"] { --chip: var(--bj-chip-50); }
+.blackjack-disc[data-v="100"], .blackjack-mini[data-v="100"] { --chip: var(--bj-chip-100); }
+.blackjack-disc[data-v="500"], .blackjack-mini[data-v="500"] { --chip: var(--bj-chip-500); }
+.blackjack-mini {
+  position: absolute; left: 1px; bottom: calc(var(--k, 0) * 3px); width: 22px; height: 22px; border-radius: 50%;
+  background:
+    radial-gradient(circle, var(--chip) 0 50%, var(--bj-chip-edge) 51% 56%, transparent 57%),
+    repeating-conic-gradient(var(--chip) 0 30deg, var(--bj-chip-edge) 30deg 45deg);
+  box-shadow: 0 1px 0 var(--bj-shade), 0 0 0 1px var(--bj-shade);
+}
+.blackjack-mini.blackjack-fly { position: fixed; bottom: auto; z-index: 60; pointer-events: none; }
+.blackjack-chipbar { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+.blackjack-disc {
+  width: 56px; height: 56px; border-radius: 50%; border: 0; padding: 0; cursor: pointer; flex: none;
+  font: inherit; font-family: var(--display); font-size: 1.05rem; color: var(--bj-chip-ink);
+  background:
+    radial-gradient(circle, var(--chip) 0 46%, var(--bj-chip-edge) 47% 50%, var(--chip) 51% 63%, transparent 64%),
+    repeating-conic-gradient(from 7.5deg, var(--chip) 0 30deg, var(--bj-chip-edge) 30deg 45deg);
+  box-shadow: 0 4px 0 var(--bj-shade), 0 0 0 1.5px var(--bj-shade);
+  margin-bottom: 4px; transition: transform .08s, box-shadow .08s, opacity .15s;
+  touch-action: manipulation;
+}
+.blackjack-disc:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--bj-shade), 0 0 0 1.5px var(--bj-shade); }
+.blackjack-disc:disabled { opacity: .3; cursor: default; }
+.blackjack-betops { display: flex; justify-content: center; gap: 10px; }
+.blackjack-pill {
+  font: inherit; font-size: .9rem; font-weight: 700; min-height: 44px; padding: 0 20px; cursor: pointer;
+  border-radius: 999px; border: 2px solid var(--line); background: var(--card); color: var(--ink);
+}
+.blackjack-pill:disabled { opacity: .4; cursor: default; }
+
+/* ---------- result banner ---------- */
+.blackjack-banner {
+  position: absolute; left: 50%; top: calc(6px + var(--bj-w) * .7); z-index: 3;
+  transform: translate(-50%, -50%) rotate(-6deg);
+  padding: 6px 14px; border-radius: 12px; white-space: nowrap; pointer-events: none;
+  font-family: var(--display); font-size: 1.2rem; line-height: 1.2;
+  border: 2px solid var(--bj-chip-edge); box-shadow: 0 3px 0 var(--bj-shade);
+  background: var(--card); color: var(--ink);
+}
+.blackjack-hands.blackjack-split .blackjack-banner { font-size: .92rem; padding: 4px 10px; }
+.blackjack-banner[data-kind="win"] { background: var(--go); color: var(--on-go); }
+.blackjack-banner[data-kind="blackjack"] { background: var(--zap); color: var(--on-zap); }
+.blackjack-banner[data-kind="lose"], .blackjack-banner[data-kind="bust"] { background: var(--alert); color: var(--on-accent); }
+.blackjack-banner.blackjack-in { animation: bjBanner .45s cubic-bezier(.2, 1.4, .4, 1) both; animation-delay: var(--bj-delay, 0ms); }
+@keyframes bjBanner {
+  from { opacity: 0; transform: translate(-50%, -50%) rotate(-6deg) scale(.3); }
+  to { opacity: 1; transform: translate(-50%, -50%) rotate(-6deg) scale(1); }
+}
+
+/* ---------- shuffle overlay ---------- */
+.blackjack-shuffle {
+  position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
+  background: color-mix(in srgb, var(--bj-felt) 82%, transparent);
+  font-family: var(--display); font-size: 1.4rem; letter-spacing: .2em;
+}
+.blackjack-shuffle b { font-weight: 400; }
+.blackjack-shuffle.blackjack-on { animation: fade .2s ease-out; }
+.blackjack-riffle { position: relative; display: flex; gap: 4px; height: 72px; }
+.blackjack-riffle i {
+  width: 50px; height: 70px; border-radius: 6px; border: 3px solid var(--pc-face); box-sizing: border-box;
+  background-color: var(--pc-back);
+  background-image: repeating-linear-gradient(45deg, var(--pc-back-2) 0 4px, transparent 4px 9px);
+  box-shadow: 0 3px 0 var(--bj-shade);
+  animation: bjRiffleL .62s ease-in-out infinite alternate;
+}
+.blackjack-riffle i + i { animation-name: bjRiffleR; }
+@keyframes bjRiffleL { to { transform: translateX(24px) rotate(10deg); } }
+@keyframes bjRiffleR { to { transform: translateX(-24px) rotate(-10deg); } }
+
+/* ---------- action buttons (2 x 2 while playing) ---------- */
+.blackjack-actions.blackjack-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; }
+.blackjack-actions.blackjack-grid .btn { padding-block: 12px; }
+.blackjack-actions .btn { position: relative; min-width: 0; }
+.blackjack-actions .btn.blackjack-rec { outline: 3px solid var(--zap); outline-offset: 2px; }
+.blackjack-actions .btn.blackjack-rec::after {
+  content: "おすすめ"; position: absolute; top: -10px; right: 8px;
+  font-size: .62rem; font-weight: 900; letter-spacing: .04em; line-height: 1;
+  background: var(--zap); color: var(--on-zap); border-radius: 999px; padding: 3px 7px;
+}
+
+/* short phones: smaller cards so the table, buttons and chips fit on one screen */
+@media (max-height: 760px) {
+  .blackjack-table { --bj-w: clamp(48px, 14vw, 58px); padding-bottom: 14px; }
+  .blackjack-hands.blackjack-split { --bj-w: clamp(40px, 11vw, 50px); }
+  .blackjack-print { width: min(88%, 280px); margin-block: 0; }
+  .blackjack-disc { width: 52px; height: 52px; font-size: 1rem; }
+}
+
+@media (max-height: 700px) {
+  .blackjack-stage { padding-block: 8px; }
+  .blackjack-play, .blackjack-talk { gap: 6px; }
+  .blackjack-bank-cell { padding-block: 2px; }
+  .blackjack-bank-num { font-size: 1.15rem; }
+  .blackjack-table { padding-bottom: 10px; }
+  .blackjack-print { width: min(72%, 230px); }
+  .blackjack-hand { padding-block: 4px; }
+  .blackjack-foot { min-height: 26px; }
+  .blackjack-disc { width: 48px; height: 48px; }
+  .blackjack-title { font-size: 1.1rem; }
+  .blackjack-actions.blackjack-grid .btn { padding-block: 9px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blackjack-bank-num.blackjack-up, .blackjack-bank-num.blackjack-down, .pcard.blackjack-peek,
+  .blackjack-banner.blackjack-in, .blackjack-shuffle.blackjack-on, .blackjack-riffle i { animation: none; }
+  .blackjack-hand, .blackjack-meter > span, .blackjack-disc { transition: none; }
+}
+</style>
 <!-- games:styles -->
 
 <div class="app">
@@ -3822,6 +4477,118 @@ body.zapping #dStage { animation: flash .13s steps(1) 9; }
   </main>
   <div class="actions" id="bfActions"></div>
 </div>
+  <!-- ===== 神経衰弱 ===== -->
+<div class="mode" id="modeMemory" hidden>
+  <main class="stage memory-stage" aria-live="polite">
+    <section class="panel" id="sSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="sVsChips"></div></div>
+        <div class="opt" id="sPlayersOpt"><span class="row-label">人数</span><div class="chips" id="sPlayerChips"></div></div>
+        <div class="opt" id="sLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="sLevelChips"></div></div>
+        <div class="opt" id="sSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="sSideChips"></div></div>
+        <div class="opt"><span class="row-label">ペアの数</span><div class="chips" id="sPairChips"></div></div>
+      </div>
+      <ul class="rules" id="sRules"></ul>
+      <p class="hint memory-record" id="sRecord" hidden></p>
+    </section>
+    <section class="panel memory-play" id="sPlay" hidden>
+      <div class="memory-scores" id="sScores" aria-live="off"></div>
+      <span class="label" id="sLabel"></span>
+      <p class="d-title memory-title" id="sTitle"></p>
+      <div class="memory-grid" id="sGrid" role="group" aria-label="神経衰弱のカード"></div>
+      <ol class="result-list memory-result" id="sResult" hidden></ol>
+      <p class="hint memory-hint" id="sHint"></p>
+    </section>
+  </main>
+  <div class="actions memory-actions" id="sActions"></div>
+</div>
+  <!-- ===== ヨット ===== -->
+<div class="mode" id="modeYacht" hidden>
+  <main class="stage" id="yStage" aria-live="polite">
+    <section class="panel" id="ySetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="yVsChips"></div></div>
+        <div class="opt" id="yLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="yLevelChips"></div></div>
+        <div class="opt" id="yOrderOpt"><span class="row-label">あなたの番</span><div class="chips" id="yOrderChips"></div></div>
+        <div class="opt" id="yCountOpt"><span class="row-label">人数</span><div class="chips" id="yCountChips"></div></div>
+      </div>
+      <p class="hint" id="yBest" hidden></p>
+      <ul class="rules" id="yRules"></ul>
+    </section>
+    <section class="panel" id="yPlay" hidden>
+      <span class="label" id="yLabel"></span>
+      <p class="d-title" id="yTitle"></p>
+      <div class="word-card" id="yCard" hidden></div>
+      <ol class="result-list yacht-ranking" id="yRanking" hidden></ol>
+      <div class="yacht-sheet" id="ySheet" aria-live="off" aria-label="スコア表"></div>
+    </section>
+  </main>
+  <div class="yacht-dock" id="yDock">
+    <div class="yacht-tray" id="yTray" hidden>
+      <div class="yacht-dice" id="yDice" role="group" aria-label="サイコロ。タップでキープ"></div>
+      <div class="yacht-rolls" id="yRolls" aria-hidden="true"><span></span><span></span><span></span></div>
+      <div class="yacht-callout" id="yCallout" aria-hidden="true" hidden></div>
+    </div>
+    <div class="yacht-hintbox"><p class="hint" id="yHint"></p></div>
+    <div class="actions" id="yActions"></div>
+  </div>
+</div>
+  <!-- ===== ブラックジャック ===== -->
+<div class="mode" id="modeBlackjack" hidden>
+  <main class="stage blackjack-stage" aria-live="polite">
+    <section class="panel blackjack-setup" id="jSetup">
+      <div class="blackjack-purse">
+        <span class="blackjack-purse-label">手持ちのチップ</span>
+        <span class="blackjack-purse-num"><span id="jPurse">1,000</span><small>枚</small></span>
+      </div>
+      <div class="opts">
+        <div class="opt">
+          <span class="row-label">ヒント</span>
+          <div class="chips" id="jHintChips"></div>
+          <p class="blackjack-note">ありにすると、その場でいちばん得な手（基本戦略）を教えてくれます</p>
+        </div>
+      </div>
+      <ul class="rules" id="jRules"></ul>
+      <p class="hint" id="jRecord" hidden></p>
+    </section>
+    <section class="panel blackjack-play" id="jPlay" hidden>
+      <div class="blackjack-bank" aria-live="off">
+        <div class="blackjack-bank-cell"><span class="blackjack-bank-label">手持ち</span><span class="blackjack-bank-num" id="jChips">1,000</span></div>
+        <div class="blackjack-bank-cell"><span class="blackjack-bank-label">ベット</span><span class="blackjack-bank-num" id="jBet">0</span></div>
+      </div>
+      <div class="blackjack-table">
+        <div class="blackjack-shoe" id="jShoe" aria-hidden="true">
+          <span class="blackjack-shoe-box"></span>
+          <span class="blackjack-meter"><span id="jShoeFill"></span></span>
+          <span class="blackjack-shoe-left" id="jShoeLeft"></span>
+        </div>
+        <div class="blackjack-seat blackjack-dealer">
+          <div class="blackjack-seat-head"><span>ディーラー</span><span class="blackjack-total" id="jDealerTotal" hidden></span></div>
+          <div class="blackjack-cards" id="jDealerCards" role="group" aria-label="ディーラーのカード"></div>
+        </div>
+        <svg class="blackjack-print" viewBox="0 0 320 58" aria-hidden="true">
+          <path id="jArcMain" d="M 24 10 Q 160 52 296 10" fill="none"></path>
+          <path id="jArcSub" d="M 58 30 Q 160 64 262 30" fill="none"></path>
+          <text class="blackjack-print-main"><textPath href="#jArcMain" startOffset="50%" text-anchor="middle">ブラックジャックは 3 : 2</textPath></text>
+          <text class="blackjack-print-sub"><textPath href="#jArcSub" startOffset="50%" text-anchor="middle">ディーラーは17以上でストップ</textPath></text>
+        </svg>
+        <div class="blackjack-hands" id="jHands" role="group" aria-label="あなたのカード"></div>
+        <div class="blackjack-shuffle" id="jShuffle" hidden>
+          <span class="blackjack-riffle" aria-hidden="true"><i></i><i></i></span>
+          <b>シャッフル</b>
+        </div>
+      </div>
+      <div class="blackjack-talk">
+        <span class="label" id="jLabel"></span>
+        <p class="d-title blackjack-title" id="jTitle"></p>
+        <div class="blackjack-chipbar" id="jChipBar" hidden></div>
+        <div class="blackjack-betops" id="jBetOps" hidden></div>
+        <p class="hint" id="jHint"></p>
+      </div>
+    </section>
+  </main>
+  <div class="actions blackjack-actions" id="jActions"></div>
+</div>
   <!-- games:partials -->
 </div>
 
@@ -4647,6 +5414,7 @@ const Fx = (() => {
   const shake = (el = document.querySelector(".app")) => { if (!reduced()) replay(el, "fx-shake"); };
 
   function flash(colorToken = "--alert", ms = 450) {
+    if (reduced()) return;
     const layer = document.createElement("div");
     layer.className = "fx-flash";
     layer.style.background = token(colorToken) || "#fff";
@@ -4768,6 +5536,9 @@ const Icons = (() => {
     aim: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>'),
     snake: svg('<path d="M4 19h7a3.5 3.5 0 0 0 0-7H8.5a3 3 0 0 1 0-6H15"/><circle cx="17.5" cy="6" r="2.5"/><path d="M18.3 5.3h.01"/><circle cx="18.5" cy="17.5" r="2"/><path d="M18.5 15.5c.3-.9 1-1.5 1.8-1.6"/>'),
     blockfall: svg('<path d="M7 2h15v5h-5v5h-5V7H7z"/><rect x="2" y="17" width="5" height="5" rx="1"/><rect x="7" y="17" width="5" height="5" rx="1"/><rect x="17" y="17" width="5" height="5" rx="1"/><rect x="2" y="12" width="5" height="5" rx="1"/>'),
+    memory: svg('<g transform="rotate(-7 7 12)"><rect x="2.5" y="5.5" width="9" height="13" rx="1.8"/><rect x="4.7" y="7.7" width="4.6" height="8.6" rx=".8"/></g><g transform="rotate(7 17 12)"><rect x="12.5" y="5.5" width="9" height="13" rx="1.8"/><path d="M17 9.2l2.1 2.8-2.1 2.8-2.1-2.8z"/></g>'),
+    yacht: svg('<rect x="3" y="8" width="11" height="11" rx="2.5"/><path d="M10 8V6.5A2.5 2.5 0 0 1 12.5 4h5A2.5 2.5 0 0 1 20 6.5v5a2.5 2.5 0 0 1-2.5 2.5H14"/><path d="M6.5 11.5h.01M8.5 13.5h.01M10.5 15.5h.01M16 6.5h.01M17.5 11h.01"/>'),
+    blackjack: svg('<rect x="3" y="6.5" width="11" height="15" rx="2"/><path d="M10 4.6l7.3-1.4a2 2 0 0 1 2.3 1.6l2 10.3a2 2 0 0 1-1.6 2.3l-3 .6"/><path d="M8.5 10c-1.3 1.5-2.8 2.3-2.8 3.8a1.5 1.5 0 0 0 2.8.7 1.5 1.5 0 0 0 2.8-.7c0-1.5-1.5-2.3-2.8-3.8zM8.5 14.5v2.3"/>'),
     /* games:icons */
   };
 })();
@@ -18680,6 +19451,2641 @@ const Blockfall = (() => {
   return { init, onShow, leave };
 })();
 </script>
+<script>
+/* cards.js */
+/* Playing cards: deck helpers (pure, testable in Node) and a DOM card face drawn with SVG suit shapes. */
+const Cards = (() => {
+  const SUITS = Object.freeze([
+    { id: "S", name: "スペード", red: false },
+    { id: "H", name: "ハート", red: true },
+    { id: "D", name: "ダイヤ", red: true },
+    { id: "C", name: "クラブ", red: false }
+  ]);
+  const RANKS = Object.freeze(["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"]);
+
+  /* 24x24 suit shapes, filled with currentColor. */
+  const SUIT_PATHS = Object.freeze({
+    S: "M12 2C9 6.5 3.5 9.5 3.5 14a4.3 4.3 0 0 0 7.2 3.2L9.5 22h5l-1.2-4.8A4.3 4.3 0 0 0 20.5 14C20.5 9.5 15 6.5 12 2z",
+    H: "M12 21.5C6.5 17 2.5 13.3 2.5 8.8A5 5 0 0 1 12 6.2a5 5 0 0 1 9.5 2.6c0 4.5-4 8.2-9.5 12.7z",
+    D: "M12 1.8 20 12l-8 10.2L4 12z",
+    C: "M12 2.2a4.4 4.4 0 0 0-3.7 6.8A4.4 4.4 0 1 0 10.6 16L9.5 22h5l-1.1-6a4.4 4.4 0 1 0 2.3-7A4.4 4.4 0 0 0 12 2.2z"
+  });
+
+  /* ---------- pure helpers ---------- */
+  function newDeck(decks = 1) {
+    if (!Number.isInteger(decks) || decks < 1 || decks > 8) throw new Error("デッキの数が正しくありません");
+    const one = SUITS.flatMap(s => RANKS.map(rank => ({ suit: s.id, rank })));
+    return Array.from({ length: decks }, (_, d) => one.map(c => ({ ...c, id: `${c.suit}${c.rank}-${d}` }))).flat();
+  }
+  const suitOf = (card) => SUITS.find(s => s.id === card.suit);
+  const isRed = (card) => Boolean(suitOf(card)?.red);
+  const rankIndex = (card) => RANKS.indexOf(card.rank);
+  const label = (card) => `${suitOf(card).name}の${card.rank}`;
+
+  /* ---------- DOM ---------- */
+  function suitSvg(suit, cls = "") {
+    return `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"><path d="${SUIT_PATHS[suit]}" fill="currentColor"/></svg>`;
+  }
+  /* Builds a card element. options: { faceDown, size: "sm" | "md" | "lg" }. */
+  function el(card, options = {}) {
+    const node = document.createElement("div");
+    const size = ["sm", "md", "lg"].includes(options.size) ? options.size : "md";
+    node.className = `pcard pcard-${size}` + (options.faceDown ? " down" : "") + (card && isRed(card) ? " red" : "");
+    node.setAttribute("role", "img");
+    node.setAttribute("aria-label", options.faceDown || !card ? "伏せたカード" : label(card));
+    const face = card
+      ? `<span class="pc-corner tl"><b>${card.rank}</b>${suitSvg(card.suit)}</span>
+         <span class="pc-center">${["J", "Q", "K"].includes(card.rank) ? `<b class="pc-court">${card.rank}</b>` : ""}${suitSvg(card.suit, "pc-pip")}</span>
+         <span class="pc-corner br"><b>${card.rank}</b>${suitSvg(card.suit)}</span>`
+      : "";
+    node.innerHTML = `<span class="pc-inner"><span class="pc-front">${face}</span><span class="pc-back"></span></span>`;
+    return node;
+  }
+  /* Turns a card element face up or face down with the flip animation. */
+  function setFaceDown(node, faceDown) {
+    node.classList.toggle("down", Boolean(faceDown));
+  }
+
+  return { SUITS, RANKS, newDeck, suitOf, isRed, rankIndex, label, suitSvg, el, setFaceDown };
+})();
+
+if (typeof module !== "undefined") module.exports = Cards;
+</script>
+<script>
+/* memory-rules.js */
+/* Concentration (神経衰弱): all cards face down; flip two a turn. Same rank and same color (black: spade+club,
+ * red: heart+diamond) is a pair: keep it, score 1 and go again. Otherwise the turn passes. Most pairs wins.
+ * The CPU only knows cards it has seen face up, and remembers each one with a level-based chance. */
+const MemoryRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const C = typeof Cards !== "undefined" ? Cards : require("./cards.js");
+
+  const PAIR_COUNTS = Object.freeze([8, 12, 16]);
+  const PLAYERS = Object.freeze({ min: 1, max: 4 });
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+  const RECALL = Object.freeze({ easy: 0.35, normal: 0.65, hard: 0.95 });
+  const SUITS_BY_COLOR = Object.freeze({ black: Object.freeze(["S", "C"]), red: Object.freeze(["H", "D"]) });
+  const NONE = -1;
+  const MAX_RECORD_MS = 24 * 60 * 60 * 1000;
+  const MAX_RECORD_TRIES = 9999;
+
+  const colorOf = (suit) => (suit === "H" || suit === "D" ? "red" : "black");
+  const pairKey = (card) => `${card.rank}-${colorOf(card.suit)}`;
+  const isMatch = (a, b) => Boolean(a && b) && a.id !== b.id && pairKey(a) === pairKey(b);
+  const other = (color) => (color === "black" ? "red" : "black");
+
+  /* ---------- dealing ---------- */
+  /* Every rank once (random color) before any rank is used again in its other color. */
+  function pickPairs(pairs, r) {
+    const ranks = R.shuffle(C.RANKS, r);
+    const firstColor = ranks.map(() => (r() < 0.5 ? "black" : "red"));
+    return Array.from({ length: pairs }, (_, i) => {
+      const k = i % ranks.length;
+      return { rank: ranks[k], color: i < ranks.length ? firstColor[k] : other(firstColor[k]) };
+    });
+  }
+  function deal(pairs, r = Math.random) {
+    if (!PAIR_COUNTS.includes(pairs)) throw new Error("ペアの数は8・12・16組から選んでください");
+    const cards = pickPairs(pairs, r).flatMap(({ rank, color }) =>
+      SUITS_BY_COLOR[color].map(suit => ({ suit, rank, id: `${suit}${rank}` })));
+    return R.shuffle(cards, r).map(c => ({ ...c, key: pairKey(c) }));
+  }
+
+  /* options: { pairs, players = 1, first = 0 } */
+  function newGame(options = {}, r = Math.random) {
+    const { pairs, players = 1, first = 0 } = options;
+    if (!Number.isInteger(players) || players < PLAYERS.min || players > PLAYERS.max) {
+      throw new Error(`人数は${PLAYERS.min}〜${PLAYERS.max}人です`);
+    }
+    if (!Number.isInteger(first) || first < 0 || first >= players) throw new Error("先にめくる人が正しくありません");
+    const cards = deal(pairs, r);
+    return {
+      pairs, players, cards,
+      owner: cards.map(() => NONE),
+      open: [],
+      turn: first,
+      scores: Array.from({ length: players }, () => 0),
+      tries: 0,
+      chain: 0,
+      last: null,
+      over: false
+    };
+  }
+
+  /* ---------- playing ---------- */
+  function flipError(s, i) {
+    if (s.over) return "もう終わっています";
+    if (s.open.length >= 2) return "2枚めくったら、結果を待ってね";
+    if (!Number.isInteger(i) || i < 0 || i >= s.cards.length) return "そのカードはありません";
+    if (s.owner[i] !== NONE) return "そのカードはもう取られています";
+    if (s.open.includes(i)) return "そのカードはもうめくっています";
+    return null;
+  }
+  const canFlip = (s, i) => flipError(s, i) === null;
+
+  function flip(s, i) {
+    const err = flipError(s, i);
+    if (err) throw new Error(err);
+    return { ...s, open: [...s.open, i] };
+  }
+
+  /* "match" or "miss" once two cards are face up, otherwise null. */
+  function pending(s) {
+    if (s.open.length < 2) return null;
+    return isMatch(s.cards[s.open[0]], s.cards[s.open[1]]) ? "match" : "miss";
+  }
+
+  /* Settles the two face-up cards: a match is kept and the same player goes again; a miss passes the turn. */
+  function resolve(s) {
+    const outcome = pending(s);
+    if (!outcome) throw new Error("2枚めくってから判定します");
+    const [a, b] = s.open;
+    const base = { ...s, open: [], tries: s.tries + 1, last: { a, b, match: outcome === "match", by: s.turn } };
+    if (outcome === "miss") return { ...base, turn: (s.turn + 1) % s.players, chain: 0 };
+    const owner = s.owner.map((o, k) => (k === a || k === b ? s.turn : o));
+    const scores = s.scores.map((v, k) => (k === s.turn ? v + 1 : v));
+    return { ...base, owner, scores, chain: s.chain + 1, over: owner.every(o => o !== NONE) };
+  }
+
+  /* Face-down cards still on the table. */
+  const closed = (s) => s.owner.flatMap((o, i) => (o === NONE && !s.open.includes(i) ? [i] : []));
+  const remaining = (s) => s.owner.filter(o => o === NONE).length / 2;
+
+  /* Ranks by pairs taken. Ties share a rank; every player with the top score is a winner. */
+  function standings(s) {
+    const best = Math.max(...s.scores);
+    const winners = s.scores.flatMap((v, i) => (v === best ? [i] : []));
+    const order = s.scores
+      .map((score, player) => ({ player, score, rank: 1 + s.scores.filter(v => v > score).length }))
+      .sort((x, y) => y.score - x.score || x.player - y.player);
+    return { best, winners, order, tie: winners.length > 1 };
+  }
+
+  /* ---------- seats and table talk (pure, so the wording of every outcome can be tested) ---------- */
+  const MODES = Object.freeze(["solo", "group", "cpu"]);
+  const SEAT_NAMES = Object.freeze(["Aさん", "Bさん", "Cさん", "Dさん"]);
+
+  /* Who plays. The human is always seat 0; against the CPU, humanFirst decides who flips first. */
+  function seating(mode, players, humanFirst) {
+    if (mode === "solo") return { mode, names: ["あなた"], first: 0, cpuSeat: NONE };
+    if (mode === "cpu") return { mode, names: ["あなた", "CPU"], first: humanFirst ? 0 : 1, cpuSeat: 1 };
+    if (mode !== "group") throw new Error("遊び方が正しくありません");
+    if (!Number.isInteger(players) || players < 2 || players > PLAYERS.max) throw new Error(`みんなでは2〜${PLAYERS.max}人です`);
+    return { mode, names: SEAT_NAMES.slice(0, players), first: 0, cpuSeat: NONE };
+  }
+
+  /* The setup screen's rules list for a mode and pair count. */
+  const PAIR_RULE = "同じ数字で同じ色（黒どうし・赤どうし）ならペア。例：スペードの7とクラブの7";
+  function rulesText(mode, pairs) {
+    if (!MODES.includes(mode)) throw new Error("遊び方が正しくありません");
+    if (!PAIR_COUNTS.includes(pairs)) throw new Error("ペアの数は8・12・16組から選んでください");
+    const n = pairs * 2;
+    if (mode === "solo") {
+      return [`${n}枚のトランプをふせて並べ、2枚ずつめくる`, PAIR_RULE, "ちがったら元にもどす。どこに何があったか覚えよう",
+        "全部そろえるまでの手数とタイムに挑戦。手数が少ないほど高記録"];
+    }
+    return [`${n}枚のトランプをふせて並べ、順番に2枚ずつめくる`, PAIR_RULE, "ペアなら取って、もう1回めくれる。ちがったら元にもどして次の人へ",
+      "全部なくなったら終わり。ペアを多く取った人の勝ち", ...(mode === "cpu" ? ["CPUもめくられたカードを覚える。つよいほど忘れない"] : [])];
+  }
+
+  /* Title and hint during play. wait: null | "deal" | "cpu" | "match" | "miss" | "fly" (a pair flying away). */
+  function status(s, seats, wait) {
+    const name = (i) => seats.names[i];
+    const solo = seats.mode === "solo";
+    if (wait === "match" || wait === "fly") {
+      const chain = wait === "match" ? s.chain + 1 : s.chain;
+      const allDone = wait === "match" ? remaining(s) === 1 : s.over;
+      const again = s.turn === seats.cpuSeat ? "CPUがもう1回めくります" : `${name(s.turn)}はもう1回めくれます`;
+      const hint = allDone ? "これで全部そろいました" : solo ? "その調子！" : again;
+      return { title: chain > 1 ? `${chain}連続でペア！` : "ペア！", hint };
+    }
+    if (wait === "miss") {
+      return { title: "ざんねん…", hint: solo ? "どこに何があったか覚えておこう" : `次は${name((s.turn + 1) % s.players)}の番` };
+    }
+    if (wait === "cpu") return { title: "CPUが考え中…", hint: "" };
+    if (wait === "deal") return { title: "カードを配っています", hint: "" };
+    const title = solo ? "ペアを探そう" : `${name(s.turn)}の番`;
+    const left = `のこり${remaining(s)}組`;
+    if (s.open.length === 1) return { title, hint: "もう1枚めくろう" };
+    return { title, hint: s.chain > 0 && !solo ? `続けてめくれます（${left}）` : `2枚めくろう（${left}）` };
+  }
+
+  /* Final words for a finished 2-4 player game. mood: "win" | "lose" | "draw" (vs CPU) or "cheer" | "draw".
+   * winners: the seats to mark as winners; empty when everyone is level (a draw has no winner). */
+  function verdict(s, seats) {
+    const { winners, tie } = standings(s);
+    if (seats.mode === "cpu") {
+      const hint = `あなた ${s.scores[0]} 対 ${s.scores[1]} CPU`;
+      if (tie) return { title: "引き分け！", hint, mood: "draw", winners: [] };
+      const mood = winners[0] === seats.cpuSeat ? "lose" : "win";
+      return { title: mood === "lose" ? "CPUの勝ち…" : "あなたの勝ち！", hint, mood, winners };
+    }
+    const hint = "ペアを多く取った人の勝ち";
+    if (winners.length === s.players) {
+      return { title: s.players === 2 ? "同点！ 引き分け" : "全員同点！ 引き分け", hint, mood: "draw", winners: [] };
+    }
+    const names = winners.map(i => seats.names[i]);
+    return { title: tie ? `${names.join("と")}が同点で1位！` : `${names[0]}の勝ち！`, hint, mood: "cheer", winners };
+  }
+
+  /* ---------- CPU ---------- */
+  const newMemory = () => ({});
+
+  /* The CPU sees the given positions face up and remembers each with its level's chance.
+   * Only cards that are face up right now can be learned; taken cards are forgotten. */
+  function observe(memory, s, positions, level, r = Math.random) {
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    if (!memory || typeof memory !== "object") throw new Error("CPUの記憶が正しくありません");
+    const kept = Object.fromEntries(Object.entries(memory).filter(([p]) => s.owner[Number(p)] === NONE));
+    const seen = positions.filter(p => s.open.includes(p) && s.owner[p] === NONE);
+    return seen.reduce((m, p) => (r() < RECALL[level] ? { ...m, [p]: s.cards[p].key } : m), kept);
+  }
+
+  function knownPair(known, memory) {
+    const first = new Map();
+    for (const p of known) {
+      const key = memory[p];
+      if (first.has(key)) return [first.get(key), p];
+      first.set(key, p);
+    }
+    return null;
+  }
+
+  /* Next card for the CPU. Reads face-down cards only through its memory, never from the table. */
+  function cpuPick(s, memory, r = Math.random) {
+    if (s.over || s.open.length >= 2) throw new Error("今はめくれません");
+    if (!memory || typeof memory !== "object") throw new Error("CPUの記憶が正しくありません");
+    const hidden = closed(s);
+    const known = hidden.filter(p => typeof memory[p] === "string");
+    const unknown = hidden.filter(p => typeof memory[p] !== "string");
+    const fresh = unknown.length ? unknown : hidden;
+    if (s.open.length === 1) {
+      const want = s.cards[s.open[0]].key; /* face up: everyone can see it */
+      const partner = known.find(p => memory[p] === want);
+      return partner !== undefined ? partner : R.pick(fresh, r);
+    }
+    const pair = knownPair(known, memory);
+    return pair ? pair[0] : R.pick(fresh, r);
+  }
+
+  /* ---------- solo records ---------- */
+  function validRecord(rec, pairs) {
+    return Boolean(rec) && typeof rec === "object" &&
+      Number.isInteger(rec.tries) && rec.tries >= pairs && rec.tries <= MAX_RECORD_TRIES &&
+      Number.isInteger(rec.ms) && rec.ms >= 0 && rec.ms < MAX_RECORD_MS;
+  }
+  /* Best record per pair count from storage: { 8: {tries, ms} | null, 12: ..., 16: ... }. */
+  function normalizeRecords(raw) {
+    const src = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+    return Object.fromEntries(PAIR_COUNTS.map(n => [n, validRecord(src[n], n) ? { tries: src[n].tries, ms: src[n].ms } : null]));
+  }
+  /* Fewer tries wins; the same tries are compared by time. */
+  function isBetter(next, best) {
+    if (!best) return true;
+    return next.tries < best.tries || (next.tries === best.tries && next.ms < best.ms);
+  }
+
+  /* ---------- layout ---------- */
+  /* Picks columns and card width (5:7 cards) so the grid fits width x height. If nothing fits with cards at
+   * least `min` wide, the height limit is dropped (the page scrolls) and cards fill the width instead. */
+  function gridLayout(count, width, height, opts = {}) {
+    const gap = opts.gap ?? 6;
+    const min = opts.min ?? 46;
+    const max = opts.max ?? 84;
+    if (!Number.isInteger(count) || count < 1) throw new Error("カードの枚数が正しくありません");
+    if (![width, height].every(v => Number.isFinite(v) && v > 0)) throw new Error("画面の大きさが正しくありません");
+    /* 4 columns always stays a candidate, so a grid of 1-3 cards still gets a plan (one short row). */
+    const plans = [4, 5, 6, 7, 8].filter(c => c <= Math.max(4, count)).map(cols => {
+      const rows = Math.ceil(count / cols);
+      const byW = (width - gap * (cols - 1)) / cols;
+      const byH = ((height - gap * (rows - 1)) / rows) * 5 / 7;
+      return { cols, rows, byW, w: Math.floor(Math.min(max, byW, byH)), full: count % cols === 0 };
+    });
+    const score = (p) => p.w + (p.full ? 2 : 0);
+    const best = plans.reduce((a, b) => (score(b) > score(a) ? b : a));
+    if (best.w >= min) return { cols: best.cols, rows: best.rows, w: best.w, scroll: false };
+    /* Scrolling: the fewest rows wins; on a tie the earlier plan (fewer columns, bigger cards) stays. */
+    const wide = plans.filter(p => p.byW >= min);
+    const pick = wide.length ? wide.reduce((a, b) => (b.rows < a.rows ? b : a)) : plans[0];
+    return { cols: pick.cols, rows: pick.rows, w: Math.floor(Math.min(max, pick.byW)), scroll: true };
+  }
+
+  return {
+    PAIR_COUNTS, PLAYERS, LEVELS, RECALL, NONE, MODES,
+    colorOf, pairKey, isMatch, deal, newGame,
+    flipError, canFlip, flip, pending, resolve, closed, remaining, standings,
+    seating, rulesText, status, verdict,
+    newMemory, observe, cpuPick,
+    normalizeRecords, isBetter, gridLayout
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = MemoryRules;
+</script>
+<script>
+/* memory.js */
+/* 神経衰弱 screen: real playing cards in a phone-sized grid. Solo time attack, 2-4 players, or a CPU that remembers. */
+const Memory = (() => {
+  const M = MemoryRules;
+  const KEY = "memory.settings";
+  const RECORD_KEY = "memory.records";
+  const MS = Object.freeze({ cpu: 450, cpuSecond: 650, match: 520, fly: 640, miss: 900, dealStep: 22 });
+  const CHROME_PX = 290; /* height around the grid besides the score bar: top bar, title, hint, buttons, paddings */
+  const GAP_PX = 6;
+  const SIDES = ["first", "second", "random"];
+  const GROUP_SIZES = [2, 3, 4];
+  const LABEL = Object.freeze({
+    solo: "ひとりで", group: "みんなで", cpu: "CPUと", first: "先攻", second: "後攻", random: "ランダム",
+    easy: "よわい", normal: "ふつう", hard: "つよい"
+  });
+  /* How each ending sounds: [sound, confetti]. */
+  const MOODS = Object.freeze({ win: ["victory", true], cheer: ["fanfare", true], clear: ["fanfare", false], lose: ["lose", false], draw: ["reveal", false] });
+
+  const el = {
+    setup: $("sSetup"), play: $("sPlay"), label: $("sLabel"), title: $("sTitle"), hint: $("sHint"),
+    actions: $("sActions"), grid: $("sGrid"), scores: $("sScores"), result: $("sResult"), record: $("sRecord"),
+    mode: $("modeMemory")
+  };
+
+  let settings = { vs: "cpu", players: 2, level: "normal", side: "first", pairs: 12 };
+  let match = { mode: "cpu", names: ["あなた", "CPU"], first: 0, cpuSeat: 1, level: "normal" };
+  let game = null;
+  let memory = {};
+  let ui = { phase: "setup", wait: null, confirm: false, end: null };
+  let slots = [];
+  let sides = [];
+  let flying = [];
+  let timers = [];
+  let clock = { banked: 0, since: 0, running: false, ticker: 0 };
+
+  const cls = (...names) => names.filter(Boolean).join(" ");
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const solo = () => match.mode === "solo";
+  const isCpuTurn = () => match.mode === "cpu" && game.turn === match.cpuSeat;
+  const who = (i) => match.names[i];
+  const sec = (ms) => Math.floor(ms / 1000);
+
+  function normalize(s) {
+    const src = s && typeof s === "object" ? s : {};
+    const pick = (list, key, fallback) => (list.includes(src[key]) ? src[key] : fallback);
+    return {
+      vs: pick(M.MODES, "vs", "cpu"), players: pick(GROUP_SIZES, "players", 2), level: pick(M.LEVELS, "level", "normal"),
+      side: pick(SIDES, "side", "first"), pairs: pick(M.PAIR_COUNTS, "pairs", 12)
+    };
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  /* timers holds only pending timeouts: each one drops itself when it fires. */
+  function after(ms, fn) {
+    const id = setTimeout(() => { timers = timers.filter(t => t !== id); fn(); }, ms);
+    timers = [...timers, id];
+  }
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+
+  /* ---------- solo clock and records ---------- */
+  const elapsed = () => clock.banked + (clock.running ? performance.now() - clock.since : 0);
+  function runClock() {
+    if (!clock.running) clock = { ...clock, since: performance.now(), running: true, ticker: setInterval(paintTime, 250) };
+  }
+  function stopClock(keep) {
+    clearInterval(clock.ticker);
+    clock = { banked: keep ? elapsed() : 0, since: 0, running: false, ticker: 0 };
+  }
+  const loadRecords = () => M.normalizeRecords(Store.load(RECORD_KEY, {}));
+  const recordLine = (r) => `${r.tries}手・${View.clock(sec(r.ms))}`;
+  const recordText = (best = loadRecords()[settings.pairs]) => (best ? `自己ベスト（${settings.pairs}組）：${recordLine(best)}` : "");
+
+  /* ---------- sounds ---------- */
+  const at = (fn) => { const ctx = Sound.ctx(); if (ctx) fn(ctx.currentTime); };
+  const soundMiss = () => at(t => {
+    Sound.tone({ freq: Sound.hz(67), type: "sine", t, dur: 0.16, vol: 0.13, filter: { freq: 1400 } });
+    Sound.tone({ freq: Sound.hz(62), type: "sine", t: t + 0.14, dur: 0.3, vol: 0.12, filter: { freq: 1200 }, send: 0.15 });
+  });
+  const soundBack = () => at(t => Sound.hiss({ t, dur: 0.08, vol: 0.07, type: "bandpass", freq: 3200, to: 1500 }));
+  const soundNope = () => Sound.tone({ freq: 160, type: "square", dur: 0.07, vol: 0.04, filter: { freq: 800 } });
+  const soundLand = () => at(t => Sound.tone({ freq: Sound.hz(84), type: "triangle", t, dur: 0.12, vol: 0.08 }));
+  function soundMatch(chain) {
+    Sound.sfx("coin");
+    if (chain > 1) at(t => Sound.tone({ freq: Sound.hz(Math.min(100, 86 + chain * 2)), type: "triangle", t: t + 0.2, dur: 0.3, vol: 0.07, send: 0.25 }));
+  }
+  const soundDeal = (n) => at(t => {
+    for (let i = 0; i < n; i += 2) Sound.hiss({ t: t + (i * MS.dealStep) / 1000, dur: 0.04, vol: 0.05, type: "highpass", freq: 3500 });
+  });
+
+  /* ---------- flow ---------- */
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    clearTimers();
+    stopClock(false);
+    const humanFirst = settings.side === "random" ? Math.random() < 0.5 : settings.side === "first";
+    match = { ...M.seating(settings.vs, settings.players, humanFirst), level: settings.level };
+    game = M.newGame({ pairs: settings.pairs, players: match.names.length, first: match.first });
+    memory = M.newMemory();
+    flying = [];
+    buildScores();
+    buildGrid();
+    Sound.sfx("confirm");
+    Music.play("think");
+    go({ phase: "play", wait: "deal", confirm: false, end: null });
+    soundDeal(game.cards.length);
+    after(reduced() ? 0 : game.cards.length * MS.dealStep + 380, next);
+  }
+  /* Decides what happens after every flip or settled pair. */
+  function next() {
+    if (ui.phase !== "play") return;
+    if (game.over) finish();
+    else if (!isCpuTurn()) go({ wait: null });
+    else {
+      go({ wait: "cpu" });
+      after(game.open.length ? MS.cpuSecond : MS.cpu, cpuFlip);
+    }
+  }
+  function cpuFlip() {
+    if (ui.phase !== "play" || ui.confirm || !isCpuTurn()) return;
+    let i;
+    try {
+      i = M.cpuPick(game, memory);
+    } catch (e) {
+      console.error("神経衰弱: CPUのカードを決められませんでした", e);
+      i = M.closed(game)[0];
+    }
+    reveal(i);
+  }
+  function tapSlot(i) {
+    if (ui.phase !== "play" || ui.wait || ui.confirm || isCpuTurn()) return;
+    if (M.canFlip(game, i)) reveal(i);
+    else soundNope();
+  }
+  function reveal(i) {
+    game = M.flip(game, i);
+    if (match.mode === "cpu") memory = M.observe(memory, game, [i], match.level);
+    Sound.sfx("flip");
+    if (solo()) runClock();
+    if (game.open.length === 2) settle();
+    else if (isCpuTurn()) next();
+    else render();
+  }
+  function settle() {
+    const outcome = M.pending(game);
+    go({ wait: outcome });
+    if (outcome === "match") {
+      after(160, () => soundMatch(game.chain + 1));
+      after(MS.match, collect);
+    } else {
+      after(260, soundMiss);
+      after(MS.miss, flipBack);
+    }
+  }
+  /* The pair lifts off and flies into the player's score box; the score counts up when it lands. */
+  function collect() {
+    const pair = game.open;
+    const by = game.turn;
+    launch(pair, target(by));
+    game = M.resolve(game);
+    flying = pair;
+    go({ wait: "fly" });
+    after(reduced() ? 320 : MS.fly, () => {
+      flying = [];
+      soundLand();
+      next();
+      Fx.pop(target(by));
+    });
+  }
+  function flipBack() {
+    game = M.resolve(game);
+    soundBack();
+    if (game.players > 1) Sound.sfx("whoosh");
+    next();
+    if (game.players > 1) Fx.pop(el.title);
+  }
+  const target = (by) => (solo() ? sides[0] : sides[by]).count;
+  function launch(pair, goalEl) {
+    const goal = goalEl.getBoundingClientRect();
+    pair.forEach(i => {
+      const box = slots[i].getBoundingClientRect();
+      slots[i].firstChild.style.setProperty("--memory-dx", `${Math.round(goal.left + goal.width / 2 - box.left - box.width / 2)}px`);
+      slots[i].firstChild.style.setProperty("--memory-dy", `${Math.round(goal.top + goal.height / 2 - box.top - box.height / 2)}px`);
+    });
+  }
+  function finish() {
+    clearTimers();
+    stopClock(true);
+    Music.stop();
+    const end = solo() ? soloEnd() : M.verdict(game, match);
+    go({ phase: "result", wait: null, confirm: false, end });
+    const [sfx, confetti] = MOODS[end.mood];
+    Sound.sfx(sfx);
+    if (confetti) Fx.confetti();
+  }
+  function soloEnd() {
+    const rec = { tries: game.tries, ms: Math.round(elapsed()) };
+    const best = loadRecords()[game.pairs];
+    const isNew = M.isBetter(rec, best);
+    if (isNew) Store.save(RECORD_KEY, { ...loadRecords(), [game.pairs]: rec });
+    const hint = `${game.pairs}組を ${recordLine(rec)} でそろえました`;
+    return { rec, best, isNew, winners: [], hint, title: isNew ? "新記録！" : "クリア！", mood: isNew ? "win" : "clear" };
+  }
+  /* Pausing (quit dialog, leaving the game, the phone going to the background) stops timers and the clock;
+   * resume() picks up from the current state. */
+  function pause() {
+    clearTimers();
+    stopClock(true);
+    flying = [];
+    ui = { ...ui, wait: null };
+  }
+  function resume() {
+    if (ui.phase !== "play" || timers.length) return; /* already running: never start a second chain */
+    flying = [];
+    if (solo() && (game.tries > 0 || game.open.length > 0)) runClock();
+    if (game.open.length === 2) settle();
+    else next();
+  }
+  const askQuit = () => { pause(); go({ confirm: true }); };
+  const keepPlaying = () => { ui = { ...ui, confirm: false }; resume(); };
+  const quit = () => { pause(); Music.stop(); go({ phase: "setup", confirm: false }); };
+
+  /* ---------- screens ---------- */
+  function playView() {
+    if (!ui.confirm) return { ...M.status(game, match, ui.wait), actions: [makeButton("やめる", askQuit, "small", ui.wait === "deal")] };
+    return {
+      title: "やめますか？",
+      hint: "このゲームはここで終わりになります",
+      actions: [makeButton("つづける", keepPlaying, "small"), makeButton("やめる", quit, "primary danger")]
+    };
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: playView,
+    result: () => ({
+      label: "結果", title: ui.end.title, hint: ui.end.hint,
+      actions: [makeButton("設定", () => go({ phase: "setup" }), "small"), makeButton("もう一回", start, "primary")]
+    })
+  };
+
+  /* ---------- painting ---------- */
+  function buildScores() {
+    const n = solo() ? 3 : match.names.length;
+    el.scores.style.setProperty("--memory-n", String(n));
+    el.scores.classList.toggle("memory-stack", n > 2);
+    sides = Array.from({ length: n }, () => {
+      const box = document.createElement("div");
+      box.className = "memory-side";
+      box.innerHTML = '<span class="memory-name"></span><b class="memory-count"></b>';
+      return { box, name: box.children[0], count: box.children[1] };
+    });
+    el.scores.replaceChildren(...sides.map(s => s.box));
+  }
+  const shownScore = (i) => game.scores[i] - (flying.length && game.last && game.last.by === i ? 1 : 0);
+  function paintTime() {
+    if (solo() && sides[2]) sides[2].count.textContent = View.clock(sec(elapsed()));
+  }
+  function paintScores() {
+    const winners = ui.phase === "result" ? ui.end.winners : [];
+    const solos = [["ペア", `${shownScore(0)}/${game.pairs}`], ["手数", String(game.tries)], ["時間", ""]];
+    sides.forEach((s, i) => {
+      const on = !solo() && ui.phase === "play" && game.turn === i;
+      s.box.classList.toggle("on", on);
+      s.box.classList.toggle("won", winners.includes(i));
+      s.box.classList.toggle("thinking", on && ui.wait === "cpu");
+      s.name.textContent = solo() ? solos[i][0] : who(i);
+      s.count.textContent = solo() ? solos[i][1] : String(shownScore(i));
+    });
+    paintTime();
+  }
+  function buildGrid() {
+    slots = game.cards.map((card, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.dataset.i = String(i);
+      b.style.setProperty("--memory-i", String(i));
+      const face = Cards.el(card, { faceDown: true, size: "md" });
+      face.setAttribute("aria-hidden", "true");
+      b.appendChild(face);
+      return b;
+    });
+    el.grid.replaceChildren(...slots);
+  }
+  function paintGrid() {
+    const res = ui.wait === "match" || ui.wait === "miss" ? ui.wait : null;
+    el.grid.classList.toggle("memory-locked", ui.phase !== "play" || Boolean(ui.wait) || ui.confirm || isCpuTurn());
+    slots.forEach((slot, i) => {
+      const open = game.open.includes(i);
+      const fly = flying.includes(i);
+      const gone = game.owner[i] !== M.NONE && !fly;
+      Cards.setFaceDown(slot.firstChild, !(open || fly));
+      slot.className = cls("memory-slot", ui.wait === "deal" && "memory-deal", open && "memory-open",
+        open && res === "match" && "memory-hit", open && res === "miss" && "memory-miss", fly && "memory-fly", gone && "memory-gone");
+      slot.disabled = gone;
+      const what = gone ? "取られたカード" : open || fly ? Cards.label(game.cards[i]) : "ふせたカード";
+      slot.setAttribute("aria-label", `${i + 1}枚目 ${what}`);
+    });
+  }
+  function resultRows(end) {
+    if (!solo()) {
+      return M.standings(game).order.map(o =>
+        ({ pos: `${o.rank}位`, who: who(o.player), num: `${o.score}組`, mark: end.winners.includes(o.player) ? "勝ち" : "", ok: o.rank === 1 }));
+    }
+    const row = (pos, r, mark, ok) => ({ pos, who: `${r.tries}手`, num: View.clock(sec(r.ms)), mark, ok });
+    const now = row("今回", end.rec, end.isNew ? "新記録" : "", end.isNew);
+    return end.best ? [now, row(end.isNew ? "前のベスト" : "自己ベスト", end.best, "", false)] : [now];
+  }
+  function rowEl(row) {
+    const li = document.createElement("li");
+    li.className = row.ok ? "ok" : "";
+    li.append(...["pos", "who", "num", "mark"].map(k =>
+      Object.assign(document.createElement(k === "num" ? "b" : "span"), { className: k, textContent: row[k] })));
+    return li;
+  }
+  function paintResult() {
+    const show = ui.phase === "result";
+    el.result.hidden = !show;
+    el.grid.hidden = show;
+    if (show) el.result.replaceChildren(...resultRows(ui.end).map(rowEl));
+  }
+  /* Sizes the cards so 8 and 12 pairs fit the phone screen without scrolling. */
+  function fit() {
+    if (!game || el.play.hidden || !el.play.clientWidth) return;
+    try {
+      const height = Math.max(200, window.innerHeight - CHROME_PX - el.scores.offsetHeight);
+      const L = M.gridLayout(game.cards.length, el.play.clientWidth, height, { gap: GAP_PX });
+      el.grid.style.setProperty("--memory-cols", String(L.cols));
+      el.grid.style.setProperty("--memory-w", `${L.w}px`);
+    } catch (e) {
+      console.error("神経衰弱: カードの大きさを決められませんでした", e);
+    }
+  }
+  function renderSetup() {
+    const vs = settings.vs;
+    const chips = (id, values, key, label = (v) => LABEL[v]) =>
+      View.chips($(id), View.options(values, label), settings[key], v => update({ [key]: v }));
+    chips("sVsChips", M.MODES, "vs");
+    chips("sPlayerChips", GROUP_SIZES, "players", n => `${n}人`);
+    chips("sLevelChips", M.LEVELS, "level");
+    chips("sSideChips", SIDES, "side");
+    chips("sPairChips", M.PAIR_COUNTS, "pairs", n => `${n}組`);
+    $("sPlayersOpt").hidden = vs !== "group";
+    $("sLevelOpt").hidden = vs !== "cpu";
+    $("sSideOpt").hidden = vs !== "cpu";
+    View.list($("sRules"), M.rulesText(vs, settings.pairs));
+    View.text(el.record, vs === "solo" ? recordText() : "");
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else {
+      paintScores();
+      paintGrid();
+      paintResult();
+      fit();
+    }
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function init() {
+    settings = normalize(Store.load(KEY, {}));
+    el.grid.addEventListener("click", (e) => {
+      const slot = e.target.closest(".memory-slot");
+      if (!slot) return;
+      e.stopPropagation(); /* the flip sound replaces the app's generic button tap */
+      tapSlot(Number(slot.dataset.i));
+    });
+    window.addEventListener("resize", fit);
+    document.addEventListener("visibilitychange", onVisibility);
+    render();
+  }
+  /* Leaving mid-game pauses it; coming back picks up where it stopped. */
+  function leave() {
+    clearTimers();
+    if (ui.phase !== "play") return;
+    pause();
+    ui = { ...ui, confirm: false };
+  }
+  /* The phone going to the background (a call, another app) pauses play, so the solo clock does not run on. */
+  function onVisibility() {
+    if (ui.phase !== "play" || ui.confirm || el.mode.hidden) return;
+    if (document.hidden) pause();
+    else resume();
+  }
+  function onShow() {
+    fit();
+    if (ui.phase !== "play" || !game) return;
+    Music.play("think");
+    resume();
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
+<script>
+/* yacht-rules.js */
+/* Yacht (世界のアソビ大全51): roll 5 dice up to 3 times a turn, then fill one of 12 boxes. 12 turns each; 63+ in the upper six gives +35. */
+const YachtRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const DICE = 5;
+  const FACES = 6;
+  const ROLLS = 3;
+  const PLAYERS = Object.freeze({ min: 1, max: 4 });
+  const BONUS = Object.freeze({ line: 63, points: 35 });
+  const PRIZE = Object.freeze({ sstraight: 15, lstraight: 30, yacht: 50 });
+  const LEVELS = Object.freeze(["easy", "normal", "hard"]);
+
+  const cat = (id, name, note, face = 0) => Object.freeze({ id, name, note, face });
+  const CATEGORIES = Object.freeze([
+    cat("ones", "1の目", "1の目の合計", 1),
+    cat("twos", "2の目", "2の目の合計", 2),
+    cat("threes", "3の目", "3の目の合計", 3),
+    cat("fours", "4の目", "4の目の合計", 4),
+    cat("fives", "5の目", "5の目の合計", 5),
+    cat("sixes", "6の目", "6の目の合計", 6),
+    cat("choice", "チョイス", "5個の合計"),
+    cat("four", "フォーダイス", "4個同じ・合計"),
+    cat("full", "フルハウス", "3個+2個・合計"),
+    cat("sstraight", "S.ストレート", "4つ連続・15点"),
+    cat("lstraight", "B.ストレート", "5つ連続・30点"),
+    cat("yacht", "ヨット", "5個同じ・50点")
+  ]);
+  const IDS = Object.freeze(CATEGORIES.map(c => c.id));
+  const UPPER = Object.freeze(CATEGORIES.filter(c => c.face).map(c => c.id));
+  const TURNS = CATEGORIES.length;
+  const BY_ID = Object.freeze(Object.fromEntries(CATEGORIES.map(c => [c.id, c])));
+  const NO_HOLD = Object.freeze(Array(DICE).fill(false));
+  const EMPTY_SHEET = Object.freeze(Object.fromEntries(IDS.map(id => [id, null])));
+
+  /* ---------- validation ---------- */
+  function checkDice(dice) {
+    const ok = Array.isArray(dice) && dice.length === DICE && dice.every(d => Number.isInteger(d) && d >= 1 && d <= FACES);
+    if (!ok) throw new Error("サイコロの目が正しくありません");
+  }
+  function checkCat(id) {
+    if (!IDS.includes(id)) throw new Error("そのマスはありません");
+  }
+  function checkState(s) {
+    const ok = s && typeof s === "object" && Array.isArray(s.sheets) && s.sheets.length === s.players
+      && Number.isInteger(s.turn) && s.turn >= 0 && s.turn < s.players && Number.isInteger(s.rolls)
+      && s.rolls >= 0 && s.rolls <= ROLLS && Array.isArray(s.held) && s.held.length === DICE;
+    if (!ok) throw new Error("ゲームの状態が正しくありません");
+    if (s.rolls > 0) checkDice(s.dice);
+  }
+  function checkLive(s) {
+    checkState(s);
+    if (s.over) throw new Error("ゲームは終わっています");
+  }
+
+  /* ---------- scoring ---------- */
+  const countsOf = (dice) => Array.from({ length: FACES }, (_, f) => dice.filter(d => d === f + 1).length);
+  const sumOf = (dice) => dice.reduce((a, d) => a + d, 0);
+  const longestRun = (counts) => counts.reduce(([best, cur], n) => (n ? [Math.max(best, cur + 1), cur + 1] : [best, 0]), [0, 0])[0];
+
+  const SCORERS = Object.freeze({
+    choice: (d) => sumOf(d),
+    four: (d, c) => (Math.max(...c) >= 4 ? sumOf(d) : 0),
+    full: (d, c) => (c.includes(3) && c.includes(2) ? sumOf(d) : 0),
+    sstraight: (d, c) => (longestRun(c) >= 4 ? PRIZE.sstraight : 0),
+    lstraight: (d, c) => (longestRun(c) >= 5 ? PRIZE.lstraight : 0),
+    yacht: (d, c) => (c.includes(DICE) ? PRIZE.yacht : 0)
+  });
+  const scoreFor = (id, dice, counts = countsOf(dice)) => {
+    const face = BY_ID[id].face;
+    return face ? face * counts[face - 1] : SCORERS[id](dice, counts);
+  };
+  function score(id, dice) {
+    checkCat(id);
+    checkDice(dice);
+    return scoreFor(id, dice);
+  }
+  function scoreAll(dice) {
+    checkDice(dice);
+    const counts = countsOf(dice);
+    return Object.freeze(Object.fromEntries(IDS.map(id => [id, scoreFor(id, dice, counts)])));
+  }
+  const isYacht = (dice) => Array.isArray(dice) && dice.length === DICE && dice.every(d => d === dice[0]) && dice[0] >= 1;
+
+  /* ---------- sheets ---------- */
+  const openCats = (sheet) => IDS.filter(id => sheet[id] === null);
+  const upperSum = (sheet) => UPPER.reduce((a, id) => a + (sheet[id] ?? 0), 0);
+  const bonusOf = (sheet) => (upperSum(sheet) >= BONUS.line ? BONUS.points : 0);
+  const totalOf = (sheet) => IDS.reduce((a, id) => a + (sheet[id] ?? 0), 0) + bonusOf(sheet);
+  function bonusInfo(sheet) {
+    const subtotal = upperSum(sheet);
+    const room = UPPER.filter(id => sheet[id] === null).reduce((a, id) => a + BY_ID[id].face * DICE, 0);
+    return Object.freeze({
+      subtotal, need: Math.max(0, BONUS.line - subtotal), reached: subtotal >= BONUS.line, possible: subtotal + room >= BONUS.line
+    });
+  }
+
+  /* ---------- game state ---------- */
+  function newGame(players) {
+    if (!Number.isInteger(players) || players < PLAYERS.min || players > PLAYERS.max) {
+      throw new Error(`人数は${PLAYERS.min}〜${PLAYERS.max}人です`);
+    }
+    return Object.freeze({
+      players, sheets: Object.freeze(Array.from({ length: players }, () => EMPTY_SHEET)),
+      turn: 0, round: 1, dice: null, held: NO_HOLD, rolls: 0, over: false, last: null
+    });
+  }
+  const canRoll = (s) => !s.over && s.rolls < ROLLS && (s.rolls === 0 || s.held.some(h => !h));
+  const canHold = (s) => !s.over && s.rolls > 0 && s.rolls < ROLLS;
+  const canScore = (s, id) => !s.over && s.rolls > 0 && IDS.includes(id) && s.sheets[s.turn][id] === null;
+  const rollsLeft = (s) => ROLLS - s.rolls;
+
+  /* The first roll of a turn throws all five dice; later rolls keep the held ones. */
+  function roll(state, r = Math.random) {
+    checkLive(state);
+    if (state.rolls >= ROLLS) throw new Error("この番はもうふれません");
+    const fresh = state.rolls === 0;
+    if (!fresh && state.held.every(Boolean)) throw new Error("全部キープしています");
+    const held = fresh ? NO_HOLD : state.held;
+    const face = () => Math.min(FACES, 1 + Math.floor(r() * FACES));
+    const dice = Object.freeze(Array.from({ length: DICE }, (_, i) => (held[i] ? state.dice[i] : face())));
+    return Object.freeze({ ...state, dice, held, rolls: state.rolls + 1 });
+  }
+  function setHeld(state, held) {
+    checkLive(state);
+    if (!Array.isArray(held) || held.length !== DICE || !held.every(h => typeof h === "boolean")) {
+      throw new Error("キープの指定が正しくありません");
+    }
+    if (!canHold(state)) throw new Error("いまはキープできません");
+    return Object.freeze({ ...state, held: Object.freeze([...held]) });
+  }
+  function toggleHold(state, i) {
+    if (!Number.isInteger(i) || i < 0 || i >= DICE) throw new Error("サイコロの番号が正しくありません");
+    checkLive(state);
+    return setHeld(state, state.held.map((h, k) => (k === i ? !h : h)));
+  }
+  function choose(state, id) {
+    checkLive(state);
+    checkCat(id);
+    if (state.rolls === 0) throw new Error("先にサイコロをふってね");
+    const before = state.sheets[state.turn];
+    if (before[id] !== null) throw new Error("そのマスはもう記入ずみです");
+    const points = scoreFor(id, state.dice);
+    const sheet = Object.freeze({ ...before, [id]: points });
+    const sheets = Object.freeze(state.sheets.map((s, p) => (p === state.turn ? sheet : s)));
+    const over = sheets.every(s => openCats(s).length === 0);
+    const next = over ? state.turn : (state.turn + 1) % state.players;
+    const round = !over && next === 0 ? state.round + 1 : state.round;
+    const bonus = !bonusInfo(before).reached && bonusInfo(sheet).reached;
+    const last = Object.freeze({ player: state.turn, cat: id, points, bonus, yacht: isYacht(state.dice) });
+    return Object.freeze({ ...state, sheets, turn: next, round, dice: null, held: NO_HOLD, rolls: 0, over, last });
+  }
+  /* What the current dice would score in each open box of the player on turn (null before the first roll). */
+  function previews(state) {
+    checkState(state);
+    if (state.rolls === 0 || state.over) return null;
+    const all = scoreAll(state.dice);
+    return Object.freeze(Object.fromEntries(openCats(state.sheets[state.turn]).map(id => [id, all[id]])));
+  }
+  /* Players by total, best first. Equal totals share a rank. */
+  function ranking(state) {
+    checkState(state);
+    const totals = state.sheets.map(totalOf);
+    const rows = totals.map((total, player) => Object.freeze({ player, total, rank: 1 + totals.filter(t => t > total).length }));
+    return Object.freeze([...rows].sort((a, b) => a.rank - b.rank || a.player - b.player));
+  }
+  const winners = (state) => Object.freeze(ranking(state).filter(row => row.rank === 1).map(row => row.player));
+
+  /* ---------- CPU: a cheap value per box, used to pick boxes and to judge which dice to keep ---------- */
+  /* Tuned by self-play (solo average about 184 for つよい). */
+  const BASE = Object.freeze({
+    ones: 2, twos: 5, threes: 6.5, fours: 11, fives: 11, sixes: 17, choice: 24, four: 11, full: 13, sstraight: 15, lstraight: 18, yacht: 7
+  });
+  const WEIGHT = Object.freeze({ par: 0.6, reach: 20, lose: 9 });
+
+  /* Returns (box, points) => value for this sheet: points over a typical result, plus the effect on the +35 bonus. */
+  function valueModel(sheet) {
+    const info = bonusInfo(sheet);
+    const live = !info.reached && info.possible;
+    const roomBut = (id) => UPPER.filter(u => u !== id && sheet[u] === null).reduce((a, u) => a + BY_ID[u].face * DICE, 0);
+    const room = Object.fromEntries(UPPER.map(id => [id, roomBut(id)]));
+    return (id, points) => {
+      const face = BY_ID[id].face;
+      const base = points - BASE[id];
+      if (!face || !live) return base;
+      const after = info.subtotal + points;
+      if (after >= BONUS.line) return base + WEIGHT.reach;
+      if (after + room[id] < BONUS.line) return base - WEIGHT.lose;
+      return base + WEIGHT.par * (points - 3 * face);
+    };
+  }
+  function bestBox(sheet, dice) {
+    const value = valueModel(sheet);
+    const counts = countsOf(dice);
+    const rated = openCats(sheet).map(id => [id, value(id, scoreFor(id, dice, counts))]);
+    return rated.reduce((best, cur) => (cur[1] > best[1] ? cur : best))[0];
+  }
+  function rawBestBox(sheet, dice, r) {
+    const counts = countsOf(dice);
+    const rated = openCats(sheet).map(id => [id, scoreFor(id, dice, counts)]);
+    const top = Math.max(...rated.map(x => x[1]));
+    return R.pick(rated.filter(x => x[1] === top).map(x => x[0]), r);
+  }
+
+  /* ---------- CPU: exact dice search over all 252 hands (つよい) ----------
+     A multiset of dice is coded as sum(count[f] * 6^f), so keep + outcome = code + code. Tables are built once, lazily. */
+  const POW = Object.freeze([1, 6, 36, 216, 1296, 7776]);
+  const FACT = Object.freeze([1, 1, 2, 6, 24, 120]);
+  const CODES = POW[FACES - 1] * FACES;
+  const keyOf = (counts) => counts.reduce((a, c, i) => a + c * POW[i], 0);
+  const chance = (counts, n) => FACT[n] / counts.reduce((a, c) => a * FACT[c], 1) / Math.pow(FACES, n);
+  let tablesCache = null;
+
+  /* Every count vector with at most five dice, fewest dice first. */
+  function allVectors() {
+    const out = [];
+    const walk = (face, left, counts) => {
+      if (face === FACES) return out.push(counts);
+      for (let n = 0; n <= left; n++) walk(face + 1, left - n, [...counts, n]);
+      return out.length;
+    };
+    walk(0, DICE, []);
+    const rows = out.map(counts => ({ counts, code: keyOf(counts), size: counts.reduce((a, n) => a + n, 0) }));
+    return rows.sort((a, b) => a.size - b.size || a.code - b.code);
+  }
+  function subCodes(counts) {
+    let codes = [0];
+    for (let f = 0; f < FACES; f++) {
+      const next = [];
+      for (const c of codes) for (let n = 0; n <= counts[f]; n++) next.push(c + n * POW[f]);
+      codes = next;
+    }
+    return codes;
+  }
+  /* Packs lists of [index, weight] pairs into flat typed arrays for fast loops. */
+  function pack(lists) {
+    const start = new Int32Array(lists.length + 1);
+    lists.forEach((list, i) => { start[i + 1] = start[i] + list.length; });
+    const at = new Int32Array(start[lists.length]);
+    const p = new Float64Array(start[lists.length]);
+    lists.forEach((list, i) => list.forEach(([a, w], k) => { at[start[i] + k] = a; p[start[i] + k] = w; }));
+    return Object.freeze({ start, at, p });
+  }
+  function buildTables() {
+    const vecs = allVectors();
+    const hands = vecs.filter(v => v.size === DICE);
+    const handAt = new Int32Array(CODES).fill(-1);
+    const keepAt = new Int32Array(CODES).fill(-1);
+    hands.forEach((h, i) => { handAt[h.code] = i; });
+    vecs.forEach((v, i) => { keepAt[v.code] = i; });
+    const bySize = Array.from({ length: DICE + 1 }, (_, m) => vecs.filter(v => v.size === m).map(v => [v.code, chance(v.counts, m)]));
+    const trans = pack(vecs.map(k => bySize[DICE - k.size].map(([code, w]) => [handAt[k.code + code], w])));
+    const subs = pack(hands.map(h => subCodes(h.counts).map(code => [keepAt[code], 0])));
+    const scores = hands.map(h => {
+      const dice = h.counts.flatMap((n, f) => Array(n).fill(f + 1));
+      return IDS.map(id => scoreFor(id, dice, h.counts));
+    });
+    return Object.freeze({ vecs, handAt, keepAt, trans, subs, scores });
+  }
+  function tables() {
+    if (!tablesCache) tablesCache = buildTables();
+    return tablesCache;
+  }
+  /* Builds the search tables ahead of time (about 20-30 ms once), so no CPU turn pays for it. */
+  const warmUp = () => { tables(); };
+  /* E[keep] = expected value of rolling the other dice once, given hand values W. */
+  function expectAll(T, W) {
+    const { start, at, p } = T.trans;
+    const E = new Float64Array(start.length - 1);
+    for (let k = 0; k < E.length; k++) {
+      let sum = 0;
+      for (let j = start[k]; j < start[k + 1]; j++) sum += p[j] * W[at[j]];
+      E[k] = sum;
+    }
+    return E;
+  }
+  /* W[hand] = value of the best keep for that hand. */
+  function improveAll(T, E) {
+    const { start, at } = T.subs;
+    const W = new Float64Array(start.length - 1);
+    for (let h = 0; h < W.length; h++) {
+      let best = -Infinity;
+      for (let j = start[h]; j < start[h + 1]; j++) best = Math.max(best, E[at[j]]);
+      W[h] = best;
+    }
+    return W;
+  }
+
+  /* Best dice to keep (as counts) with `left` rolls to go, or null when scoring now is best. */
+  function searchKeep(sheet, dice, left) {
+    const T = tables();
+    const value = valueModel(sheet);
+    const open = openCats(sheet).map(id => IDS.indexOf(id));
+    const now = Float64Array.from(T.scores, row => open.reduce((m, i) => Math.max(m, value(IDS[i], row[i])), -Infinity));
+    const E = Array.from({ length: left - 1 }).reduce(prev => expectAll(T, improveAll(T, prev)), expectAll(T, now));
+    const code = keyOf(countsOf(dice));
+    const h = T.handAt[code];
+    const full = T.keepAt[code];
+    const ks = Array.from(T.subs.at.subarray(T.subs.start[h], T.subs.start[h + 1]));
+    const best = ks.reduce((b, k) => (k !== full && E[k] > b.v + 1e-9 ? { k, v: E[k] } : b), { k: -1, v: now[h] });
+    return best.k < 0 ? null : T.vecs[best.k].counts;
+  }
+
+  /* ---------- CPU: rule-of-thumb keeps (ふつう) and the simple habit (よわい) ---------- */
+  function runKeep(counts) {
+    const ends = counts.map((n, f) => (n ? f : -1));
+    const runAt = (f) => (counts[f] ? 1 + (f > 0 ? runAt(f - 1) : 0) : 0);
+    const len = longestRun(counts);
+    const end = ends.find(f => f >= 0 && runAt(f) === len);
+    return counts.map((_, f) => (f > end - len && f <= end ? 1 : 0));
+  }
+  function favoriteFace(sheet, counts) {
+    const rate = (f) => counts[f] * 10 + (sheet[UPPER[f]] === null ? 4 : 0) + f;
+    return counts.reduce((best, _, f) => (rate(f) > rate(best) ? f : best), 0);
+  }
+  function normalKeep(sheet, dice) {
+    const c = countsOf(dice);
+    const open = (id) => sheet[id] === null;
+    const run = longestRun(c);
+    const top = Math.max(...c);
+    const value = valueModel(sheet);
+    const bestNow = Math.max(...openCats(sheet).map(id => value(id, scoreFor(id, dice, c))));
+    const madeFull = c.includes(3) && c.includes(2) && open("full");
+    const madeStraight = (run === 5 && open("lstraight")) || (run >= 4 && open("sstraight") && !open("lstraight"));
+    if ((top === DICE && open("yacht")) || madeFull || madeStraight) return null;
+    if (top === DICE - 1 && open("yacht")) return c.map(n => (n === top ? n : 0));
+    if (bestNow >= 10) return null;
+    if ((open("lstraight") || open("sstraight")) && top <= 2 && run >= 3) return runKeep(c);
+    if (open("full") && c.filter(n => n === 2).length === 2) return c.map(n => (n === 2 ? 2 : 0));
+    const face = favoriteFace(sheet, c);
+    if (c[face] >= 2 || !open("choice")) return c.map((n, f) => (f === face ? n : 0));
+    return c.map((n, f) => (f >= 4 ? n : 0));
+  }
+  function easyKeep(sheet, dice) {
+    const c = countsOf(dice);
+    const best = Math.max(...openCats(sheet).map(id => scoreFor(id, dice, c)));
+    if (best >= 25) return null;
+    const top = Math.max(...c);
+    const face = c.lastIndexOf(top);
+    return c.map((n, f) => (f === face ? n : 0));
+  }
+  const KEEPERS = Object.freeze({
+    easy: (sheet, dice) => easyKeep(sheet, dice),
+    normal: (sheet, dice) => normalKeep(sheet, dice),
+    hard: (sheet, dice, left) => searchKeep(sheet, dice, left)
+  });
+  const CHOOSERS = Object.freeze({
+    easy: (sheet, dice, r) => rawBestBox(sheet, dice, r),
+    normal: (sheet, dice) => bestBox(sheet, dice),
+    hard: (sheet, dice) => bestBox(sheet, dice)
+  });
+  /* Turns kept counts into held flags, holding the first dice of each kept face. */
+  function heldFor(dice, keep) {
+    const used = Array(FACES).fill(0);
+    return Object.freeze(dice.map(d => {
+      const take = used[d - 1] < keep[d - 1];
+      used[d - 1] += take ? 1 : 0;
+      return take;
+    }));
+  }
+
+  /* One CPU step: { action: "roll", held } or { action: "score", cat }. */
+  function cpuPlan(state, level, r = Math.random) {
+    checkLive(state);
+    if (!LEVELS.includes(level)) throw new Error("CPUの強さが正しくありません");
+    if (state.rolls === 0) return Object.freeze({ action: "roll", held: NO_HOLD });
+    const sheet = state.sheets[state.turn];
+    const keep = state.rolls >= ROLLS ? null : KEEPERS[level](sheet, state.dice, rollsLeft(state), r);
+    if (!keep || keep.reduce((a, n) => a + n, 0) >= DICE) {
+      return Object.freeze({ action: "score", cat: CHOOSERS[level](sheet, state.dice, r) });
+    }
+    return Object.freeze({ action: "roll", held: heldFor(state.dice, keep) });
+  }
+
+  return {
+    DICE, FACES, ROLLS, TURNS, PLAYERS, BONUS, PRIZE, LEVELS, CATEGORIES, IDS, UPPER, BY_ID,
+    score, scoreAll, isYacht, openCats, upperSum, bonusOf, totalOf, bonusInfo,
+    newGame, canRoll, canHold, canScore, rollsLeft, roll, setHeld, toggleHold, choose, previews, ranking, winners,
+    cpuPlan, warmUp
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = YachtRules;
+</script>
+<script>
+/* yacht.js */
+/* Yacht screen: roll five dice up to three times, keep the good ones, fill the score sheet. Solo, 2-4 on one phone, or vs CPU. */
+const Yacht = (() => {
+  const Y = YachtRules;
+  const KEY = "yacht.settings";
+  const BEST_KEY = "yacht.best";
+  const MAX_TOTAL = 400;
+  const MS = Object.freeze({ roll: 520, face: 65, cpu: 450, hold: 520, pick: 700, turn: 750, end: 900, callout: 1300, bonus: 650, confirm: 400 });
+  const VS = Object.freeze({ solo: "ひとりで", party: "みんなで", cpu: "CPUと" });
+  const LEVEL = Object.freeze({ easy: "よわい", normal: "ふつう", hard: "つよい" });
+  const ORDER = Object.freeze({ first: "先攻", second: "後攻", random: "ランダム" });
+  const COUNTS = Object.freeze([2, 3, 4]);
+  const DEFAULTS = Object.freeze({ vs: "cpu", level: "normal", order: "first", count: 2 });
+  const HANDS = Object.freeze([["lstraight", "B.ストレート！"], ["four", "フォーダイス！"], ["full", "フルハウス！"], ["sstraight", "S.ストレート！"]]);
+  const SOFT_FAIL = "うまく動かせませんでした。もう一度タップしてね";
+
+  const el = {
+    setup: $("ySetup"), play: $("yPlay"), stage: $("yStage"), label: $("yLabel"), title: $("yTitle"),
+    card: $("yCard"), hint: $("yHint"), actions: $("yActions"), ranking: $("yRanking"), sheet: $("ySheet"),
+    dock: $("yDock"), tray: $("yTray"), dice: $("yDice"), rolls: $("yRolls"), callout: $("yCallout"),
+    levelOpt: $("yLevelOpt"), orderOpt: $("yOrderOpt"), countOpt: $("yCountOpt"), best: $("yBest")
+  };
+
+  let settings = DEFAULTS;
+  let best = 0;
+  let match = null;      // { vs, level, names, cpu } fixed when a game starts (cpu = seat index or -1)
+  let game = null;
+  let shown = null;      // faces on screen while the dice tumble
+  let ui = { phase: "setup", busy: false, handoff: false, thinking: false, armed: null, armedAt: 0, pick: null, quit: false, note: "", record: false };
+  let timers = [];
+  let epoch = 0;
+  let calloutTimer = 0;
+  let dieEls = [];
+  let sheetEls = null;
+
+  const keysOf = (o) => Object.keys(o);
+  const reduced = () => Boolean(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+  const isCpu = (p) => match !== null && match.cpu === p;
+  const call = (p) => (match.vs === "party" ? `${match.names[p]}さん` : match.names[p]);
+  const shownTurn = () => (ui.handoff && game.last ? game.last.player : game.turn);
+  const canTouch = () => ui.phase === "play" && game !== null && !game.over && !isCpu(game.turn) && !ui.busy && !ui.thinking && !ui.quit;
+  const randomFace = () => 1 + Math.floor(Math.random() * Y.FACES);
+  const validBest = (v) => (Number.isInteger(v) && v > 0 && v <= MAX_TOTAL ? v : 0);
+  function make(tag, cls, text) {
+    const node = document.createElement(tag);
+    node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function normalize(s) {
+    const v = s && typeof s === "object" ? s : {};
+    const pick = (list, key) => (list.includes(v[key]) ? v[key] : DEFAULTS[key]);
+    return Object.freeze({ vs: pick(keysOf(VS), "vs"), level: pick(Y.LEVELS, "level"), order: pick(keysOf(ORDER), "order"), count: pick(COUNTS, "count") });
+  }
+  function update(patch) {
+    settings = normalize({ ...settings, ...patch });
+    Store.save(KEY, settings);
+    render();
+  }
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+
+  /* ---------- timing: every delayed step belongs to the current epoch; stopAll() cancels them all ---------- */
+  function guard(fn) {
+    try {
+      fn();
+    } catch (e) {
+      console.error("yacht step failed", e);
+      shown = null;
+      go({ busy: false, thinking: false, pick: null, note: SOFT_FAIL });
+    }
+  }
+  function later(ms, fn) {
+    const mine = epoch;
+    const id = setTimeout(() => {
+      timers = timers.filter(t => t !== id);
+      if (mine === epoch) guard(fn);
+    }, ms);
+    timers = [...timers, id];
+  }
+  function stopAll() {
+    timers.forEach(clearTimeout);
+    clearTimeout(calloutTimer);
+    timers = [];
+    epoch += 1;
+    shown = null;
+    el.callout.hidden = true;
+    dieEls.forEach(d => d.cube.classList.remove("yacht-tumble"));
+  }
+
+  /* ---------- sounds: cup rattle, dice clacks on the felt, hold clicks, pencil scribble ---------- */
+  const at = (fn) => { const c = Sound.ctx(); if (c) fn(c.currentTime); };
+  const rattle = () => at(t => Array.from({ length: 9 }, (_, i) => {
+    const d = t + i * 0.045 + Math.random() * 0.02;
+    Sound.hiss({ t: d, dur: 0.03, vol: 0.08, type: "bandpass", freq: 2200 + Math.random() * 2200, q: 3 });
+    Sound.tone({ freq: 1700 + Math.random() * 900, type: "triangle", t: d, dur: 0.025, vol: 0.05 });
+    return d;
+  }));
+  const clack = (n) => at(t => Array.from({ length: n }, (_, k) => {
+    const d = t + k * 0.05 + Math.random() * 0.015;
+    Sound.tone({ freq: 300 + Math.random() * 90, glide: 170, glideTime: 0.06, type: "triangle", t: d, dur: 0.08, vol: 0.2, filter: { freq: 2400 } });
+    Sound.hiss({ t: d, dur: 0.025, vol: 0.1, type: "bandpass", freq: 3200, q: 1.6 });
+    return d;
+  }));
+  const holdSound = (on) => Sound.tone({ freq: on ? 760 : 620, glide: on ? 1150 : 420, glideTime: 0.07, type: "triangle", dur: 0.09, vol: 0.12 });
+  const scribble = () => at(t => [0, 0.09].forEach(d => Sound.hiss({ t: t + d, dur: 0.08, vol: 0.06, type: "bandpass", freq: 1600, to: 3400, q: 2 })));
+  const thud = () => Sound.tone({ freq: 170, glide: 95, type: "sine", dur: 0.18, vol: 0.22 });
+  const chime = () => at(t => [79, 84, 88, 91].forEach((m, i) =>
+    Sound.tone({ freq: Sound.hz(m), type: "triangle", t: t + i * 0.07, dur: 0.28, vol: 0.11, send: 0.25 })));
+
+  function callout(text, kind) {
+    clearTimeout(calloutTimer);
+    el.callout.textContent = text;
+    el.callout.className = `yacht-callout ${kind}`;
+    el.callout.hidden = false;
+    Fx.replay(el.callout, "yacht-show");
+    calloutTimer = setTimeout(() => { el.callout.hidden = true; }, MS.callout);
+  }
+
+  /* ---------- flow ---------- */
+  function seatsFor(s) {
+    if (s.vs === "solo") return { names: ["あなた"], cpu: -1 };
+    if (s.vs === "party") return { names: Array.from({ length: s.count }, (_, i) => View.seat(i)), cpu: -1 };
+    const cpuFirst = s.order === "second" || (s.order === "random" && Math.random() < 0.5);
+    return cpuFirst ? { names: ["CPU", "あなた"], cpu: 0 } : { names: ["あなた", "CPU"], cpu: 1 };
+  }
+  function start() {
+    Sound.ensure();
+    Awake.keep();
+    stopAll();
+    const seats = seatsFor(settings);
+    match = Object.freeze({ vs: settings.vs, level: settings.level, names: Object.freeze(seats.names), cpu: seats.cpu });
+    game = Y.newGame(match.names.length);
+    if (match.cpu >= 0) Y.warmUp();
+    buildSheet();
+    Sound.sfx("confirm");
+    Music.play("think");
+    go({ phase: "play", busy: false, handoff: false, thinking: false, armed: null, pick: null, quit: false, note: "", record: false });
+    if (match.names.length > 1) callout(`${call(game.turn)}から`, "turn");
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+  function roll() {
+    if (canTouch() && Y.canRoll(game)) guard(throwDice);
+  }
+  function throwDice() {
+    const before = game;
+    game = Y.roll(before);
+    const moving = game.dice.map((_, i) => before.rolls === 0 || !before.held[i]);
+    const animate = !reduced();
+    shown = animate ? game.dice.map((f, i) => (moving[i] ? randomFace() : f)) : null;
+    go({ busy: true, armed: null, note: "" });
+    rattle();
+    if (!animate) return later(160, () => land(before, moving));
+    dieEls.forEach((d, i) => { if (moving[i]) tumble(d); });
+    const swaps = Math.floor(MS.roll / MS.face) - 1;
+    Array.from({ length: swaps }, (_, k) => later((k + 1) * MS.face, () => {
+      shown = shown.map((f, i) => (moving[i] ? randomFace() : f));
+      paintDice();
+    }));
+    later(MS.roll, () => land(before, moving));
+  }
+  /* The landing class from the last roll must go first: it comes later in the CSS and would override the tumble. */
+  function tumble(d) {
+    d.cube.classList.remove("yacht-land");
+    d.cube.style.setProperty("--spin", ((Math.random() < 0.5 ? -1 : 1) * (0.8 + Math.random() * 0.5)).toFixed(2));
+    d.cube.style.setProperty("--dur", `${Math.round(MS.roll * (0.82 + Math.random() * 0.18))}ms`);
+    Fx.replay(d.cube, "yacht-tumble");
+  }
+  function land(before, moving) {
+    shown = null;
+    dieEls.forEach((d, i) => {
+      d.cube.classList.remove("yacht-tumble");
+      if (moving[i] && !reduced()) Fx.replay(d.cube, "yacht-land");
+    });
+    clack(moving.filter(Boolean).length);
+    go({ busy: false });
+    announce(before);
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+  /* Calls out a hand that just appeared, if the player can still use its box. A yacht is always celebrated. */
+  function announce(before) {
+    if (Y.isYacht(game.dice)) return celebrateYacht();
+    const now = Y.previews(game) || {};
+    const had = before.rolls > 0 ? Y.scoreAll(before.dice) : {};
+    const hit = HANDS.find(([id]) => now[id] > 0 && !(had[id] > 0));
+    if (!hit) return;
+    chime();
+    callout(hit[1], "hand");
+  }
+  function celebrateYacht() {
+    callout(isCpu(game.turn) ? "CPUがヨット！" : "ヨット！", "yacht");
+    Fx.flash("--zap", 500);
+    if (isCpu(game.turn)) {
+      Sound.sfx("reveal");
+      Fx.shake();
+      return;
+    }
+    Sound.sfx("victory");
+    Fx.confetti();
+  }
+
+  function onDice(e) {
+    const btn = e.target.closest(".yacht-die");
+    if (!btn || !canTouch()) return;
+    if (!Y.canHold(game)) {
+      thud();
+      go({ note: game.rolls === 0 ? "先に「ふる」でサイコロをふってね" : "3回ふったので、表から記入するマスを選ぼう" });
+      return;
+    }
+    guard(() => {
+      const i = Number(btn.dataset.i);
+      game = Y.toggleHold(game, i);
+      holdSound(game.held[i]);
+      go({ armed: null, note: "" });
+    });
+  }
+  function onSheet(e) {
+    const row = e.target.closest("button.yacht-row");
+    if (!row || !canTouch()) return;
+    const id = row.dataset.cat;
+    if (!Y.canScore(game, id)) {
+      if (game.rolls === 0) {
+        thud();
+        go({ note: "先に「ふる」でサイコロをふってね" });
+      }
+      return;
+    }
+    if (Y.previews(game)[id] === 0 && ui.armed !== id) {
+      thud();
+      go({ armed: id, armedAt: Date.now(), note: "" });
+      return;
+    }
+    /* A quick double tap is one tap: a zero needs a second, deliberate tap. */
+    if (ui.armed === id && Date.now() - ui.armedAt < MS.confirm) return;
+    guard(() => commit(id));
+  }
+  function commit(id) {
+    const player = game.turn;
+    game = Y.choose(game, id);
+    const { points, bonus } = game.last;
+    scribble();
+    if (points === 0) thud();
+    else Sound.sfx(points >= 30 ? "correct" : "coin");
+    go({ armed: null, pick: null, busy: true, handoff: true, note: "" });
+    Fx.replay(sheetEls.rows[id].cells[player], "yacht-fresh");
+    if (bonus) later(380, () => { chime(); callout("ボーナス +35！", "bonus"); });
+    /* After a bonus, wait a little longer so the next turn's callout does not cover it. */
+    later((game.over ? MS.end : MS.turn) + (bonus ? MS.bonus : 0), game.over ? finish : nextTurn);
+  }
+  function nextTurn() {
+    go({ busy: false, handoff: false });
+    Fx.pop(el.title);
+    if (match.names.length > 1) {
+      Sound.sfx("whoosh");
+      callout(`${call(game.turn)}の番`, "turn");
+    }
+    if (isCpu(game.turn)) scheduleCpu();
+  }
+
+  /* ---------- CPU: think, show the dice it keeps, roll, then mark its box ---------- */
+  function scheduleCpu() {
+    go({ thinking: true });
+    later(MS.cpu, cpuStep);
+  }
+  function cpuStep() {
+    if (ui.phase !== "play" || game.over || !isCpu(game.turn)) return;
+    const plan = Y.cpuPlan(game, match.level);
+    if (plan.action === "score") {
+      const name = Y.BY_ID[plan.cat].name;
+      go({ thinking: false, pick: plan.cat, note: `CPUは「${name}」に${Y.previews(game)[plan.cat]}点` });
+      later(MS.pick, () => commit(plan.cat));
+      return;
+    }
+    if (game.rolls === 0) {
+      ui = { ...ui, thinking: false };
+      throwDice();
+      return;
+    }
+    game = Y.setHeld(game, plan.held);
+    const kept = game.dice.filter((_, i) => plan.held[i]);
+    holdSound(kept.length > 0);
+    go({ thinking: false, busy: true, note: kept.length ? `CPUは ${kept.join("・")} をキープ` : "CPUは全部ふり直し" });
+    later(MS.hold, () => {
+      ui = { ...ui, busy: false };
+      throwDice();
+    });
+  }
+
+  function finish() {
+    stopAll();
+    Music.stop();
+    const rows = Y.ranking(game);
+    const record = match.vs === "solo" && rows[0].total > best;
+    if (record) {
+      best = rows[0].total;
+      Store.save(BEST_KEY, best);
+    }
+    go({ phase: "over", busy: false, handoff: false, thinking: false, armed: null, pick: null, quit: false, note: "", record });
+    Fx.pop(match.vs === "solo" ? el.card : el.ranking);
+    endSound(rows, record);
+  }
+  function endSound(rows, record) {
+    const tie = rows.filter(r => r.rank === 1).length > 1;
+    if (match.vs === "solo") Sound.sfx(record ? "victory" : "fanfare");
+    else if (tie) Sound.sfx("reveal");
+    else if (isCpu(rows[0].player)) Sound.sfx("lose");
+    else Sound.sfx(match.vs === "cpu" ? "victory" : "fanfare");
+    if ((match.vs === "solo" && record) || (match.vs !== "solo" && !tie && !isCpu(rows[0].player))) Fx.confetti();
+  }
+  function quit() {
+    if (!ui.quit) go({ quit: true });
+  }
+  function toSetup() {
+    stopAll();
+    Music.stop();
+    go({ phase: "setup", busy: false, handoff: false, thinking: false, armed: null, pick: null, quit: false, note: "" });
+  }
+
+  /* ---------- screens ---------- */
+  function playTitle() {
+    if (ui.handoff && game.last) return `「${Y.BY_ID[game.last.cat].name}」に${game.last.points}点${game.last.points >= 30 ? "！" : ""}`;
+    if (ui.thinking) return "CPUが考え中…";
+    if (match.vs === "solo") return `合計 ${Y.totalOf(game.sheets[0])}点`;
+    if (match.vs === "cpu") return isCpu(game.turn) ? "CPUの番" : "あなたの番";
+    return `${call(game.turn)}の番`;
+  }
+  function playHint() {
+    if (ui.note) return ui.note;
+    if (ui.busy || ui.thinking || isCpu(game.turn)) return "";
+    if (ui.armed) return `「${Y.BY_ID[ui.armed].name}」は0点。もう一度タップで記入`;
+    if (game.rolls === 0) return "「ふる」でサイコロを5個ふろう";
+    if (game.rolls >= Y.ROLLS) return "表から記入するマスを1つ選ぼう";
+    return "サイコロをタップでキープ。表をタップで記入";
+  }
+  function rollLabel() {
+    if (isCpu(game.turn)) return "CPUの番";
+    if (game.rolls === 0) return match.vs === "party" ? `${call(game.turn)}がふる` : "ふる";
+    if (game.rolls >= Y.ROLLS) return "マスを選んでね";
+    if (!Y.canRoll(game)) return "全部キープ中";
+    return `ふる（あと${Y.rollsLeft(game)}回）`;
+  }
+  function playActions() {
+    if (ui.quit) return [makeButton("つづける", () => go({ quit: false }), "small"), makeButton("やめる", toSetup, "primary danger")];
+    if (ui.armed) {
+      const id = ui.armed;
+      return [makeButton("とりけす", () => go({ armed: null }), "small"),
+        makeButton(`${Y.BY_ID[id].name}に0点`, () => { if (canTouch()) guard(() => commit(id)); }, "primary danger", !canTouch())];
+    }
+    return [makeButton("やめる", quit, "small"), makeButton(rollLabel(), roll, "primary", !canTouch() || !Y.canRoll(game))];
+  }
+  function resultTitle() {
+    const top = Y.ranking(game).filter(r => r.rank === 1);
+    if (match.vs === "solo") return ui.record ? "自己ベスト更新！" : "おつかれさま！";
+    if (top.length === match.names.length) return "引き分け！";
+    if (top.length > 1) return `${top.map(r => call(r.player)).join("と")}が同点優勝！`;
+    if (match.vs === "cpu") return isCpu(top[0].player) ? "CPUの勝ち…" : "あなたの勝ち！";
+    return `${call(top[0].player)}の優勝！`;
+  }
+  function resultHint() {
+    const rows = Y.ranking(game);
+    if (match.vs === "solo") {
+      const tip = Y.bonusOf(game.sheets[0]) ? "ボーナスも取れました！" : "1〜6の目の小計が63点以上なら+35点";
+      return `自己ベスト ${best}点。${tip}`;
+    }
+    const gap = rows[0].total - rows[1].total;
+    return gap > 0 ? `${gap}点差で決着` : "合計点がぴったり同じでした";
+  }
+
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("はじめる", start, "primary")] }),
+    play: () => ({
+      label: `${match.vs === "cpu" ? `CPU ${LEVEL[match.level]}・` : ""}ラウンド ${game.round} / ${Y.TURNS}`,
+      title: playTitle(), hint: playHint(), actions: playActions()
+    }),
+    over: () => ({
+      label: "結果", title: resultTitle(), hint: resultHint(),
+      card: match.vs === "solo" ? { main: `${Y.totalOf(game.sheets[0])}点`, sub: "12マスの合計", cls: "yacht-final" } : null,
+      actions: [makeButton("設定", toSetup, "small"), makeButton("もう一回", start, "primary")]
+    })
+  };
+
+  /* ---------- dice ---------- */
+  function buildDice() {
+    return Array.from({ length: Y.DICE }, (_, i) => {
+      const root = make("button", "yacht-die");
+      root.type = "button";
+      root.dataset.i = String(i);
+      const cube = pips(make("span", "yacht-cube"), 0);
+      root.append(cube, make("span", "yacht-tag", "キープ"));
+      el.dice.append(root);
+      return Object.freeze({ root, cube });
+    });
+  }
+  function pips(cube, face) {
+    cube.dataset.face = String(face);
+    cube.append(...Array.from({ length: 9 }, () => document.createElement("i")));
+    return cube;
+  }
+  function paintDice() {
+    const faces = shown || (game && game.dice) || null;
+    const holdable = canTouch() && Y.canHold(game);
+    dieEls.forEach((d, i) => {
+      const face = faces ? faces[i] : 0;
+      const held = Boolean(game && game.rolls > 0 && game.held[i]);
+      if (d.cube.dataset.face !== String(face)) d.cube.dataset.face = String(face);
+      d.root.classList.toggle("held", held);
+      d.root.classList.toggle("can", holdable);
+      d.root.setAttribute("aria-pressed", String(held));
+      d.root.setAttribute("aria-label", face ? `${face}の目${held ? "、キープ中" : ""}` : "まだふっていないサイコロ");
+    });
+    const left = game && !game.over ? Y.rollsLeft(game) : 0;
+    [...el.rolls.children].forEach((dot, i) => dot.classList.toggle("on", i < left));
+  }
+
+  /* ---------- score sheet: built once per game, then repainted in place ---------- */
+  function catLabel(c) {
+    const box = make("span", "yacht-cat");
+    const name = make("span", "yacht-cat-name");
+    if (c.face) name.append(pips(make("span", "yacht-cube yacht-mini"), c.face));
+    name.append(c.name);
+    box.append(name, make("small", "", c.note));
+    return box;
+  }
+  function buildRow(tag, cls, label, n) {
+    const row = make(tag, `yacht-row ${cls}`.trim());
+    if (tag === "button") row.type = "button";
+    const cells = Array.from({ length: n }, () => make("span", "yacht-cell"));
+    row.append(label, ...cells);
+    return Object.freeze({ row, cells });
+  }
+  function buildSheet() {
+    const n = match.names.length;
+    const plain = (text) => make("span", "yacht-cat", text);
+    const noted = (name, note) => {
+      const box = make("span", "yacht-cat");
+      box.append(make("span", "yacht-cat-name", name), make("small", "", note));
+      return box;
+    };
+    const head = buildRow("div", "yacht-head", plain(""), n);
+    head.cells.forEach((c, p) => { c.textContent = match.names[p]; });
+    const rows = Object.fromEntries(Y.CATEGORIES.map(c => {
+      const r = buildRow("button", "", catLabel(c), n);
+      r.row.dataset.cat = c.id;
+      return [c.id, r];
+    }));
+    const sub = buildRow("div", "yacht-sum", noted("小計", `${Y.BONUS.line}点で+${Y.BONUS.points}`), n);
+    const bonus = buildRow("div", "yacht-sum", plain("ボーナス"), n);
+    const total = buildRow("div", "yacht-total", plain("合計"), n);
+    const lower = Y.IDS.filter(id => !Y.UPPER.includes(id));
+    el.sheet.style.setProperty("--n", String(n));
+    el.sheet.replaceChildren(head.row, ...Y.UPPER.map(id => rows[id].row), sub.row, bonus.row, ...lower.map(id => rows[id].row), total.row);
+    sheetEls = Object.freeze({ rows, head: head.cells, sub: sub.cells, bonus: bonus.cells, total: total.cells });
+  }
+  function paintRow(c, r, turn, pre, touch) {
+    const can = touch && pre !== null && c.id in pre;
+    r.row.classList.toggle("open", can);
+    r.row.classList.toggle("used", turn >= 0 && game.sheets[turn][c.id] !== null);
+    r.row.classList.toggle("armed", ui.armed === c.id);
+    r.row.classList.toggle("pick", ui.pick === c.id);
+    r.row.setAttribute("aria-disabled", String(!can));
+    r.row.setAttribute("aria-label", can ? `${c.name}に${pre[c.id]}点で記入` : c.name);
+    r.cells.forEach((cell, p) => {
+      const val = game.sheets[p][c.id];
+      const preview = val === null && p === turn && pre !== null ? pre[c.id] : null;
+      const text = val !== null ? String(val) : preview !== null ? String(preview) : "";
+      if (cell.textContent !== text) cell.textContent = text;
+      cell.classList.toggle("done", val !== null);
+      cell.classList.toggle("preview", preview !== null);
+      cell.classList.toggle("zero", preview === 0);
+      cell.classList.toggle("turn", p === turn);
+    });
+  }
+  function bonusText(sheet, info) {
+    if (info.reached) return `+${Y.BONUS.points}`;
+    const upperDone = Y.UPPER.every(id => sheet[id] !== null);
+    return !info.possible || upperDone ? "0" : `あと${info.need}`;
+  }
+  function paintTotals(turn, leaders) {
+    game.sheets.forEach((sheet, p) => {
+      const info = Y.bonusInfo(sheet);
+      const btext = bonusText(sheet, info);
+      sheetEls.sub[p].textContent = String(info.subtotal);
+      sheetEls.bonus[p].textContent = btext;
+      sheetEls.bonus[p].classList.toggle("got", info.reached);
+      sheetEls.bonus[p].classList.toggle("need", btext.startsWith("あと"));
+      sheetEls.total[p].textContent = String(Y.totalOf(sheet));
+      [sheetEls.head[p], sheetEls.sub[p], sheetEls.bonus[p], sheetEls.total[p]].forEach(cell => cell.classList.toggle("turn", p === turn));
+      [sheetEls.head[p], sheetEls.total[p]].forEach(cell => cell.classList.toggle("lead", leaders.includes(p)));
+    });
+  }
+  function paintSheet() {
+    if (!sheetEls) return;
+    const turn = ui.phase === "play" && !game.over ? shownTurn() : -1;
+    const pre = turn >= 0 && !ui.busy ? Y.previews(game) : null;
+    const touch = canTouch();
+    Y.CATEGORIES.forEach(c => paintRow(c, sheetEls.rows[c.id], turn, pre, touch));
+    paintTotals(turn, ui.phase === "over" && match.names.length > 1 ? Y.winners(game) : []);
+  }
+  function paintRanking() {
+    const show = ui.phase === "over" && match.names.length > 1;
+    el.ranking.hidden = !show;
+    if (!show) return;
+    el.ranking.replaceChildren(...Y.ranking(game).map(r => {
+      const li = make("li", r.rank === 1 ? "ok" : "");
+      li.append(make("span", "pos", `${r.rank}位`), make("span", "who", call(r.player)), make("b", "num", String(r.total)), make("span", "mark", "点"));
+      return li;
+    }));
+  }
+
+  /* ---------- setup ---------- */
+  function renderSetup() {
+    View.chips($("yVsChips"), View.options(keysOf(VS), k => VS[k]), settings.vs, v => update({ vs: v }));
+    View.chips($("yLevelChips"), View.options(Y.LEVELS, k => LEVEL[k]), settings.level, v => update({ level: v }));
+    View.chips($("yOrderChips"), View.options(keysOf(ORDER), k => ORDER[k]), settings.order, v => update({ order: v }));
+    View.chips($("yCountChips"), View.options(COUNTS, n => `${n}人`), settings.count, v => update({ count: v }));
+    el.levelOpt.hidden = settings.vs !== "cpu";
+    el.orderOpt.hidden = settings.vs !== "cpu";
+    el.countOpt.hidden = settings.vs !== "party";
+    View.text(el.best, settings.vs === "solo" && best > 0 ? `自己ベスト ${best}点` : "");
+    View.list($("yRules"), [
+      "1回の番で、サイコロ5個を3回までふれる。残したいサイコロはタップでキープ",
+      "ふり終えたら表のマスを1つ選んで記入。0点でもどこかに必ず記入する",
+      "1〜6の目はその目の合計。チョイス・フォーダイス・フルハウスは5個の合計",
+      "S.ストレートは15点、B.ストレートは30点、ヨット（5個同じ）は50点",
+      settings.vs === "solo"
+        ? "1〜6の目の小計が63点以上で+35点。12マス埋めて自己ベストをねらおう"
+        : "1〜6の目の小計が63点以上で+35点。12マス埋めて合計が多い人の勝ち"
+    ]);
+  }
+
+  function render() {
+    const playing = ui.phase !== "setup";
+    el.setup.hidden = playing;
+    el.play.hidden = !playing;
+    el.tray.hidden = ui.phase !== "play";
+    el.stage.classList.toggle("yacht-playing", playing);
+    el.dock.classList.toggle("yacht-dock-setup", !playing);
+    if (!playing) renderSetup();
+    View.stage(el, SCREENS[ui.phase]());
+    if (!playing) return;
+    paintSheet();
+    paintDice();
+    paintRanking();
+  }
+
+  function init() {
+    settings = normalize(Store.load(KEY, {}));
+    best = validBest(Store.load(BEST_KEY, 0));
+    dieEls = buildDice();
+    el.dice.addEventListener("click", onDice);
+    el.sheet.addEventListener("click", onSheet);
+    render();
+  }
+  function onShow() {
+    if (ui.phase !== "play") return;
+    Music.play("think");
+    if (game.over) finish();
+    else if (isCpu(game.turn)) scheduleCpu();
+  }
+  function leave() {
+    stopAll();
+    if (ui.phase === "play") go({ busy: false, handoff: false, thinking: false, pick: null, quit: false });
+  }
+
+  return { init, onShow, leave };
+})();
+</script>
+<script>
+/* blackjack-rules.js */
+/* Blackjack rules: 6-deck shoe, dealer stands on all 17s, blackjack pays 3:2, double, one split, dealer peeks. */
+const BlackjackRules = (() => {
+  const R = typeof Rand !== "undefined" ? Rand : require("./random.js");
+  const C = typeof Cards !== "undefined" ? Cards : require("./cards.js");
+
+  const DECKS = 6;
+  const PENETRATION = 0.75;
+  const START_CHIPS = 1000;
+  const MIN_BET = 10;
+  const MAX_BET = 5000;
+  const MAX_CHIPS = 999999999;
+  const CHIP_VALUES = Object.freeze([10, 50, 100, 500]);
+  const ACTIONS = Object.freeze(["hit", "stand", "double", "split"]);
+  const TENS = Object.freeze(["10", "J", "Q", "K"]);
+  const SUIT_IDS = C.SUITS.map(s => s.id);
+
+  /* ---------- cards and totals ---------- */
+  const isCard = (c) => Boolean(c) && SUIT_IDS.includes(c.suit) && C.RANKS.includes(c.rank);
+  const cardValue = (card) => (card.rank === "A" ? 1 : TENS.includes(card.rank) ? 10 : Number(card.rank));
+
+  /* total: best total; hard: aces as 1; soft: an ace is counted as 11. */
+  function handValue(cards) {
+    const hard = cards.reduce((sum, c) => sum + cardValue(c), 0);
+    const soft = cards.some(c => c.rank === "A") && hard + 10 <= 21;
+    const total = soft ? hard + 10 : hard;
+    return { total, hard, soft, bust: total > 21 };
+  }
+  const isBlackjack = (cards) => cards.length === 2 && handValue(cards).total === 21;
+  /* A natural is a two-card 21 on the original hand; 21 after a split is only 21. */
+  const isNatural = (hand) => !hand.split && isBlackjack(hand.cards);
+  /* "7 / 17" while an ace can still be 1 or 11 and the hand can still draw; a finished hand shows only its total. */
+  function totalLabel(cards, finished = false) {
+    const v = handValue(cards);
+    return v.soft && v.total < 21 && !finished ? `${v.hard} / ${v.total}` : String(v.total);
+  }
+  const dealerShouldHit = (cards) => handValue(cards).total < 17;
+  const canPeek = (up) => up.rank === "A" || cardValue(up) === 10;
+
+  /* ---------- shoe ---------- */
+  function shoeFrom(cards) {
+    if (!Array.isArray(cards) || cards.length === 0 || !cards.every(isCard)) throw new Error("山札が正しくありません");
+    return Object.freeze({ cards: Object.freeze([...cards]), next: 0 });
+  }
+  const newShoe = (r = Math.random, decks = DECKS) => shoeFrom(R.shuffle(C.newDeck(decks), r));
+  const remaining = (shoe) => shoe.cards.length - shoe.next;
+  const needsShuffle = (shoe) => shoe.next >= shoe.cards.length * PENETRATION;
+  function draw(shoe) {
+    if (remaining(shoe) <= 0) throw new Error("山札がありません");
+    return { card: shoe.cards[shoe.next], shoe: { ...shoe, next: shoe.next + 1 } };
+  }
+
+  /* ---------- chips ---------- */
+  const isBroke = (chips) => chips < MIN_BET;
+  const maxBet = (chips) => Math.max(0, Math.min(MAX_BET, Math.floor(chips / MIN_BET) * MIN_BET));
+  const canAddChip = (bet, value, chips) => CHIP_VALUES.includes(value) && bet + value <= maxBet(chips);
+  /* 同じ額: the last bet, lowered to what the chips allow. */
+  const repeatBet = (last, chips) => (Number.isInteger(last) && last >= MIN_BET ? Math.min(last, maxBet(chips)) : 0);
+  function validBet(chips, bet) {
+    return Number.isInteger(chips) && Number.isInteger(bet) && bet >= MIN_BET && bet % MIN_BET === 0 && bet <= maxBet(chips);
+  }
+  /* Splits an amount into chip values, biggest first (for drawing stacks). */
+  function chipStack(amount) {
+    if (!Number.isInteger(amount) || amount < 0) throw new Error("チップの数が正しくありません");
+    return [...CHIP_VALUES].reverse().reduce((acc, v) => {
+      const n = Math.floor(acc.left / v);
+      return { left: acc.left - n * v, list: [...acc.list, ...Array(n).fill(v)] };
+    }, { left: amount, list: [] }).list;
+  }
+  /* Checks what was loaded from storage. */
+  function normalizeBank(raw) {
+    const src = raw && typeof raw === "object" ? raw : {};
+    const ok = (n) => Number.isInteger(n) && n >= 0 && n <= MAX_CHIPS;
+    const chips = ok(src.chips) ? src.chips : START_CHIPS;
+    const last = ok(src.last) && src.last >= MIN_BET && src.last <= MAX_BET && src.last % MIN_BET === 0 ? src.last : 0;
+    const best = Math.max(chips, START_CHIPS, ok(src.best) ? src.best : 0);
+    return { chips, last, best };
+  }
+
+  /* ---------- round ---------- */
+  const newHand = (cards, bet, split = false) => ({ cards, bet, split, doubled: false, done: false });
+  const activeHand = (round) => round.hands[round.active];
+  const staked = (round) => round.hands.reduce((sum, h) => sum + h.bet, 0);
+
+  /* Deals player, dealer up card, player, dealer hole card. Shuffles a fresh shoe first when 75% is gone. */
+  function startRound({ shoe, chips, bet }, r = Math.random) {
+    if (!validBet(chips, bet)) throw new Error(`賭けは${MIN_BET}枚から、持っているチップまで（最大${MAX_BET}枚）です`);
+    const shuffled = !shoe || needsShuffle(shoe);
+    const dealt = [0, 1, 2, 3].reduce((acc) => {
+      const d = draw(acc.shoe);
+      return { shoe: d.shoe, list: [...acc.list, d.card] };
+    }, { shoe: shuffled ? newShoe(r) : shoe, list: [] });
+    const [p1, up, p2, hole] = dealt.list;
+    const round = {
+      phase: "player", shoe: dealt.shoe, chips: chips - bet, bet, shuffled,
+      dealer: [up, hole], hands: [newHand([p1, p2], bet)], active: 0,
+      splitDone: false, peeked: canPeek(up), results: null
+    };
+    return isBlackjack(round.dealer) || isNatural(round.hands[0]) ? settle(round) : round;
+  }
+
+  function canDouble(round) {
+    const h = activeHand(round);
+    return round.phase === "player" && h.cards.length === 2 && round.chips >= h.bet;
+  }
+  function canSplit(round) {
+    const h = activeHand(round);
+    return round.phase === "player" && !round.splitDone && h.cards.length === 2 &&
+      h.cards[0].rank === h.cards[1].rank && round.chips >= h.bet;
+  }
+  function legalActions(round) {
+    if (!round || round.phase !== "player") return [];
+    return ["hit", "stand", ...(canDouble(round) ? ["double"] : []), ...(canSplit(round) ? ["split"] : [])];
+  }
+
+  const withHand = (round, hand) => ({ ...round, hands: round.hands.map((h, i) => (i === round.active ? hand : h)) });
+  function hitHand(hand, shoe) {
+    const d = draw(shoe);
+    const cards = [...hand.cards, d.card];
+    return { hand: { ...hand, cards, done: hand.done || handValue(cards).total >= 21 }, shoe: d.shoe };
+  }
+  const MOVES = {
+    hit: (round) => {
+      const d = hitHand(activeHand(round), round.shoe);
+      return { ...withHand(round, d.hand), shoe: d.shoe };
+    },
+    stand: (round) => withHand(round, { ...activeHand(round), done: true }),
+    double: (round) => {
+      const h = activeHand(round);
+      const d = hitHand({ ...h, bet: h.bet * 2, doubled: true, done: true }, round.shoe);
+      return { ...withHand(round, d.hand), shoe: d.shoe, chips: round.chips - h.bet };
+    },
+    split: (round) => {
+      const h = activeHand(round);
+      const aces = h.cards[0].rank === "A";
+      const first = hitHand({ ...newHand([h.cards[0]], h.bet, true), done: aces }, round.shoe);
+      const second = aces
+        ? hitHand({ ...newHand([h.cards[1]], h.bet, true), done: true }, first.shoe)
+        : { hand: newHand([h.cards[1]], h.bet, true), shoe: first.shoe };
+      return { ...round, shoe: second.shoe, chips: round.chips - h.bet, hands: [first.hand, second.hand], splitDone: true };
+    }
+  };
+
+  /* Moves on to the next unfinished hand (dealing its second card), then to the dealer. */
+  function advance(round) {
+    if (!activeHand(round).done) return round;
+    const next = round.hands.findIndex((h, i) => i > round.active && !h.done);
+    if (next >= 0) {
+      const h = round.hands[next];
+      if (h.cards.length >= 2) return advance({ ...round, active: next });
+      const d = hitHand(h, round.shoe);
+      return advance({ ...round, active: next, shoe: d.shoe, hands: round.hands.map((x, i) => (i === next ? d.hand : x)) });
+    }
+    const live = round.hands.some(h => !handValue(h.cards).bust);
+    return live ? { ...round, phase: "dealer" } : settle(round);
+  }
+
+  function act(round, action) {
+    if (!ACTIONS.includes(action)) throw new Error("知らない操作です");
+    if (!legalActions(round).includes(action)) throw new Error("今はその操作はできません");
+    return advance(MOVES[action](round));
+  }
+
+  /* One dealer step: draws a card below 17, otherwise settles the round. */
+  function dealerStep(round) {
+    if (!round || round.phase !== "dealer") throw new Error("ディーラーの番ではありません");
+    if (!dealerShouldHit(round.dealer)) return settle(round);
+    const d = draw(round.shoe);
+    return { ...round, shoe: d.shoe, dealer: [...round.dealer, d.card] };
+  }
+  function playDealer(round) {
+    let r = round;
+    while (r.phase === "dealer") r = dealerStep(r);
+    return r;
+  }
+
+  /* ---------- settlement ---------- */
+  const RETURNS = Object.freeze({
+    blackjack: (bet) => bet + Math.floor(bet * 3 / 2), win: (bet) => bet * 2, push: (bet) => bet, lose: () => 0, bust: () => 0
+  });
+  function outcome(hand, dealer) {
+    const p = handValue(hand.cards);
+    const d = handValue(dealer);
+    const natural = isNatural(hand);
+    const dealerBj = isBlackjack(dealer);
+    if (natural && dealerBj) return "push";
+    if (natural) return "blackjack";
+    if (dealerBj) return "lose";
+    if (p.bust) return "bust";
+    if (d.bust || p.total > d.total) return "win";
+    return p.total < d.total ? "lose" : "push";
+  }
+  function settle(round) {
+    const results = round.hands.map(h => {
+      const kind = outcome(h, round.dealer);
+      const ret = RETURNS[kind](h.bet);
+      return { outcome: kind, bet: h.bet, ret, net: ret - h.bet };
+    });
+    const back = results.reduce((sum, x) => sum + x.ret, 0);
+    return { ...round, phase: "done", hands: round.hands.map(h => ({ ...h, done: true })), chips: round.chips + back, results };
+  }
+  const roundNet = (round) => (round.results || []).reduce((sum, x) => sum + x.net, 0);
+
+  /* ---------- basic strategy (4-8 decks, S17, double after split, no surrender) ---------- */
+  /* Columns: dealer 2 3 4 5 6 7 8 9 10 A. H hit, S stand, D double else hit, X double else stand, P split. */
+  const HARD = Object.freeze({ 9: "HDDDDHHHHH", 10: "DDDDDDDDHH", 11: "DDDDDDDDDH", 12: "HHSSSHHHHH", 13: "SSSSSHHHHH" });
+  const SOFT = Object.freeze({ 13: "HHHDDHHHHH", 14: "HHHDDHHHHH", 15: "HHDDDHHHHH", 16: "HHDDDHHHHH", 17: "HDDDDHHHHH", 18: "SXXXXSSHHH" });
+  const PAIRS = Object.freeze({
+    A: "PPPPPPPPPP", 9: "PPPPPSPPSS", 8: "PPPPPPPPPP", 7: "PPPPPPHHHH",
+    6: "PPPPPHHHHH", 4: "HHHPPHHHHH", 3: "PPPPPPHHHH", 2: "PPPPPPHHHH"
+  });
+  const upColumn = (up) => (up.rank === "A" ? 9 : cardValue(up) - 2);
+  function hardCode(total, col) {
+    if (total <= 8) return "H";
+    if (total >= 17) return "S";
+    return HARD[Math.min(total, 13)][col];
+  }
+  function softCode(total, col) {
+    if (total <= 12) return "H";
+    return total >= 19 ? "S" : SOFT[total][col];
+  }
+  /* The book move for these cards; options say whether doubling and splitting are allowed right now. */
+  function strategy(cards, up, options = {}) {
+    if (!Array.isArray(cards) || cards.length < 2 || !cards.every(isCard) || !isCard(up)) throw new Error("カードが正しくありません");
+    const col = upColumn(up);
+    const pair = PAIRS[cards[0].rank];
+    if (options.split && cards.length === 2 && cards[0].rank === cards[1].rank && pair && pair[col] === "P") return "split";
+    const v = handValue(cards);
+    const code = v.soft ? softCode(v.total, col) : hardCode(v.total, col);
+    if (code === "D") return options.double ? "double" : "hit";
+    if (code === "X") return options.double ? "double" : "stand";
+    return code === "H" ? "hit" : "stand";
+  }
+  /* Basic-strategy advice for the hand being played (always a legal action), or null. */
+  function recommend(round) {
+    const legal = legalActions(round);
+    if (!legal.length) return null;
+    return strategy(activeHand(round).cards, round.dealer[0], { double: legal.includes("double"), split: legal.includes("split") });
+  }
+
+  return {
+    DECKS, PENETRATION, START_CHIPS, MIN_BET, MAX_BET, CHIP_VALUES, ACTIONS,
+    isCard, cardValue, handValue, isBlackjack, isNatural, totalLabel, dealerShouldHit, canPeek,
+    shoeFrom, newShoe, remaining, needsShuffle, draw,
+    isBroke, maxBet, canAddChip, repeatBet, validBet, chipStack, normalizeBank,
+    startRound, activeHand, staked, legalActions, act, dealerStep, playDealer, outcome, settle, roundNet,
+    strategy, recommend
+  };
+})();
+
+if (typeof module !== "undefined") module.exports = BlackjackRules;
+</script>
+<script>
+/* blackjack.js */
+/* Blackjack screen: you against the dealer on a felt table, with chips, a 6-deck shoe and dealt-card animations. */
+const Blackjack = (() => {
+  const R = BlackjackRules;
+  const KEY = "blackjack.settings";
+  const BANK_KEY = "blackjack.bank";
+  const T = Object.freeze({ gap: 240, slide: 300, flip: 330, rest: 160, peek: 950, shuffle: 1500, dealer: 520, count: 700 });
+  const ACTION_LABEL = Object.freeze({ hit: "ヒット", stand: "スタンド", double: "ダブル", split: "スプリット" });
+  const ACTION_CLASS = Object.freeze({ hit: "primary", stand: "primary danger", double: "", split: "" });
+  const OUTCOME = Object.freeze({ blackjack: "ブラックジャック！", win: "勝ち", lose: "負け", push: "引き分け", bust: "バースト" });
+  const TITLE = Object.freeze({ blackjack: "ブラックジャック！", win: "勝ち！", lose: "負け…", push: "引き分け", bust: "バースト…" });
+  const NOTE = Object.freeze({ shuffle: "シャッフル中…", peek: "ディーラーがブラックジャックか確認中…", "": "" });
+  const RULES = Object.freeze([
+    "合計を21に近づけて、ディーラーより大きければ勝ち。Aは1か11、J・Q・Kは10と数える",
+    "21をこえたらバーストで負け。最初の2枚で21ならブラックジャックで、賭けの1.5倍もらえる",
+    "ヒットでもう1枚、スタンドで勝負。ダブルは賭けを2倍にして1枚だけ引く。同じ札の2枚（8と8、KとKなど）はスプリットで2つの手に分けられる（1回まで。Aは1枚ずつ）",
+    "ディーラーは16以下なら引き、17以上で止まる（Aを11と数える17でも止まる）。6組のカードを使い、4分の3を配ったらシャッフル",
+    "インシュランスとサレンダーはなし。1回に10〜5,000枚まで賭けられる"
+  ]);
+
+  const el = {
+    setup: $("jSetup"), play: $("jPlay"), label: $("jLabel"), title: $("jTitle"), hint: $("jHint"), actions: $("jActions"),
+    purse: $("jPurse"), record: $("jRecord"), chips: $("jChips"), bet: $("jBet"), shoe: $("jShoe"),
+    shoeFill: $("jShoeFill"), shoeLeft: $("jShoeLeft"), dealerCards: $("jDealerCards"), dealerTotal: $("jDealerTotal"),
+    hands: $("jHands"), shuffle: $("jShuffle"), chipBar: $("jChipBar"), betOps: $("jBetOps")
+  };
+
+  let settings = { hint: false };
+  let bank = R.normalizeBank(null);
+  let shoe = null;
+  let round = null; /* the real round */
+  let shown = null; /* the round as totals and banners show it; catches up after each animation */
+  let ui = { phase: "setup", bet: 0, busy: false, hole: true, note: "", paused: false };
+  let timers = [];
+  let nodes = new Map(); /* card id -> card element on the table */
+  let boxes = [];
+  let discs = [];
+  let ops = null;
+  let counter = { value: 0, target: 0, frame: 0 };
+
+  const reduced = () => window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const fmt = (n) => n.toLocaleString("ja-JP");
+  const signed = (n) => (n > 0 ? `+${fmt(n)}` : n < 0 ? `−${fmt(-n)}` : "±0");
+  const paidBack = (r) => (r.results || []).reduce((sum, x) => sum + x.ret, 0);
+  const live = () => Boolean(round) && ["deal", "play", "dealer", "result"].includes(ui.phase);
+
+  function go(patch) {
+    ui = { ...ui, ...patch };
+    render();
+  }
+  function later(fn, ms) {
+    const id = setTimeout(() => {
+      timers = timers.filter(t => t !== id);
+      fn();
+    }, ms);
+    timers = [...timers, id];
+  }
+  function clearTimers() {
+    timers.forEach(clearTimeout);
+    timers = [];
+  }
+  function update(patch) {
+    settings = { hint: patch.hint === true };
+    Store.save(KEY, settings);
+    render();
+  }
+  function saveBank(patch) {
+    const next = { ...bank, ...patch };
+    bank = R.normalizeBank({ ...next, best: Math.max(bank.best, next.chips) });
+    Store.save(BANK_KEY, bank);
+  }
+  function setRound(next) {
+    round = next;
+    shoe = next.shoe;
+  }
+
+  /* ---------- sounds (built from the synth primitives) ---------- */
+  const now = () => (Sound.ctx() ? Sound.ctx().currentTime : null);
+  function clack(t, pitch = 1) {
+    Sound.tone({ freq: 2900 * pitch, type: "triangle", t, dur: 0.04, vol: 0.12 });
+    Sound.tone({ freq: 4400 * pitch, type: "sine", t: t + 0.006, dur: 0.03, vol: 0.05 });
+    Sound.hiss({ t, dur: 0.035, vol: 0.09, type: "bandpass", freq: 5200, q: 2.5 });
+  }
+  function chipSound(count = 1, pitch = 1, start = 0) {
+    const t = now();
+    if (t === null) return;
+    for (let k = 0; k < count; k++) clack(t + start + k * 0.055 + Math.random() * 0.012, pitch * (1 - k * 0.025));
+  }
+  function snap(t) {
+    Sound.hiss({ t, dur: 0.045, vol: 0.16, type: "highpass", freq: 2800 });
+    Sound.tone({ freq: 620, glide: 300, type: "triangle", t, dur: 0.07, vol: 0.07 });
+  }
+  function cardSound(delayMs, flip) {
+    const t = now();
+    if (t === null) return;
+    const s = t + delayMs / 1000;
+    Sound.hiss({ t: s, dur: 0.2, vol: 0.12, type: "bandpass", freq: 700, to: 3400, q: 0.9, attack: 0.05 });
+    if (flip) snap(s + T.slide / 1000);
+  }
+  function riffle() {
+    const t = now();
+    if (t === null) return;
+    [0, 0.65].forEach(off => {
+      for (let k = 0; k < 22; k++) {
+        Sound.hiss({ t: t + off + k * 0.021, dur: 0.028, vol: 0.05 + k * 0.004, type: "bandpass", freq: 2400 + (k % 5) * 380, q: 1.4 });
+      }
+      Sound.hiss({ t: t + off + 0.5, dur: 0.16, vol: 0.14, type: "bandpass", freq: 1300, to: 420, q: 0.8 });
+    });
+  }
+  function knock() {
+    const t = now();
+    if (t === null) return;
+    [0, 0.11].forEach(d => Sound.tone({ freq: 170, glide: 90, type: "sine", t: t + d, dur: 0.09, vol: 0.32 }));
+  }
+  function peekSound() {
+    const t = now();
+    if (t === null) return;
+    [0, 0.32].forEach(d => Sound.tone({ freq: 1320, type: "triangle", t: t + 0.15 + d, dur: 0.05, vol: 0.06 }));
+  }
+  function lossSound() {
+    const t = now();
+    if (t === null) return;
+    Sound.tone({ freq: Sound.hz(64), type: "triangle", t, dur: 0.16, vol: 0.12 });
+    Sound.tone({ freq: Sound.hz(57), type: "triangle", t: t + 0.15, dur: 0.45, vol: 0.12, send: 0.15 });
+    Sound.hiss({ t: t + 0.1, dur: 0.35, vol: 0.08, type: "bandpass", freq: 3000, to: 900, q: 0.8, attack: 0.08 });
+  }
+
+  /* ---------- cards on the table ---------- */
+  function reveal(node, card) {
+    Cards.setFaceDown(node, false);
+    node.setAttribute("aria-label", Cards.label(card));
+  }
+  /* Every card on the table in dealing order: hands then dealer, one card each per pass. */
+  function tableCards() {
+    const seats = [...round.hands.map(h => h.cards), round.dealer];
+    const dealerSeat = seats.length - 1;
+    return seats.flatMap((cards, si) => cards.map((card, k) => ({
+      card, order: k * seats.length + si, faceUp: !(si === dealerSeat && k === 1 && ui.hole)
+    })));
+  }
+  function overlap(n, split) {
+    const steps = split ? [0, 0, 0.2, 0.42, 0.52, 0.6, 0.66, 0.7, 0.74] : [0, 0, 0.15, 0.25, 0.38, 0.5, 0.58, 0.64, 0.7];
+    return -steps[Math.min(n, steps.length - 1)];
+  }
+  function setOverlaps() {
+    const split = round.hands.length > 1;
+    el.dealerCards.style.setProperty("--bj-ov", overlap(round.dealer.length, false));
+    round.hands.forEach((h, i) => boxes[i].cards.style.setProperty("--bj-ov", overlap(h.cards.length, split)));
+  }
+  /* Places every card element where the round says; new cards slide in from the shoe. Returns the animation time. */
+  function paintTable(instant = false) {
+    const before = new Map([...nodes].filter(([, n]) => n.isConnected).map(([id, n]) => [id, n.getBoundingClientRect()]));
+    const all = tableCards();
+    const fresh = all.filter(x => !nodes.has(x.card.id)).sort((a, b) => a.order - b.order);
+    nodes = new Map([...nodes, ...fresh.map(x => [x.card.id, Cards.el(x.card, { faceDown: true })])]);
+    ensureBoxes(round.hands.length);
+    el.hands.classList.toggle("blackjack-split", round.hands.length > 1);
+    el.dealerCards.replaceChildren(...round.dealer.map(c => nodes.get(c.id)));
+    round.hands.forEach((h, i) => boxes[i].cards.replaceChildren(...h.cards.map(c => nodes.get(c.id))));
+    setOverlaps();
+    if (instant) return settleFaces(all);
+    slideMoved(before);
+    return dealFresh(fresh);
+  }
+  function dealFresh(fresh) {
+    const gap = reduced() ? 140 : T.gap;
+    fresh.forEach((x, k) => {
+      const node = nodes.get(x.card.id);
+      const delay = k * gap;
+      slideIn(node, delay);
+      cardSound(delay, x.faceUp);
+      if (x.faceUp) later(() => reveal(node, x.card), delay + T.slide);
+    });
+    return fresh.length ? (fresh.length - 1) * gap + T.slide + T.flip : T.rest;
+  }
+  function slideIn(node, delay) {
+    if (reduced() || !node.animate) return;
+    const a = node.getBoundingClientRect();
+    const s = el.shoe.getBoundingClientRect();
+    const dx = s.left + s.width / 2 - (a.left + a.width / 2);
+    const dy = s.top + s.height / 2 - (a.top + a.height / 2);
+    node.animate([{ transform: `translate(${dx}px, ${dy}px) rotate(-28deg) scale(.6)` }, { transform: "none" }],
+      { duration: T.slide, delay, easing: "cubic-bezier(.2, .75, .25, 1)", fill: "backwards" });
+  }
+  /* Cards that moved (a split, or a hand re-centering) glide to their new place. */
+  function slideMoved(before) {
+    if (reduced()) return;
+    nodes.forEach((node, id) => {
+      const b = before.get(id);
+      if (!b || !node.isConnected || !node.animate) return;
+      const a = node.getBoundingClientRect();
+      const dx = b.left - a.left;
+      const dy = b.top - a.top;
+      if (Math.abs(dx) + Math.abs(dy) < 1) return;
+      node.animate([{ transform: `translate(${dx}px, ${dy}px)` }, { transform: "none" }], { duration: 280, easing: "ease-out" });
+    });
+  }
+  function settleFaces(all) {
+    all.forEach(x => {
+      const node = nodes.get(x.card.id);
+      if (node.getAnimations) node.getAnimations().forEach(a => a.finish());
+      if (x.faceUp) reveal(node, x.card);
+      else Cards.setFaceDown(node, true);
+    });
+    return 0;
+  }
+  /* Old cards fly off to the discard side. Returns how long to wait before dealing again. */
+  function sweep() {
+    const old = [...nodes.values()].filter(n => n.isConnected);
+    nodes = new Map();
+    if (reduced() || !old.length) {
+      old.forEach(n => n.remove());
+      return 0;
+    }
+    old.forEach((node, i) => {
+      const anim = node.animate([{ transform: "none", opacity: 1 }, { transform: "translate(-130px, -110px) rotate(-40deg) scale(.6)", opacity: 0 }],
+        { duration: 300, delay: i * 30, easing: "cubic-bezier(.5, 0, .8, .4)", fill: "forwards" });
+      anim.onfinish = () => node.remove();
+    });
+    Sound.hiss({ dur: 0.35, vol: 0.1, type: "bandpass", freq: 2600, to: 700, q: 0.8, attack: 0.06 });
+    return 300 + (old.length - 1) * 30 + 60;
+  }
+  function clearTable() {
+    nodes.forEach(n => n.remove());
+    nodes = new Map();
+    ensureBoxes(1);
+    el.hands.classList.remove("blackjack-split");
+  }
+
+  /* ---------- hand boxes (cards, total, stake, result banner) ---------- */
+  function makeBox() {
+    const root = document.createElement("div");
+    root.className = "blackjack-hand";
+    root.innerHTML = '<div class="blackjack-cards"></div><div class="blackjack-foot"><span class="blackjack-total" hidden></span>' +
+      '<span class="blackjack-stake"><span class="blackjack-stack"></span><b></b></span></div><span class="blackjack-banner" hidden></span>';
+    const q = (s) => root.querySelector(s);
+    return { root, cards: q(".blackjack-cards"), total: q(".blackjack-total"), stake: q(".blackjack-stake"),
+      stack: q(".blackjack-stack"), amount: q(".blackjack-stake b"), banner: q(".blackjack-banner") };
+  }
+  function ensureBoxes(n) {
+    if (boxes.length === n) return;
+    boxes = Array.from({ length: n }, (_, i) => boxes[i] || makeBox());
+    el.hands.replaceChildren(...boxes.map(b => b.root));
+  }
+  function mini(v, k) {
+    const i = document.createElement("i");
+    i.className = "blackjack-mini";
+    i.dataset.v = String(v);
+    i.style.setProperty("--k", String(k));
+    return i;
+  }
+  function paintStake(b, amount) {
+    if (b.stake.dataset.amount === String(amount)) return;
+    const grew = amount > Number(b.stake.dataset.amount || 0);
+    const list = R.chipStack(amount).slice(0, 8);
+    b.stake.dataset.amount = String(amount);
+    b.stack.style.setProperty("--bj-n", String(Math.max(1, list.length)));
+    b.stack.replaceChildren(...list.map(mini));
+    b.amount.textContent = amount ? fmt(amount) : "";
+    if (grew) Fx.pop(b.stack);
+  }
+  function paintTotal(node, cards, natural, finished) {
+    node.hidden = !cards || cards.length === 0;
+    if (node.hidden) return;
+    const v = R.handValue(cards);
+    node.textContent = R.totalLabel(cards, finished);
+    node.className = "blackjack-total" + (v.bust ? " blackjack-bust" : natural ? " blackjack-bj" : v.total === 21 ? " blackjack-21" : "");
+  }
+  function bannerFor(h, i) {
+    const res = ui.phase === "result" && shown.results ? shown.results[i] : null;
+    if (res) return { kind: res.outcome, text: res.net > 0 ? `${OUTCOME[res.outcome]} ${signed(res.net)}` : OUTCOME[res.outcome] };
+    return R.handValue(h.cards).bust ? { kind: "bust", text: OUTCOME.bust } : null;
+  }
+  function paintBanner(b, info, i) {
+    const key = info ? `${info.kind}:${info.text}` : "";
+    if (b.banner.dataset.key === key) return;
+    b.banner.dataset.key = key;
+    b.banner.hidden = !info;
+    b.root.dataset.out = info ? info.kind : "";
+    if (!info) return;
+    b.banner.textContent = info.text;
+    b.banner.dataset.kind = info.kind;
+    b.banner.style.setProperty("--bj-delay", `${i * 180}ms`);
+    Fx.replay(b.banner, "blackjack-in");
+  }
+  function paintHands() {
+    const betting = ui.phase === "bet";
+    el.hands.classList.toggle("blackjack-betting", betting);
+    boxes.forEach((b, i) => {
+      const h = !betting && shown ? shown.hands[i] : null;
+      const stakeHand = !betting && round ? round.hands[i] : null;
+      paintStake(b, betting ? (i === 0 ? ui.bet : 0) : stakeHand ? stakeHand.bet : 0);
+      paintTotal(b.total, h ? h.cards : null, h ? R.isNatural(h) : false, Boolean(h && h.done));
+      paintBanner(b, h ? bannerFor(h, i) : null, i);
+      const turn = ui.phase === "play" && shown && shown.hands.length > 1;
+      b.root.classList.toggle("blackjack-active", Boolean(turn && i === shown.active));
+      b.root.classList.toggle("blackjack-waiting", Boolean(turn && i !== shown.active));
+    });
+  }
+  function paintDealer() {
+    const d = shown && ui.phase !== "bet" ? shown.dealer : null;
+    const open = Boolean(d) && !ui.hole;
+    paintTotal(el.dealerTotal, d ? (ui.hole ? d.slice(0, 1) : d) : null, open && R.isBlackjack(d), open && !R.dealerShouldHit(d));
+  }
+
+  /* ---------- chip counter, shoe, bet controls ---------- */
+  function countChips(target) {
+    if (target === counter.target) return;
+    cancelAnimationFrame(counter.frame);
+    const from = counter.value;
+    const t0 = performance.now();
+    const dur = reduced() ? 1 : T.count;
+    const step = (time) => {
+      const p = Math.min(1, (time - t0) / dur);
+      const value = Math.round(from + (target - from) * (1 - (1 - p) ** 3));
+      el.chips.textContent = fmt(value);
+      counter = { ...counter, value, frame: p < 1 ? requestAnimationFrame(step) : 0 };
+    };
+    counter = { value: from, target, frame: requestAnimationFrame(step) };
+    if (ui.phase === "result") Fx.replay(el.chips, target > from ? "blackjack-up" : "blackjack-down");
+  }
+  function paintBank() {
+    const free = ui.phase === "bet" ? bank.chips - ui.bet : !live() ? bank.chips
+      : ui.phase === "result" ? round.chips : round.chips - paidBack(round);
+    const bet = ui.phase === "bet" ? ui.bet : live() ? R.staked(round) : 0;
+    countChips(free);
+    if (el.bet.textContent !== fmt(bet)) {
+      el.bet.textContent = fmt(bet);
+      Fx.pop(el.bet);
+    }
+  }
+  function paintShoe() {
+    const size = shoe ? shoe.cards.length : R.DECKS * 52;
+    const left = shoe ? R.remaining(shoe) : size;
+    el.shoeFill.style.width = `${(left / size) * 100}%`;
+    el.shoeLeft.textContent = `のこり${left}枚`;
+  }
+  function paintBetControls() {
+    discs.forEach(d => { d.disabled = !R.canAddChip(ui.bet, Number(d.dataset.v), bank.chips); });
+    const again = R.repeatBet(bank.last, bank.chips);
+    ops.clear.disabled = ui.bet === 0;
+    ops.repeat.disabled = again === 0 || again === ui.bet;
+  }
+  function flyChip(from, v) {
+    if (reduced() || !document.body.animate) return;
+    const a = from.getBoundingClientRect();
+    const b = boxes[0].stack.getBoundingClientRect();
+    const chip = mini(v, 0);
+    chip.classList.add("blackjack-fly");
+    chip.style.left = `${a.left + a.width / 2 - 12}px`;
+    chip.style.top = `${a.top + a.height / 2 - 12}px`;
+    document.body.appendChild(chip);
+    const dx = b.left + b.width / 2 - (a.left + a.width / 2);
+    const dy = b.bottom - 12 - (a.top + a.height / 2);
+    chip.animate([{ transform: "scale(2.2)" }, { transform: `translate(${dx}px, ${dy}px) scale(1)` }],
+      { duration: 280, easing: "cubic-bezier(.3, .7, .4, 1)" }).onfinish = () => chip.remove();
+  }
+  function addChip(v, button, index) {
+    if (ui.phase !== "bet" || !R.canAddChip(ui.bet, v, bank.chips)) return;
+    Sound.ensure();
+    chipSound(1 + Math.min(index, 2), 1.08 - index * 0.06);
+    flyChip(button, v);
+    go({ bet: ui.bet + v });
+  }
+  function clearBet() {
+    if (ui.phase !== "bet" || ui.bet === 0) return;
+    chipSound(3, 0.85);
+    go({ bet: 0 });
+  }
+  function repeatLast() {
+    const again = R.repeatBet(bank.last, bank.chips);
+    if (ui.phase !== "bet" || again === 0) return;
+    chipSound(3, 1);
+    go({ bet: again });
+  }
+
+  /* ---------- flow ---------- */
+  function enter() {
+    Sound.ensure();
+    Awake.keep();
+    Sound.sfx("confirm");
+    Music.play("think");
+    clearTable();
+    go({ phase: "bet", bet: 0, busy: false, hole: true, note: "" });
+  }
+  function toBet() {
+    clearTimers();
+    const wait = sweep();
+    shown = null;
+    go({ phase: "bet", bet: 0, busy: false, hole: true, note: "" });
+    later(() => { clearTable(); render(); }, wait);
+  }
+  function toSetup() {
+    clearTimers();
+    clearTable();
+    shown = null;
+    Music.stop();
+    go({ phase: "setup", bet: 0, busy: false, note: "" });
+  }
+  function resetChips() {
+    Sound.ensure();
+    saveBank({ chips: R.START_CHIPS, last: 0 });
+    Sound.sfx("fanfare");
+    chipSound(6, 1, 0.3);
+    toBet();
+  }
+  function deal() {
+    const bet = ui.phase === "result" ? R.repeatBet(bank.last, bank.chips) : ui.bet;
+    if (!["bet", "result"].includes(ui.phase) || ui.busy || !R.validBet(bank.chips, bet)) return;
+    Sound.ensure();
+    Awake.keep();
+    let next;
+    try {
+      next = R.startRound({ shoe, chips: bank.chips, bet });
+    } catch (e) {
+      console.error("ブラックジャック: カードを配れませんでした", e);
+      Sound.sfx("wrong");
+      return;
+    }
+    clearTimers();
+    const wait = sweep();
+    setRound(next);
+    shown = null;
+    saveBank({ chips: next.chips, last: bet });
+    chipSound(3, 0.92);
+    go({ phase: "deal", bet, busy: true, hole: true, note: next.shuffled ? "shuffle" : "" });
+    later(next.shuffled ? shuffleShoe : dealCards, wait);
+  }
+  function shuffleShoe() {
+    el.shuffle.hidden = false;
+    Fx.replay(el.shuffle, "blackjack-on");
+    riffle();
+    later(() => {
+      el.shuffle.hidden = true;
+      go({ note: "" });
+      dealCards();
+    }, reduced() ? 700 : T.shuffle);
+  }
+  function dealCards() {
+    const ms = paintTable();
+    later(afterDeal, ms + T.rest);
+  }
+  function afterDeal() {
+    shown = round;
+    if (!round.peeked) {
+      afterPeek();
+      return;
+    }
+    go({ note: "peek" });
+    const node = nodes.get(round.dealer[1].id);
+    if (node) Fx.replay(node, "blackjack-peek");
+    peekSound();
+    later(afterPeek, T.peek);
+  }
+  function afterPeek() {
+    if (round.phase === "done") {
+      finish();
+      return;
+    }
+    go({ phase: "play", busy: false, note: "" });
+  }
+  function doAction(action) {
+    if (ui.phase !== "play" || ui.busy || !R.legalActions(round).includes(action)) return;
+    const before = round;
+    setRound(R.act(round, action));
+    if (action === "double" || action === "split") chipSound(3, 0.95);
+    if (action === "stand") knock();
+    const ms = paintTable(); /* before render, so a new split hand gets its stake drawn at once */
+    go({ busy: true });
+    later(() => afterAction(before), ms + T.rest);
+  }
+  function afterAction(before) {
+    shown = round;
+    const bustNow = round.hands.some((h, i) => R.handValue(h.cards).bust && !(before.hands[i] && R.handValue(before.hands[i].cards).bust));
+    if (bustNow) Sound.sfx("wrong");
+    if (round.phase === "player") go({ busy: false });
+    else if (round.phase === "dealer") dealerTurn();
+    else finish();
+  }
+  function revealHole() {
+    if (!ui.hole) return false;
+    ui = { ...ui, hole: false };
+    const node = round ? nodes.get(round.dealer[1].id) : null;
+    if (node) reveal(node, round.dealer[1]);
+    const t = now();
+    if (t !== null) snap(t);
+    return true;
+  }
+  function dealerTurn() {
+    revealHole();
+    go({ phase: "dealer", busy: true });
+    later(dealerNext, T.flip + T.dealer);
+  }
+  function dealerNext() {
+    if (round.phase !== "dealer") {
+      finish();
+      return;
+    }
+    setRound(R.dealerStep(round));
+    if (round.phase === "done") {
+      finish();
+      return;
+    }
+    const ms = paintTable();
+    later(() => {
+      shown = round;
+      render();
+      later(dealerNext, T.dealer);
+    }, ms);
+  }
+  function finish() {
+    const flipped = revealHole();
+    if (flipped) render();
+    later(showResult, flipped ? T.flip + 200 : 0);
+  }
+  function showResult() {
+    shown = round;
+    saveBank({ chips: round.chips });
+    go({ phase: "result", busy: false, note: "" });
+    celebrate();
+  }
+  function celebrate() {
+    const res = round.results;
+    const net = R.roundNet(round);
+    if (res.some(x => x.outcome === "blackjack")) {
+      Sound.sfx("victory");
+      Fx.confetti();
+    } else if (net > 0) {
+      Sound.sfx("coin");
+      chipSound(6, 1.05, 0.25);
+    } else if (net === 0) {
+      Sound.sfx("pop");
+    } else if (!res.every(x => x.outcome === "bust")) {
+      lossSound();
+      if (R.isBlackjack(round.dealer)) Fx.flash("--alert", 350);
+    }
+    if (R.isBroke(round.chips)) {
+      later(() => {
+        Sound.sfx("lose");
+        Fx.shake();
+      }, 700);
+    }
+  }
+
+  /* ---------- screens ---------- */
+  function playButtons(on) {
+    const legal = on ? R.legalActions(round) : [];
+    const rec = on && settings.hint ? R.recommend(round) : null;
+    return R.ACTIONS.map(a => {
+      const b = makeButton(ACTION_LABEL[a], () => doAction(a), ACTION_CLASS[a], !legal.includes(a));
+      if (a === rec) b.classList.add("blackjack-rec");
+      return b;
+    });
+  }
+  const resetButtons = () => [makeButton("設定", toSetup, "small"), makeButton(`${fmt(R.START_CHIPS)}枚でやりなおす`, resetChips, "primary")];
+  function betView() {
+    if (R.isBroke(bank.chips)) return { title: "チップがなくなりました", hint: "もう一度、最初のチップから遊べます", actions: resetButtons() };
+    return {
+      title: ui.bet ? `${fmt(ui.bet)}枚 賭ける` : "チップをタップして賭けよう",
+      actions: [makeButton("設定", toSetup, "small"), makeButton("配る", deal, "primary", !R.validBet(bank.chips, ui.bet))]
+    };
+  }
+  function playView() {
+    const rec = settings.hint && !ui.busy ? R.recommend(round) : null;
+    const split = round.hands.length > 1;
+    return {
+      title: split ? `${round.active + 1}つ目の手` : "あなたの番",
+      hint: rec ? `ヒント：ここは「${ACTION_LABEL[rec]}」がおすすめ` : "こえないように21に近づけよう",
+      actions: playButtons(!ui.busy)
+    };
+  }
+  function dealerLine() {
+    const v = R.handValue(round.dealer);
+    return `ディーラー ${R.isBlackjack(round.dealer) ? "ブラックジャック" : v.bust ? "バースト" : v.total}`;
+  }
+  function resultTitle() {
+    const net = R.roundNet(round);
+    if (round.results.length > 1) return `合計 ${signed(net)}枚`;
+    const kind = round.results[0].outcome;
+    if (kind === "lose" && R.isBlackjack(round.dealer)) return `ディーラーがブラックジャック… ${signed(net)}枚`;
+    return net === 0 ? `${TITLE[kind]}（賭けは戻ります）` : `${TITLE[kind]} ${signed(net)}枚`;
+  }
+  function resultView() {
+    if (R.isBroke(bank.chips)) return { label: dealerLine(), title: resultTitle(), hint: "チップがなくなりました", actions: resetButtons() };
+    return {
+      label: dealerLine(),
+      title: resultTitle(),
+      hint: `「もう一回」で、また${fmt(R.repeatBet(bank.last, bank.chips))}枚賭けて配ります`,
+      actions: [makeButton("設定", toSetup, "small"), makeButton("賭けなおす", toBet, "small"), makeButton("もう一回", deal, "primary")]
+    };
+  }
+  const SCREENS = {
+    setup: () => ({ actions: [makeButton("テーブルにつく", enter, "primary")] }),
+    bet: betView,
+    deal: () => ({ title: NOTE[ui.note] || "", actions: playButtons(false) }),
+    play: playView,
+    dealer: () => ({ title: "ディーラーの番", hint: "ディーラーは17以上になるまで引きます", actions: playButtons(false) }),
+    result: resultView
+  };
+
+  function renderSetup() {
+    View.chips($("jHintChips"), [{ value: false, label: "なし" }, { value: true, label: "あり" }], settings.hint, v => update({ hint: v }));
+    View.list($("jRules"), RULES);
+    el.purse.textContent = fmt(bank.chips);
+    View.text(el.record, bank.best > R.START_CHIPS ? `これまでの最高：${fmt(bank.best)}枚` : "");
+  }
+  function renderTable() {
+    paintBank();
+    paintShoe();
+    paintDealer();
+    paintHands();
+    const betting = ui.phase === "bet" && !R.isBroke(bank.chips);
+    el.chipBar.hidden = !betting;
+    el.betOps.hidden = !betting;
+    if (betting) paintBetControls();
+    el.actions.classList.toggle("blackjack-grid", ["deal", "play", "dealer"].includes(ui.phase));
+  }
+  function render() {
+    el.setup.hidden = ui.phase !== "setup";
+    el.play.hidden = ui.phase === "setup";
+    if (ui.phase === "setup") renderSetup();
+    else renderTable();
+    View.stage(el, SCREENS[ui.phase]());
+  }
+
+  function makePill(label, onClick) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "blackjack-pill";
+    b.textContent = label;
+    b.addEventListener("click", onClick);
+    return b;
+  }
+  function buildChipBar() {
+    discs = R.CHIP_VALUES.map((v, i) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "blackjack-disc";
+      b.dataset.v = String(v);
+      b.textContent = String(v);
+      b.setAttribute("aria-label", `${v}枚のチップを置く`);
+      b.addEventListener("click", (e) => {
+        e.stopPropagation(); /* the chip clack replaces the app's generic button tap */
+        addChip(v, b, i);
+      });
+      return b;
+    });
+    el.chipBar.replaceChildren(...discs);
+    ops = { clear: makePill("クリア", clearBet), repeat: makePill("同じ額", repeatLast) };
+    el.betOps.replaceChildren(ops.clear, ops.repeat);
+  }
+  function init() {
+    const saved = Store.load(KEY, {});
+    settings = { hint: Boolean(saved && typeof saved === "object" && saved.hint === true) };
+    bank = R.normalizeBank(Store.load(BANK_KEY, null));
+    counter = { value: bank.chips, target: bank.chips, frame: 0 };
+    el.chips.textContent = fmt(bank.chips);
+    buildChipBar();
+    ensureBoxes(1);
+    render();
+  }
+  /* Leaving mid-round pauses it; coming back picks up where it stopped. */
+  function leave() {
+    clearTimers();
+    if (ui.phase !== "setup") ui = { ...ui, paused: true };
+  }
+  function resume() {
+    ui = { ...ui, paused: false, note: "" };
+    el.shuffle.hidden = true;
+    if (!round || ui.phase === "bet" || ui.phase === "result") {
+      if (ui.phase === "bet") clearTable();
+      render();
+      return;
+    }
+    paintTable(true);
+    shown = round;
+    if (round.phase === "player") go({ phase: "play", busy: false, note: "" });
+    else if (round.phase === "dealer") dealerTurn();
+    else finish();
+  }
+  function onShow() {
+    if (ui.phase === "setup") {
+      render();
+      return;
+    }
+    Music.play("think");
+    if (ui.paused) resume();
+  }
+
+  return { init, leave, onShow };
+})();
+</script>
 <!-- games:scripts -->
 <script>
 /* main.js */
@@ -18713,6 +22119,9 @@ const Blockfall = (() => {
     { id: "aim", title: "的当てタップ", players: "1人", desc: "出てくる的をすばやくタップ。命中率も勝負", color: "--c-orange", el: "modeAim", game: Aim, group: "reflex" },
     { id: "snake", title: "スネーク", players: "1人", desc: "エサを食べてのびるヘビ。壁と体に注意", color: "--c-lime", el: "modeSnake", game: Snake, group: "reflex" },
     { id: "blockfall", title: "ブロックおとし", players: "1人", desc: "横一列そろえて消す落ちものパズル", color: "--c-indigo", el: "modeBlockfall", game: Blockfall, group: "reflex" },
+    { id: "memory", title: "神経衰弱", players: "1〜4人・CPU", desc: "めくって覚えて、同じ数字と色をそろえる", color: "--c-rose", el: "modeMemory", game: Memory, group: "classic" },
+    { id: "yacht", title: "ヨット", players: "1〜4人・CPU", desc: "サイコロ5個で役をそろえて高得点を目指す", color: "--c-violet", el: "modeYacht", game: Yacht, group: "classic" },
+    { id: "blackjack", title: "ブラックジャック", players: "1人", desc: "21に近づけてディーラーに勝とう", color: "--c-sky", el: "modeBlackjack", game: Blackjack, group: "classic" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };
@@ -18834,7 +22243,7 @@ const Blockfall = (() => {
   /* Small click sounds for every button, so the whole app feels responsive. */
   document.addEventListener("click", (e) => {
     const t = e.target.closest("button");
-    if (!t || t.disabled || t.classList.contains("menu-card") || t.id === "soundBtn") return;
+    if (!t || t.disabled || t.classList.contains("menu-card") || t.id === "soundBtn" || "silent" in t.dataset) return;
     if (t.classList.contains("chip")) Sound.sfx("select");
     else if (!t.classList.contains("key")) Sound.sfx("tap");
   });

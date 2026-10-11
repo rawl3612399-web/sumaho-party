@@ -171,3 +171,4 @@ For the 脳トレ・IQ, 反射神経・アクション and 世界の定番パズ
 - CPU-time assertions in tests must scale for slower CI machines: declare `const TIMING_SLACK = Number(process.env.TIMING_SLACK) || 1;` at the top of the test file and write limits as `worst < 150 * TIMING_SLACK`. The deploy workflow sets `TIMING_SLACK=3`.
 - Local test servers on localhost / 127.0.0.1 start with sound off (append `?sound` to the URL to hear it), so browser testing stays quiet. Close the browser tabs you open when you are done; the pane has a tab limit.
 - `tools/smoke-browser.js` opens every game in the built page and reports script errors; `tools/add-game.js` wires a finished game in.
+- Every `<button>` click plays a small shared `tap` sound. Add the attribute `data-silent` to buttons that already play their own sound (dice, board cells, keys) to skip it.

@@ -1,0 +1,25 @@
+<!-- ===== 神経衰弱 ===== -->
+<div class="mode" id="modeMemory" hidden>
+  <main class="stage memory-stage" aria-live="polite">
+    <section class="panel" id="sSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="sVsChips"></div></div>
+        <div class="opt" id="sPlayersOpt"><span class="row-label">人数</span><div class="chips" id="sPlayerChips"></div></div>
+        <div class="opt" id="sLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="sLevelChips"></div></div>
+        <div class="opt" id="sSideOpt"><span class="row-label">あなたの番</span><div class="chips" id="sSideChips"></div></div>
+        <div class="opt"><span class="row-label">ペアの数</span><div class="chips" id="sPairChips"></div></div>
+      </div>
+      <ul class="rules" id="sRules"></ul>
+      <p class="hint memory-record" id="sRecord" hidden></p>
+    </section>
+    <section class="panel memory-play" id="sPlay" hidden>
+      <div class="memory-scores" id="sScores" aria-live="off"></div>
+      <span class="label" id="sLabel"></span>
+      <p class="d-title memory-title" id="sTitle"></p>
+      <div class="memory-grid" id="sGrid" role="group" aria-label="神経衰弱のカード"></div>
+      <ol class="result-list memory-result" id="sResult" hidden></ol>
+      <p class="hint memory-hint" id="sHint"></p>
+    </section>
+  </main>
+  <div class="actions memory-actions" id="sActions"></div>
+</div>

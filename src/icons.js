@@ -34,6 +34,9 @@ const Icons = (() => {
     aim: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>'),
     snake: svg('<path d="M4 19h7a3.5 3.5 0 0 0 0-7H8.5a3 3 0 0 1 0-6H15"/><circle cx="17.5" cy="6" r="2.5"/><path d="M18.3 5.3h.01"/><circle cx="18.5" cy="17.5" r="2"/><path d="M18.5 15.5c.3-.9 1-1.5 1.8-1.6"/>'),
     blockfall: svg('<path d="M7 2h15v5h-5v5h-5V7H7z"/><rect x="2" y="17" width="5" height="5" rx="1"/><rect x="7" y="17" width="5" height="5" rx="1"/><rect x="17" y="17" width="5" height="5" rx="1"/><rect x="2" y="12" width="5" height="5" rx="1"/>'),
+    memory: svg('<g transform="rotate(-7 7 12)"><rect x="2.5" y="5.5" width="9" height="13" rx="1.8"/><rect x="4.7" y="7.7" width="4.6" height="8.6" rx=".8"/></g><g transform="rotate(7 17 12)"><rect x="12.5" y="5.5" width="9" height="13" rx="1.8"/><path d="M17 9.2l2.1 2.8-2.1 2.8-2.1-2.8z"/></g>'),
+    yacht: svg('<rect x="3" y="8" width="11" height="11" rx="2.5"/><path d="M10 8V6.5A2.5 2.5 0 0 1 12.5 4h5A2.5 2.5 0 0 1 20 6.5v5a2.5 2.5 0 0 1-2.5 2.5H14"/><path d="M6.5 11.5h.01M8.5 13.5h.01M10.5 15.5h.01M16 6.5h.01M17.5 11h.01"/>'),
+    blackjack: svg('<rect x="3" y="6.5" width="11" height="15" rx="2"/><path d="M10 4.6l7.3-1.4a2 2 0 0 1 2.3 1.6l2 10.3a2 2 0 0 1-1.6 2.3l-3 .6"/><path d="M8.5 10c-1.3 1.5-2.8 2.3-2.8 3.8a1.5 1.5 0 0 0 2.8.7 1.5 1.5 0 0 0 2.8-.7c0-1.5-1.5-2.3-2.8-3.8zM8.5 14.5v2.3"/>'),
     /* games:icons */
   };
 })();
