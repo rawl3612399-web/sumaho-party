@@ -1,0 +1,151 @@
+/* 瞬間記憶: big clean digits, a numeric keypad, and the 5x6 position grid. Colors come from tokens only. */
+
+/* ---------- setup ---------- */
+.memnum-best {
+  width: 100%; box-sizing: border-box;
+  display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 2px 10px;
+  padding: 10px 14px; border-radius: 14px; border: 2px dashed var(--c-cyan);
+}
+.memnum-best-label { font-size: .78rem; color: var(--muted); letter-spacing: .1em; }
+.memnum-best-num { font-size: 1.6rem; font-weight: 900; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.memnum-best-rank { font-weight: 700; }
+
+/* ---------- top status: length, lives, best ---------- */
+.memnum-hud { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px; width: 100%; }
+.memnum-stat { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; min-width: 0; line-height: 1.1; }
+.memnum-stat.right { align-items: flex-end; }
+.memnum-stat small { font-size: .68rem; color: var(--muted); letter-spacing: .08em; white-space: nowrap; }
+.memnum-stat b { font-size: 1.3rem; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.memnum-stat b.up { color: var(--c-cyan); }
+.memnum-lives { display: flex; gap: 4px; }
+.memnum-heart { width: 26px; height: 26px; color: var(--alert); }
+.memnum-heart svg { display: block; width: 100%; height: 100%; }
+.memnum-heart path { fill: currentColor; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.memnum-heart.lost { color: var(--muted); animation: memnumBreak .5s ease-out; }
+.memnum-heart.lost path { fill: none; stroke-dasharray: 3 2.5; }
+@keyframes memnumBreak { 0% { transform: scale(1.35) rotate(-12deg); } 40% { transform: scale(.8) rotate(8deg); } 100% { transform: none; } }
+
+/* ---------- digits flash ---------- */
+.memnum-flash {
+  width: min(100%, 340px); min-height: 150px; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  padding: 20px 14px 18px; border-radius: 22px;
+  background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink); margin-bottom: 6px;
+}
+.memnum-digits, .memnum-line {
+  font-family: var(--body); font-weight: 900; font-variant-numeric: tabular-nums;
+  letter-spacing: .06em; line-height: 1.1; color: var(--ink);
+  overflow-wrap: anywhere; word-break: break-all; text-align: center;
+}
+.memnum-digits[data-size="1"], .memnum-line[data-size="1"] { font-size: clamp(3rem, 16vw, 4.4rem); }
+.memnum-digits[data-size="2"], .memnum-line[data-size="2"] { font-size: clamp(2.4rem, 11.5vw, 3.4rem); }
+.memnum-digits[data-size="3"], .memnum-line[data-size="3"] { font-size: clamp(1.9rem, 8.4vw, 2.5rem); }
+.memnum-digits[data-size="4"], .memnum-line[data-size="4"] { font-size: clamp(1.55rem, 6.8vw, 2rem); }
+.memnum-digits.wait { color: var(--muted); letter-spacing: .2em; }
+.memnum-timer { width: 100%; max-width: 280px; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.memnum-timer span { display: block; height: 100%; background: var(--c-cyan); transform-origin: left center; border-radius: inherit; }
+
+/* ---------- typed answer ---------- */
+.memnum-slots {
+  display: grid; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); gap: 6px;
+  width: min(100%, calc(var(--cols, 3) * 48px));
+}
+.memnum-slot {
+  aspect-ratio: 4 / 5; display: grid; place-items: center; min-width: 0;
+  border: 2.5px solid var(--line); border-radius: 10px; background: var(--card);
+  font-weight: 900; font-size: clamp(1.15rem, 6vw, 1.9rem); font-variant-numeric: tabular-nums; line-height: 1;
+}
+/* 11+ digits wrap to two rows: square slots keep the keypad on screen at 667px tall */
+.memnum-slots[data-rows="2"] { gap: 5px; }
+.memnum-slots[data-rows="2"] .memnum-slot { aspect-ratio: 1; }
+.memnum-slot.filled { border-color: var(--ink); }
+.memnum-slot.cur { border-color: var(--c-cyan); box-shadow: 0 0 0 3px var(--hl); }
+.memnum-slot.new { animation: memnumIn .18s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes memnumIn { from { transform: scale(.6); opacity: .3; } to { transform: none; opacity: 1; } }
+
+/* ---------- keypad ---------- */
+.memnum-keypad { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: min(100%, 300px); }
+.memnum-keypad .memnum-key {
+  min-height: 52px; height: clamp(52px, 7.4svh, 62px); padding: 0; margin-bottom: 4px;
+  font-family: var(--body); font-weight: 900; font-size: 1.6rem; font-variant-numeric: tabular-nums;
+  border: 2px solid var(--ink); border-radius: 14px; background: var(--card); color: var(--ink);
+  box-shadow: 0 4px 0 var(--ink); cursor: pointer; touch-action: manipulation;
+  user-select: none; -webkit-user-select: none; transition: transform .05s, box-shadow .05s;
+}
+.memnum-keypad .memnum-key:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); }
+.memnum-keypad .memnum-key:disabled { opacity: .35; cursor: default; }
+.memnum-keypad .memnum-key.del { font-size: 1rem; color: var(--muted); }
+.memnum-keypad .memnum-key.ok {
+  font-size: 1.1rem; background: var(--accent); border-color: var(--accent-deep); color: var(--on-accent);
+  box-shadow: 0 4px 0 var(--accent-deep);
+}
+.memnum-keypad .memnum-key.ok:active:not(:disabled) { box-shadow: 0 1px 0 var(--accent-deep); }
+.memnum-keypad .memnum-key.ok.ready { animation: memnumReady 1s ease-in-out infinite; }
+@keyframes memnumReady { 50% { transform: scale(1.06); } }
+
+/* ---------- answer check ---------- */
+.memnum-compare { display: flex; flex-direction: column; gap: 10px; width: min(100%, 340px); }
+.memnum-row { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.memnum-tag { font-size: .75rem; color: var(--muted); letter-spacing: .15em; }
+.memnum-line { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; }
+.memnum-d { min-width: .62em; padding: 0 .06em; border-radius: 6px; }
+.memnum-d.fix { text-decoration: underline; text-decoration-thickness: 4px; text-underline-offset: 6px; text-decoration-color: var(--go); }
+.memnum-d.ng { background: var(--alert); color: var(--on-accent); text-decoration: line-through; text-decoration-thickness: 3px; }
+.memnum-compare.ok .memnum-line { color: var(--go); }
+
+/* ---------- position grid ---------- */
+.memnum-grid {
+  display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 6px;
+  width: min(100%, 360px);
+  width: min(100%, 360px, max(250px, calc((100svh - 352px) * 5 / 6)));
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.memnum-grid .memnum-cell {
+  position: relative; aspect-ratio: 1; min-width: 0; min-height: 44px; padding: 0; margin: 0;
+  display: grid; place-items: center; cursor: pointer;
+  font-family: var(--body); font-weight: 900; font-size: clamp(1.3rem, 6.5vw, 1.9rem); font-variant-numeric: tabular-nums; line-height: 1;
+  border: 2.5px solid var(--ink); border-radius: 12px; background: var(--card); color: var(--ink);
+  box-shadow: 0 3px 0 var(--ink); touch-action: manipulation;
+}
+.memnum-grid .memnum-cell:disabled { opacity: 1; cursor: default; }
+.memnum-grid .memnum-cell.number:active, .memnum-grid .memnum-cell.covered:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ink); }
+.memnum-grid .memnum-cell.empty { border: 0; box-shadow: none; background: color-mix(in srgb, var(--line) 55%, transparent); }
+.memnum-grid .memnum-cell.covered {
+  background-color: var(--c-cyan);
+  background-image: repeating-linear-gradient(45deg, transparent 0 7px, color-mix(in srgb, var(--on-tile) 22%, transparent) 7px 14px);
+  animation: memnumCover .22s ease-out;
+}
+@keyframes memnumCover { from { transform: rotateY(90deg); } to { transform: none; } }
+.memnum-grid .memnum-cell.cleared {
+  border: 2px dashed var(--line); box-shadow: none; background: transparent; color: var(--muted);
+  font-size: clamp(1rem, 5vw, 1.4rem); animation: memnumClear .3s ease-out;
+}
+@keyframes memnumClear { from { transform: scale(1.12); background: var(--go); } to { transform: none; } }
+.memnum-grid .memnum-cell.answer { border-color: var(--muted); box-shadow: 0 3px 0 var(--muted); }
+.memnum-grid .memnum-cell.wrong { background: var(--alert); border-color: var(--alert-deep); box-shadow: 0 3px 0 var(--alert-deep); color: var(--on-accent); }
+.memnum-grid .memnum-cell.wrong::after {
+  content: "×"; position: absolute; top: -8px; right: -8px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .85rem; background: var(--ink); color: var(--paper);
+}
+.memnum-grid .memnum-cell.expected {
+  border: 3px dashed var(--go); box-shadow: none; color: var(--go);
+  animation: memnumPulse .7s ease-in-out 3;
+}
+@keyframes memnumPulse { 50% { transform: scale(1.1); } }
+
+/* ---------- results ---------- */
+.word-card.memnum-score .wc-main { font-family: var(--body); font-weight: 900; font-size: clamp(3.2rem, 17vw, 4.6rem); font-variant-numeric: tabular-nums; }
+.memnum-details li { grid-template-columns: 1fr auto; padding: 6px 12px; }
+.memnum-details .num { font-size: 1.15rem; }
+.label.memnum-newrec {
+  font-size: .95rem; font-weight: 900; letter-spacing: .12em; color: var(--on-zap); background: var(--zap);
+  padding: 4px 14px; border-radius: 999px; animation: memnumBounce .6s cubic-bezier(.2, 1.4, .4, 1);
+}
+@keyframes memnumBounce { from { transform: scale(.4) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .memnum-heart.lost, .memnum-slot.new, .memnum-keypad .memnum-key.ok.ready,
+  .memnum-grid .memnum-cell.covered, .memnum-grid .memnum-cell.cleared, .memnum-grid .memnum-cell.expected,
+  .label.memnum-newrec { animation: none; }
+  .memnum-keypad .memnum-key:active:not(:disabled), .memnum-grid .memnum-cell:active { transform: none; }
+}

@@ -37,6 +37,13 @@ const Icons = (() => {
     memory: svg('<g transform="rotate(-7 7 12)"><rect x="2.5" y="5.5" width="9" height="13" rx="1.8"/><rect x="4.7" y="7.7" width="4.6" height="8.6" rx=".8"/></g><g transform="rotate(7 17 12)"><rect x="12.5" y="5.5" width="9" height="13" rx="1.8"/><path d="M17 9.2l2.1 2.8-2.1 2.8-2.1-2.8z"/></g>'),
     yacht: svg('<rect x="3" y="8" width="11" height="11" rx="2.5"/><path d="M10 8V6.5A2.5 2.5 0 0 1 12.5 4h5A2.5 2.5 0 0 1 20 6.5v5a2.5 2.5 0 0 1-2.5 2.5H14"/><path d="M6.5 11.5h.01M8.5 13.5h.01M10.5 15.5h.01M16 6.5h.01M17.5 11h.01"/>'),
     blackjack: svg('<rect x="3" y="6.5" width="11" height="15" rx="2"/><path d="M10 4.6l7.3-1.4a2 2 0 0 1 2.3 1.6l2 10.3a2 2 0 0 1-1.6 2.3l-3 .6"/><path d="M8.5 10c-1.3 1.5-2.8 2.3-2.8 3.8a1.5 1.5 0 0 0 2.8.7 1.5 1.5 0 0 0 2.8-.7c0-1.5-1.5-2.3-2.8-3.8zM8.5 14.5v2.3"/>'),
+    sevens: svg('<rect x="7" y="4.5" width="10" height="15" rx="2"/><path d="M10 9h4l-2.6 6.5"/><path d="M4.5 9 2 12l2.5 3M19.5 9 22 12l-2.5 3"/>'),
+    speed: svg('<rect x="9" y="3.5" width="11" height="17" rx="2"/><path d="M14.5 8.5l2.5 3.5-2.5 3.5-2.5-3.5z"/><path d="M2.5 8h4M3.5 12h3.5M2.5 16h4"/>'),
+    slide: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><rect x="6" y="6" width="5" height="5" rx="1"/><rect x="13" y="6" width="5" height="5" rx="1"/><rect x="6" y="13" width="5" height="5" rx="1"/><path d="M13.5 15.5h4M16 13.5l2 2-2 2"/>'),
+    memnum: svg('<path d="M2.5 14s3.5-5.5 9.5-5.5 9.5 5.5 9.5 5.5-3.5 5.5-9.5 5.5S2.5 14 2.5 14z"/><circle cx="12" cy="14" r="2.6"/><path d="M12 2.5V5M6 4l1.3 2M18 4l-1.3 2"/>'),
+    stroop: svg('<rect x="2.5" y="4" width="13" height="11" rx="2.5"/><path d="M6 8h6M6 11.5h3.5"/><path d="M18.5 12.5c1.7 2.1 3 3.7 3 5.3a3 3 0 0 1-6 0c0-1.6 1.3-3.2 3-5.3z"/>'),
+    schulte: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/><path d="M5.4 5.6l1-.8v2.6" stroke-width="1.4"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/>'),
+    simon: svg('<path d="M3.14 10.4A9 9 0 0 1 10.4 3.14V8.78A3.6 3.6 0 0 0 8.78 10.4z" fill="currentColor"/><path d="M13.6 3.14A9 9 0 0 1 20.86 10.4H15.22A3.6 3.6 0 0 0 13.6 8.78z"/><path d="M20.86 13.6A9 9 0 0 1 13.6 20.86V15.22A3.6 3.6 0 0 0 15.22 13.6z"/><path d="M10.4 20.86A9 9 0 0 1 3.14 13.6H8.78A3.6 3.6 0 0 0 10.4 15.22z"/>'),
     /* games:icons */
   };
 })();

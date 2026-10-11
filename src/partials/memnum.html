@@ -1,0 +1,33 @@
+<!-- ===== 瞬間記憶 ===== -->
+<div class="mode" id="modeMemNum" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="mnSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">モード</span><div class="chips" id="mnModeChips"></div></div>
+      </div>
+      <div class="memnum-best" id="mnSetupBest"></div>
+      <ul class="rules" id="mnRules"></ul>
+    </section>
+    <section class="panel" id="mnPlay" hidden>
+      <div class="memnum-hud" id="mnHud">
+        <span class="memnum-stat"><small>いまの長さ</small><b id="mnLevel"></b></span>
+        <span class="memnum-lives" id="mnLives" role="img"></span>
+        <span class="memnum-stat right"><small>自己ベスト</small><b id="mnHudBest"></b></span>
+      </div>
+      <span class="label" id="mnLabel"></span>
+      <p class="d-title" id="mnTitle"></p>
+      <div class="word-card" id="mnCard"></div>
+      <div class="memnum-flash" id="mnFlash" hidden>
+        <div class="memnum-digits" id="mnDigits"></div>
+        <div class="memnum-timer" aria-hidden="true"><span id="mnTimerBar"></span></div>
+      </div>
+      <div class="memnum-slots" id="mnSlots" aria-label="入力した数字" hidden></div>
+      <div class="memnum-compare" id="mnCompare" hidden></div>
+      <div class="memnum-grid" id="mnGrid" hidden></div>
+      <div class="memnum-keypad" id="mnKeypad" hidden></div>
+      <ul class="result-list memnum-details" id="mnDetails" hidden></ul>
+      <p class="hint" id="mnHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="mnActions"></div>
+</div>

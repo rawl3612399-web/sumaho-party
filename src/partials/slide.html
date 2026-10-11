@@ -1,0 +1,30 @@
+<!-- ===== スライドパズル ===== -->
+<div class="mode" id="modeSlide" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="slSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">大きさ</span><div class="chips" id="slSizeChips"></div></div>
+        <div class="opt"><span class="row-label">絵柄</span><div class="chips" id="slPicChips"></div></div>
+        <div class="opt" id="slNumOpt"><span class="row-label">番号</span><div class="chips" id="slNumChips"></div></div>
+      </div>
+      <p class="slide-setup-best" id="slSetupBest"></p>
+      <ul class="rules" id="slRules"></ul>
+    </section>
+    <section class="panel" id="slPlay" hidden>
+      <span class="label" id="slLabel"></span>
+      <p class="d-title" id="slTitle"></p>
+      <div class="slide-stats" id="slStats" aria-live="off">
+        <div class="slide-stat" id="slMovesBox"><span class="slide-stat-name">手数</span><b class="slide-stat-val" id="slMoves">0</b></div>
+        <div class="slide-stat" id="slTimeBox"><span class="slide-stat-name">タイム</span><b class="slide-stat-val" id="slTime">0:00.0</b></div>
+        <div class="slide-stat slide-stat-best"><span class="slide-stat-name">自己ベスト</span><b class="slide-stat-val" id="slBest">-</b></div>
+      </div>
+      <div class="slide-tray" id="slTray">
+        <div class="slide-board" id="slBoard" role="group" aria-label="スライドパズルの盤（矢印キーでも動かせます）" tabindex="0" aria-live="off"></div>
+        <div class="slide-peek" id="slPeek" aria-hidden="true"></div>
+      </div>
+      <p class="slide-record" id="slRecord" hidden></p>
+      <p class="hint" id="slHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="slActions"></div>
+</div>

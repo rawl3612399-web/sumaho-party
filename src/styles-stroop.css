@@ -1,0 +1,123 @@
+/* 色と文字: the colored word card, time/score HUD, combo flame, 2x2 answer pad and result stats.
+   Colors come from tokens in styles.css. The four inks are the only colored text in the game. */
+
+/* ---------- the four inks ---------- */
+.stroop-word[data-ink="red"] { color: var(--c-red); }
+.stroop-word[data-ink="blue"] { color: var(--c-blue); }
+.stroop-word[data-ink="green"] { color: var(--c-green); }
+.stroop-word[data-ink="yellow"] { color: var(--c-amber); }
+.stroop-word {
+  font-family: var(--body); font-weight: 900; line-height: 1.1; letter-spacing: .04em; white-space: nowrap;
+  font-size: clamp(3.2rem, 18vw, 5.2rem); color: var(--ink);
+}
+
+/* ---------- setup ---------- */
+.stroop-demo {
+  display: flex; align-items: center; justify-content: center; gap: 16px; width: 100%; box-sizing: border-box;
+  padding: 10px 14px; border-radius: 16px; border: 2px dashed var(--line);
+}
+.stroop-demo .stroop-word { font-size: clamp(2.2rem, 11vw, 2.8rem); }
+.stroop-demo-ans { font-size: .95rem; font-weight: 700; color: var(--muted); text-align: left; }
+.stroop-best { margin: 0; font-size: .9rem; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; text-wrap: balance; }
+.stroop-best.stroop-new {
+  color: var(--ink); font-size: 1rem; padding: 4px 14px; border-radius: 999px; background: var(--hl);
+  animation: stroopNew .6s cubic-bezier(.2, 1.4, .4, 1);
+}
+
+/* ---------- play layout ---------- */
+#srStage.stroop-tight { padding: 14px 12px; }
+#srPlay.stroop-live { gap: 12px; }
+#srHint { white-space: pre-line; }
+
+/* ---------- HUD ---------- */
+.stroop-hud {
+  display: grid; grid-template-columns: auto minmax(40px, 1fr) auto auto; align-items: center; gap: 10px;
+  width: 100%; max-width: 420px;
+}
+.stroop-clock { position: relative; display: flex; align-items: baseline; gap: 2px; min-width: 3em; font-variant-numeric: tabular-nums; }
+.stroop-clock b, .stroop-score b { font-family: var(--display); font-weight: 400; font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.stroop-clock small, .stroop-score small { font-size: .72rem; font-weight: 700; color: var(--muted); }
+.stroop-score { display: flex; align-items: baseline; justify-content: flex-end; gap: 4px; min-width: 3.4em; }
+.stroop-score b { display: inline-block; }
+.stroop-score b.stroop-bump { animation: stroopBump .22s ease-out; }
+.stroop-meter { height: 12px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.stroop-meter span { display: block; height: 100%; border-radius: inherit; background: var(--ink); transform-origin: left center; will-change: transform; }
+.stroop-hud.urgent .stroop-clock b { color: var(--alert); animation: stroopPulse .5s ease-in-out infinite; }
+.stroop-hud.urgent .stroop-meter span { background: var(--alert); }
+.stroop-pause { flex: none; }
+.stroop-pause:disabled { opacity: .4; cursor: default; }
+.stroop-minus {
+  position: absolute; left: 0; top: -6px; white-space: nowrap; pointer-events: none;
+  font-weight: 900; font-size: .95rem; color: var(--alert);
+  animation: stroopFloat .75s ease-out forwards;
+}
+
+/* ---------- the word card ---------- */
+.stroop-stim {
+  position: relative; width: 100%; max-width: 420px; box-sizing: border-box;
+  height: clamp(132px, 28vh, 210px); height: clamp(132px, 28svh, 210px); margin-bottom: 6px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  border-radius: 22px; background: var(--paper); border: 2.5px solid var(--ink); box-shadow: 0 6px 0 var(--ink);
+  user-select: none; -webkit-user-select: none;
+}
+.stroop-ask { font-size: .82rem; font-weight: 700; letter-spacing: .08em; color: var(--muted); }
+.stroop-word.stroop-new { animation: stroopIn .18s cubic-bezier(.2, 1.4, .4, 1); }
+.stroop-stim.stroop-miss { animation: stroopShake .07s linear 4; }
+
+/* combo badge with a small flame once the combo is hot */
+.stroop-combo {
+  position: absolute; top: 8px; right: 10px; display: flex; align-items: center; gap: 2px;
+  font-size: .82rem; font-weight: 900; color: var(--muted); font-variant-numeric: tabular-nums;
+}
+.stroop-combo svg { display: none; width: 20px; height: 20px; transform-origin: 50% 90%; }
+.stroop-flame-out { fill: var(--c-orange); }
+.stroop-flame-in { fill: var(--zap); }
+.stroop-combo.stroop-fire { color: var(--ink); }
+.stroop-combo.stroop-fire svg { display: block; animation: stroopFlicker .45s ease-in-out infinite alternate; }
+.stroop-combo.stroop-bump { animation: stroopBump .22s ease-out; }
+
+/* ---------- answer pad (neutral: no ink colors on the buttons) ---------- */
+.stroop-pad { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 420px; }
+.key.stroop-ans {
+  position: relative; display: flex; align-items: center; justify-content: center; gap: 8px; min-width: 0;
+  min-height: clamp(64px, 12.5vh, 96px); min-height: clamp(64px, 12.5svh, 96px); padding: 8px 10px; margin-bottom: 5px;
+  font-family: var(--body); font-weight: 900; font-size: clamp(1.4rem, 6.5vw, 1.8rem); letter-spacing: .04em;
+  background: var(--card); color: var(--ink);
+  border: 2.5px solid var(--ink); border-radius: 18px; box-shadow: 0 5px 0 var(--ink);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none;
+}
+.key.stroop-ans svg { flex: none; width: 20px; height: 20px; color: var(--muted); }
+.key.stroop-ans:disabled { opacity: .45; }
+.key.stroop-ans.stroop-press { animation: stroopPress .14s ease-out; }
+.stroop-kbd { display: none; position: absolute; top: 5px; left: 10px; font-size: .68rem; font-weight: 700; color: var(--muted); }
+@media (hover: hover) and (pointer: fine) {
+  .stroop-kbd { display: block; }
+}
+
+/* ---------- results ---------- */
+.stroop-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; width: 100%; max-width: 380px; }
+.stroop-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 0;
+  padding: 8px 4px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.stroop-stat small { font-size: .7rem; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.stroop-stat b { font-family: var(--display); font-weight: 400; font-size: 1.2rem; line-height: 1.2; font-variant-numeric: tabular-nums; white-space: nowrap; }
+@media (max-width: 340px) {
+  .stroop-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+/* ---------- motion ---------- */
+@keyframes stroopIn { 0% { transform: scale(.82); opacity: .2; } 100% { transform: none; opacity: 1; } }
+@keyframes stroopShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+@keyframes stroopPress { 0% { transform: translateY(4px); box-shadow: 0 1px 0 var(--ink); } 100% { transform: none; } }
+@keyframes stroopBump { 40% { transform: scale(1.25); } }
+@keyframes stroopPulse { 50% { transform: scale(1.12); } }
+@keyframes stroopFloat { 0% { transform: translateY(0); opacity: 1; } 100% { transform: translateY(-26px); opacity: 0; } }
+@keyframes stroopFlicker { 0% { transform: scale(.92) rotate(-6deg); } 100% { transform: scale(1.12) rotate(5deg); } }
+@keyframes stroopNew { 0% { transform: scale(1.4); opacity: 0; } 100% { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .stroop-word.stroop-new, .stroop-stim.stroop-miss, .key.stroop-ans.stroop-press, .stroop-combo.stroop-bump,
+  .stroop-score b.stroop-bump, .stroop-hud.urgent .stroop-clock b, .stroop-combo.stroop-fire svg, .stroop-best.stroop-new { animation: none; }
+  .stroop-minus { animation: none; opacity: 1; }
+}

@@ -1,0 +1,34 @@
+<!-- ===== 1〜25タッチ ===== -->
+<div class="mode" id="modeSchulte" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="scSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">マスの数</span><div class="chips" id="scSizeChips"></div></div>
+        <div class="opt"><span class="row-label">ルール</span><div class="chips" id="scVariantChips"></div></div>
+      </div>
+      <div class="schulte-records" id="scRecords"></div>
+      <ul class="rules" id="scRules"></ul>
+    </section>
+    <section class="panel schulte-play" id="scPlay" hidden>
+      <span class="label" id="scLabel"></span>
+      <p class="d-title" id="scTitle"></p>
+      <div class="schulte-hud" id="scHud" aria-live="off">
+        <div class="schulte-stat schulte-next-box">
+          <span class="schulte-stat-label">つぎ</span>
+          <b class="schulte-next" id="scNext">1</b>
+        </div>
+        <div class="schulte-time" id="scTime">0.00</div>
+        <div class="schulte-stat">
+          <span class="schulte-stat-label">ミス</span>
+          <b class="schulte-miss-count" id="scMiss">0</b>
+        </div>
+      </div>
+      <div class="schulte-progress" id="scProgress" aria-hidden="true"><span></span></div>
+      <div class="schulte-grid" id="scGrid" role="group" aria-label="1から順番にタッチする数字のマス" aria-live="off"></div>
+      <div class="word-card" id="scCard"></div>
+      <ul class="schulte-details" id="scDetails" hidden></ul>
+      <p class="hint" id="scHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="scActions"></div>
+</div>

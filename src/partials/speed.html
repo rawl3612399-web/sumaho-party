@@ -1,0 +1,22 @@
+<!-- ===== スピード ===== -->
+<div class="mode" id="modeSpeed" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="spSetup">
+      <div class="speed-demo" id="spDemo" aria-hidden="true"></div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">対戦</span><div class="chips" id="spVsChips"></div></div>
+        <div class="opt" id="spLevelOpt"><span class="row-label">CPUの強さ</span><div class="chips" id="spLevelChips"></div></div>
+      </div>
+      <div class="setup-form" id="spNames" hidden>
+        <label for="spNameIn0">1人目（下側・赤）<input class="name-input" id="spNameIn0" maxlength="12" autocomplete="off"></label>
+        <label for="spNameIn1">2人目（上側・黒）<input class="name-input" id="spNameIn1" maxlength="12" autocomplete="off"></label>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">出せるカード</span><div class="chips" id="spHintChips"></div></div>
+      </div>
+      <ul class="rules" id="spRules"></ul>
+      <p class="hint" id="spRecord" hidden></p>
+    </section>
+  </main>
+  <div class="actions" id="spActions"></div>
+</div>

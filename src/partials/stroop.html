@@ -1,0 +1,42 @@
+<!-- ===== 色と文字 ===== -->
+<div class="mode" id="modeStroop" hidden>
+  <main class="stage" id="srStage" aria-live="polite">
+    <section class="panel" id="srSetup">
+      <div class="stroop-demo" id="srDemo" aria-hidden="true">
+        <span class="stroop-word" id="srDemoWord"></span>
+        <span class="stroop-demo-ans" id="srDemoAns"></span>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">答え方</span><div class="chips" id="srModeChips"></div></div>
+        <div class="opt"><span class="row-label">時間</span><div class="chips" id="srTimeChips"></div></div>
+      </div>
+      <ul class="rules" id="srRules"></ul>
+    </section>
+    <section class="panel" id="srPlay" hidden>
+      <span class="label" id="srLabel"></span>
+      <p class="d-title" id="srTitle"></p>
+      <div class="word-card" id="srCard"></div>
+      <div class="stroop-hud" id="srHud" hidden>
+        <div class="stroop-clock" id="srClock"><b id="srTime">30</b><small>秒</small></div>
+        <div class="stroop-meter" aria-hidden="true"><span id="srBar"></span></div>
+        <div class="stroop-score"><small>正解</small><b id="srScore">0</b></div>
+        <button class="icon-btn stroop-pause" id="srPause" type="button" aria-label="一時停止">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M9 6.5v11M15 6.5v11"/></svg>
+        </button>
+      </div>
+      <div class="stroop-stim" id="srStim" hidden>
+        <span class="stroop-combo" id="srCombo" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path class="stroop-flame-out" d="M12 2.5c.8 3.2 5.5 5.6 5.5 11a5.5 5.5 0 0 1-11 0c0-2.7 1.4-4.4 2.6-5.6.1 1.9.9 3.1 2 3.5-.2-3.3.2-6.2.9-8.9z"/><path class="stroop-flame-in" d="M12 12.5c1 1.4 2.6 2.4 2.6 4.3a2.6 2.6 0 0 1-5.2 0c0-1.6 1.2-2.6 2.6-4.3z"/></svg>
+          <span id="srComboNum"></span>
+        </span>
+        <span class="stroop-ask" id="srAsk"></span>
+        <span class="stroop-word" id="srWord"></span>
+      </div>
+      <div class="stroop-pad" id="srPad" hidden></div>
+      <div class="stroop-stats" id="srStats" hidden></div>
+      <p class="hint" id="srHint"></p>
+    </section>
+    <p class="stroop-best" id="srBest" hidden></p>
+  </main>
+  <div class="actions" id="srActions"></div>
+</div>

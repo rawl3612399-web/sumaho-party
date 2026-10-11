@@ -31,6 +31,13 @@
     { id: "memory", title: "神経衰弱", players: "1〜4人・CPU", desc: "めくって覚えて、同じ数字と色をそろえる", color: "--c-rose", el: "modeMemory", game: Memory, group: "classic" },
     { id: "yacht", title: "ヨット", players: "1〜4人・CPU", desc: "サイコロ5個で役をそろえて高得点を目指す", color: "--c-violet", el: "modeYacht", game: Yacht, group: "classic" },
     { id: "blackjack", title: "ブラックジャック", players: "1人", desc: "21に近づけてディーラーに勝とう", color: "--c-sky", el: "modeBlackjack", game: Blackjack, group: "classic" },
+    { id: "sevens", title: "七並べ", players: "1人＋CPU3", desc: "7からつなげて先に手札をなくそう", color: "--c-green", el: "modeSevens", game: Sevens, group: "classic" },
+    { id: "speed", title: "スピード", players: "1人・2人", desc: "1つちがいの数字を早い者勝ちで出しきれ", color: "--c-cyan", el: "modeSpeed", game: Speed, group: "classic" },
+    { id: "slide", title: "スライドパズル", players: "1人", desc: "タイルをすべらせて絵や数字をそろえる", color: "--c-sky", el: "modeSlide", game: Slide, group: "puzzle" },
+    { id: "memnum", title: "瞬間記憶", players: "1人", desc: "一瞬見た数字と場所を覚える", color: "--c-cyan", el: "modeMemNum", game: MemNum, group: "brain" },
+    { id: "stroop", title: "色と文字", players: "1人", desc: "文字にまどわされず、色を答える脳トレ", color: "--c-red", el: "modeStroop", game: Stroop, group: "brain" },
+    { id: "schulte", title: "1〜25タッチ", players: "1人", desc: "1から順に数字をタッチ。目の速さ勝負", color: "--c-blue", el: "modeSchulte", game: Schulte, group: "brain" },
+    { id: "simon", title: "サイモン", players: "1人", desc: "光る順番を覚えて同じ順にタップ", color: "--c-green", el: "modeSimon", game: Simon, group: "brain" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

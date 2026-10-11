@@ -1,0 +1,197 @@
+/* スライドパズル: stats bar, a wooden tray, sliding tiles (numbers or a sliced picture), peek layer and win reveal.
+   Wood and picture colors are this game's own tokens, defined for light and dark below. */
+:root {
+  --sl-wood: #f2d29c; --sl-wood-edge: #c4914f; --sl-wood-ink: #5a3a1a; --sl-grain: rgba(160, 100, 40, .1);
+  --sl-tray: #6e4c2e; --sl-cloud: #ffffff;
+  --sl-shade: rgba(20, 16, 10, .25); --sl-light: rgba(255, 255, 255, .5);
+  --sl-badge: rgba(18, 24, 32, .66); --sl-on-badge: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sl-wood: #e3bf86; --sl-wood-edge: #a8763e; --sl-wood-ink: #4a2e12; --sl-grain: rgba(120, 70, 20, .12);
+    --sl-tray: #3e2c1c; --sl-cloud: #f3f6fa;
+    --sl-shade: rgba(0, 0, 0, .4); --sl-light: rgba(255, 255, 255, .32);
+    --sl-badge: rgba(10, 14, 12, .72); --sl-on-badge: #ffffff;
+  }
+}
+:root[data-theme="dark"] {
+  --sl-wood: #e3bf86; --sl-wood-edge: #a8763e; --sl-wood-ink: #4a2e12; --sl-grain: rgba(120, 70, 20, .12);
+  --sl-tray: #3e2c1c; --sl-cloud: #f3f6fa;
+  --sl-shade: rgba(0, 0, 0, .4); --sl-light: rgba(255, 255, 255, .32);
+  --sl-badge: rgba(10, 14, 12, .72); --sl-on-badge: #ffffff;
+}
+
+#modeSlide .stage { padding-inline: 10px; gap: 12px; }
+#slPlay { gap: 12px; }
+#slActions { justify-content: center; }
+/* short phones (iPhone SE): keep the board and the peek button on one screen */
+@media (max-height: 720px) {
+  #modeSlide .stage { padding-block: 10px; }
+  #slPlay { gap: 8px; }
+}
+
+.slide-setup-best {
+  margin: 0; padding: 6px 14px; border-radius: 999px; border: 2px dashed var(--line);
+  font-size: .9rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+
+/* ---------- stats ---------- */
+.slide-stats { display: grid; grid-template-columns: 1fr 1fr 1.35fr; gap: 8px; width: min(100%, 420px); }
+.slide-stat {
+  position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 4px 6px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  transition: border-color .2s, background-color .2s;
+}
+.slide-stat-name { font-size: .7rem; color: var(--muted); letter-spacing: .12em; }
+.slide-stat-val {
+  font-family: var(--display); font-weight: 400; font-size: 1.35rem; line-height: 1.25;
+  font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+}
+.slide-stat-best .slide-stat-val { font-size: .98rem; line-height: 1.7; }
+.slide-stat.slide-new { border-color: var(--alert); background: var(--hl); }
+.slide-stat.slide-new::after {
+  content: "新記録"; position: absolute; top: -10px; right: -4px;
+  font-size: .62rem; font-weight: 900; letter-spacing: .04em; line-height: 1;
+  padding: 3px 6px; border-radius: 999px; background: var(--alert); color: var(--on-accent);
+  animation: slideBadge .5s cubic-bezier(.2, 1.5, .4, 1);
+}
+.slide-record { margin: 0; font-family: var(--display); font-size: 1.15rem; color: var(--alert); }
+
+/* ---------- tray and board ---------- */
+.slide-tray {
+  --gap: 3px; --pad: 7px;
+  position: relative; box-sizing: border-box; width: min(100%, 420px); padding: var(--pad);
+  border-radius: 18px; background: var(--sl-tray);
+  border: 2.5px solid var(--ink); box-shadow: 0 5px 0 var(--ink), inset 0 3px 10px var(--sl-shade);
+  margin-bottom: 5px; container-type: inline-size;
+}
+.slide-board {
+  position: relative; width: 100%; aspect-ratio: 1; border-radius: 10px;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.slide-board:focus-visible { outline: 3px solid var(--accent); outline-offset: 5px; }
+
+.slide-tile {
+  position: absolute; left: 0; top: 0;
+  width: calc(100% / var(--n)); height: calc(100% / var(--n));
+  transition: transform .12s cubic-bezier(.25, .8, .35, 1);
+  will-change: transform;
+}
+.slide-tile.slide-can { cursor: pointer; }
+.slide-won .slide-tile.slide-can { cursor: default; }
+.slide-scatter .slide-tile { transition: transform .5s cubic-bezier(.3, 1.25, .4, 1) var(--d); }
+
+.slide-face {
+  position: absolute; top: var(--gap); right: var(--gap); bottom: var(--gap); left: var(--gap);
+  display: grid; place-items: center; overflow: hidden;
+  border-radius: calc(16px - var(--n) * 1.6px);
+  background-color: var(--sl-wood);
+  background-image: repeating-linear-gradient(97deg, var(--sl-grain) 0 2px, transparent 2px 7px, var(--sl-grain) 7px 8px, transparent 8px 15px);
+  color: var(--sl-wood-ink);
+  box-shadow: 0 2px 3px var(--sl-shade);
+  transition: top .45s ease, right .45s ease, bottom .45s ease, left .45s ease, border-radius .45s ease;
+}
+.slide-face::after {
+  content: ""; position: absolute; inset: 0; z-index: 1; border-radius: inherit; pointer-events: none;
+  box-shadow: inset 0 -4px 0 var(--sl-wood-edge), inset 0 2px 0 var(--sl-light);
+  transition: opacity .4s;
+}
+.slide-num {
+  position: relative; z-index: 2; font-family: var(--display); font-weight: 400; line-height: 1;
+  font-variant-numeric: tabular-nums; transition: opacity .3s;
+  font-size: calc(min(100vw - 70px, 400px) * .4 / var(--n));
+  font-size: calc(40cqw / var(--n));
+}
+/* tile already in its place: a small green dot */
+.slide-home .slide-face::before {
+  content: ""; position: absolute; z-index: 2; top: 8%; right: 8%; width: 11%; aspect-ratio: 1; min-width: 6px;
+  border-radius: 50%; background: var(--go); box-shadow: 0 0 0 2px var(--sl-light);
+  animation: slideDot .3s cubic-bezier(.2, 1.6, .4, 1);
+}
+
+/* picture tiles: each face shows its own slice of the full picture */
+.slide-img { display: none; }
+.slide-mode-pic .slide-face { background: var(--card); }
+.slide-mode-pic .slide-face::after { box-shadow: inset 0 -3px 0 var(--sl-shade), inset 0 2px 0 var(--sl-light); }
+.slide-mode-pic .slide-img {
+  display: block; position: absolute;
+  width: calc(var(--n) * (100% + 2 * var(--gap)));
+  height: calc(var(--n) * (100% + 2 * var(--gap)));
+  left: calc(-1 * (var(--hx) * (100% + 2 * var(--gap)) + var(--gap)));
+  top: calc(-1 * (var(--hy) * (100% + 2 * var(--gap)) + var(--gap)));
+  background: var(--sl-img) center / 100% 100% no-repeat;
+  transition: left .45s ease, top .45s ease, width .45s ease, height .45s ease;
+}
+.slide-mode-pic .slide-num {
+  position: absolute; top: 6%; left: 6%;
+  font-family: var(--body); font-weight: 900; line-height: 1.15;
+  padding: 1px 5px; border-radius: 6px; background: var(--sl-badge); color: var(--sl-on-badge);
+  font-size: 12px;
+  font-size: max(11px, calc(15cqw / var(--n)));
+}
+.slide-mode-pic:not(.slide-labels) .slide-num { opacity: 0; }
+
+/* the bottom-right piece: only in picture mode, shown before the shuffle and after the win */
+.slide-mode-num .slide-last { display: none; }
+.slide-last { pointer-events: none; opacity: 0; transition: opacity .3s, transform .12s; }
+.slide-last .slide-face { transform: scale(.6); transition: transform .4s cubic-bezier(.2, 1.4, .4, 1), top .45s ease, right .45s ease, bottom .45s ease, left .45s ease, border-radius .45s ease; }
+.slide-intro .slide-last, .slide-won .slide-last { opacity: 1; }
+.slide-intro .slide-last .slide-face, .slide-won .slide-last .slide-face { transform: none; }
+.slide-won .slide-last, .slide-won .slide-last .slide-face { transition-delay: .3s; }
+
+/* ---------- win ---------- */
+.slide-mode-pic.slide-won { --gap: 0px; }
+.slide-mode-pic.slide-won .slide-face { border-radius: 0; box-shadow: none; }
+.slide-mode-pic.slide-won .slide-face::after, .slide-mode-pic.slide-won .slide-num, .slide-won .slide-home .slide-face::before { opacity: 0; }
+.slide-mode-pic.slide-won .slide-board { overflow: hidden; }
+.slide-mode-pic.slide-won .slide-board::before {
+  content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
+  background: var(--sl-img) center / 100% 100% no-repeat; animation: slideFadeIn .3s .8s both;
+}
+.slide-mode-pic.slide-won .slide-board::after {
+  content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none;
+  background: linear-gradient(110deg, transparent 35%, var(--sl-light) 50%, transparent 65%) no-repeat;
+  background-size: 300% 100%; animation: slideShine 1.2s .6s ease-out both;
+}
+.slide-mode-num.slide-won .slide-face { animation: slideWave .55s calc(var(--k) * 55ms) ease-out both; }
+
+/* ---------- peek (hold to see the finished board) ---------- */
+.slide-peek {
+  position: absolute; inset: var(--pad); z-index: 4; border-radius: 10px; overflow: hidden;
+  display: grid; grid-template-columns: repeat(var(--n), 1fr); grid-template-rows: repeat(var(--n), 1fr);
+  background: var(--sl-tray); opacity: 0; pointer-events: none; transition: opacity .15s;
+}
+.slide-peek-on .slide-peek { opacity: 1; }
+.slide-peek::after {
+  content: "完成図"; position: absolute; left: 50%; bottom: 8px; transform: translateX(-50%);
+  font-size: .78rem; font-weight: 900; letter-spacing: .1em; padding: 3px 12px; border-radius: 999px;
+  background: var(--sl-badge); color: var(--sl-on-badge);
+}
+.slide-peek-cell {
+  margin: var(--gap); border-radius: 8px; display: grid; place-items: center;
+  background: var(--sl-wood); color: var(--sl-wood-ink); box-shadow: inset 0 -3px 0 var(--sl-wood-edge);
+  font-family: var(--display); font-size: calc(min(100vw - 70px, 400px) * .3 / var(--n)); font-size: calc(30cqw / var(--n));
+}
+.slide-mode-pic .slide-peek { background: var(--sl-img) center / 100% 100% no-repeat; }
+.slide-mode-pic .slide-peek-cell { background: none; box-shadow: none; place-items: start; padding: 5%; }
+.slide-mode-pic .slide-peek-cell b {
+  font-family: var(--body); font-weight: 900; font-size: 11px; line-height: 1.15; padding: 1px 5px; border-radius: 6px;
+  background: var(--sl-badge); color: var(--sl-on-badge);
+}
+.slide-mode-pic:not(.slide-labels) .slide-peek-cell b { display: none; }
+.slide-peek-btn { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+
+/* ---------- motion ---------- */
+.slide-nope { animation: slideNope .09s linear 2; }
+@keyframes slideNope { 25% { transform: translateX(-5%); } 75% { transform: translateX(5%); } }
+@keyframes slideDot { from { transform: scale(0); } }
+@keyframes slideBadge { from { transform: scale(.3) rotate(-12deg); opacity: 0; } }
+@keyframes slideWave { 40% { transform: translateY(-12%) scale(1.06); } 100% { transform: none; } }
+@keyframes slideFadeIn { from { opacity: 0; } }
+@keyframes slideShine { from { background-position: 100% 0; } to { background-position: 0 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-tile, .slide-face, .slide-img, .slide-last, .slide-last .slide-face, .slide-peek, .slide-num, .slide-stat { transition: none !important; }
+  .slide-nope, .slide-home .slide-face::before, .slide-stat.slide-new::after,
+  .slide-mode-num.slide-won .slide-face, .slide-mode-pic.slide-won .slide-board::before, .slide-mode-pic.slide-won .slide-board::after { animation: none !important; }
+}

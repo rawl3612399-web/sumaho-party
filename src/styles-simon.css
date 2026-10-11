@@ -1,0 +1,131 @@
+/* サイモン: the round four-pad board, lit glow, center hub, progress bar and result rows. Colors come from tokens. */
+:root { --simon-body: #1c2838; --simon-glow: #ffffff; --simon-dim: .72; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --simon-body: #0e1512; --simon-glow: #ffffff; --simon-dim: .58; }
+}
+:root[data-theme="dark"] { --simon-body: #0e1512; --simon-glow: #ffffff; --simon-dim: .58; }
+
+/* ---------- setup ---------- */
+.simon-mini {
+  width: 108px; aspect-ratio: 1; box-sizing: border-box; padding: 6px; border-radius: 50%;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 5px;
+  background: var(--simon-body); box-shadow: 0 5px 0 var(--line);
+}
+.simon-mini span { filter: brightness(var(--simon-dim)) saturate(.85); animation: simonAttract 2.4s linear infinite; }
+.simon-mini span:nth-child(1) { background: var(--c-green); border-radius: 100% 14% 14% 14%; }
+.simon-mini span:nth-child(2) { background: var(--c-red); border-radius: 14% 100% 14% 14%; animation-delay: .6s; }
+.simon-mini span:nth-child(3) { background: var(--c-amber); border-radius: 14% 14% 14% 100%; animation-delay: 1.8s; }
+.simon-mini span:nth-child(4) { background: var(--c-blue); border-radius: 14% 14% 100% 14%; animation-delay: 1.2s; }
+@keyframes simonAttract {
+  0%, 24%, 100% { filter: brightness(var(--simon-dim)) saturate(.85); }
+  5%, 15% { filter: brightness(1.2) saturate(1.15); }
+}
+.simon-best { margin: 0; font-weight: 700; font-size: .95rem; font-variant-numeric: tabular-nums; text-wrap: balance; }
+.simon-ranks { width: 100%; text-align: left; }
+.simon-ranks summary { padding-block: 12px; } /* a 44px tap target */
+.simon-ranks ul { margin: 6px 0 0; padding-left: 1.2em; line-height: 1.7; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* ---------- play view ---------- */
+.simon-wrap { display: flex; flex-direction: column; align-items: center; gap: 12px; width: 100%; }
+.simon-meta { display: flex; justify-content: center; gap: 20px; }
+.simon-stat {
+  display: flex; align-items: baseline; gap: 5px;
+  font-size: .78rem; letter-spacing: .06em; color: var(--muted);
+}
+.simon-stat b { font-family: var(--display); font-weight: 400; font-size: 1.3rem; color: var(--ink); font-variant-numeric: tabular-nums; }
+.simon-stat.simon-hot b { color: var(--go); }
+.simon-stat.simon-hot::after { content: "更新中"; font-size: .72rem; font-weight: 700; color: var(--go); }
+
+.simon-board {
+  position: relative; box-sizing: border-box;
+  width: min(100%, 340px, max(46vh, 220px)); aspect-ratio: 1;
+  padding: 3.5%; border-radius: 50%;
+  display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 3.5%;
+  background: var(--simon-body); box-shadow: 0 8px 0 var(--line);
+  touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.simon-pad {
+  --pad: var(--c-green);
+  position: relative; display: grid; place-items: center; min-width: 44px; min-height: 44px;
+  background: var(--pad); color: var(--on-tile); cursor: pointer; outline: none;
+  filter: brightness(var(--simon-dim)) saturate(.95);
+  transition: filter .12s ease-out, transform .08s ease-out, box-shadow .12s ease-out;
+  touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+}
+.simon-pad[data-pad="0"] { --pad: var(--c-green); border-radius: 100% 12% 12% 12%; transform-origin: 70% 70%; }
+.simon-pad[data-pad="1"] { --pad: var(--c-red); border-radius: 12% 100% 12% 12%; transform-origin: 30% 70%; }
+.simon-pad[data-pad="2"] { --pad: var(--c-amber); border-radius: 12% 12% 12% 100%; transform-origin: 70% 30%; }
+.simon-pad[data-pad="3"] { --pad: var(--c-blue); border-radius: 12% 12% 100% 12%; transform-origin: 30% 30%; }
+.simon-pad::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(circle at 50% 50%, color-mix(in srgb, var(--simon-glow) 55%, transparent), transparent 68%);
+  transition: opacity .12s ease-out;
+}
+.simon-shape { position: relative; z-index: 1; width: 24%; height: 24%; fill: currentColor; opacity: .62; transition: opacity .12s, transform .12s, color .12s; }
+.simon-board[data-state="input"] .simon-pad { filter: brightness(calc(var(--simon-dim) + .12)); }
+.simon-board:not([data-state="input"]) .simon-pad { cursor: default; pointer-events: none; }
+.simon-pad.simon-press { transform: scale(.95); }
+.simon-pad:focus-visible { box-shadow: inset 0 0 0 4px var(--accent); }
+.simon-board .simon-pad.lit {
+  z-index: 1; filter: brightness(1.18) saturate(1.2);
+  box-shadow: 0 0 0 3px var(--simon-glow), 0 0 30px 8px var(--pad);
+  transition-duration: .04s;
+}
+.simon-pad.lit::after { opacity: 1; transition-duration: .04s; }
+.simon-pad.lit .simon-shape { color: var(--simon-body); opacity: .9; transform: scale(1.14); }
+
+/* center hub: round number and what to do now */
+.simon-hub {
+  position: absolute; inset: 0; margin: auto; z-index: 2; width: 40%; height: 40%;
+  border-radius: 50%; box-sizing: border-box; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  background: var(--card); color: var(--ink);
+  box-shadow: 0 0 0 6px var(--simon-body), inset 0 -4px 0 var(--line);
+  transition: box-shadow .15s;
+}
+.simon-hub-label { font-size: .66rem; letter-spacing: .14em; color: var(--muted); }
+.simon-hub-num { display: block; font-family: var(--display); font-size: clamp(2rem, 11vw, 2.9rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.simon-hub-state { font-size: .72rem; font-weight: 700; color: var(--muted); min-height: 1.1em; font-variant-numeric: tabular-nums; }
+.simon-board[data-state="input"] .simon-hub { box-shadow: 0 0 0 6px var(--simon-body), inset 0 0 0 4px var(--accent); }
+.simon-board[data-state="input"] .simon-hub-state { color: var(--accent); }
+.simon-board[data-state="clear"] .simon-hub { box-shadow: 0 0 0 6px var(--simon-body), inset 0 0 0 4px var(--go); }
+.simon-board[data-state="clear"] .simon-hub-num, .simon-board[data-state="clear"] .simon-hub-state { color: var(--go); }
+.simon-board[data-state="miss"] .simon-hub { box-shadow: 0 0 0 6px var(--simon-body), inset 0 0 0 4px var(--alert); }
+.simon-board[data-state="miss"] .simon-hub-num, .simon-board[data-state="miss"] .simon-hub-state { color: var(--alert); }
+
+/* speed-up ribbon over the board */
+.simon-badge {
+  position: absolute; top: -10px; left: 0; right: 0; z-index: 3;
+  width: max-content; margin-inline: auto; padding: 4px 14px; border-radius: 999px;
+  font-family: var(--display); font-size: 1.05rem; line-height: 1.2;
+  background: var(--zap); color: var(--on-zap); border: 2.5px solid var(--simon-body);
+  opacity: 0; pointer-events: none; transition: opacity .25s;
+}
+.simon-badge.on { opacity: 1; }
+.simon-badge.simon-pop { animation: simonBadge .7s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes simonBadge { 0% { transform: scale(.4) rotate(-6deg); } 60% { transform: scale(1.1) rotate(2deg); } 100% { transform: none; } }
+
+.simon-progress { width: min(100%, 300px); height: 10px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.simon-progress-fill { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--accent); transition: width .15s ease-out; }
+.simon-board[data-state="clear"] + .simon-progress .simon-progress-fill { background: var(--go); }
+
+/* ---------- result ---------- */
+.word-card.simon-record { border-color: var(--go); box-shadow: 0 6px 0 var(--go); }
+.word-card.simon-record .wc-main { color: var(--go); }
+.simon-stats { list-style: none; margin: 0; padding: 0; width: min(100%, 340px); display: flex; flex-direction: column; gap: 6px; }
+.simon-stats li {
+  display: flex; justify-content: space-between; align-items: baseline; gap: 10px;
+  padding: 8px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-variant-numeric: tabular-nums; text-align: left;
+}
+.simon-stats li span { font-size: .85rem; color: var(--muted); flex: none; }
+.simon-stats li b { font-family: var(--display); font-weight: 400; font-size: 1.1rem; text-align: right; min-width: 0; }
+.simon-stats li.simon-new { border-color: var(--go); }
+.simon-stats li.simon-new b { color: var(--go); }
+
+@media (prefers-reduced-motion: reduce) {
+  .simon-mini span { animation: none; filter: none; }
+  .simon-pad, .simon-pad::after, .simon-shape, .simon-hub, .simon-badge, .simon-progress-fill { transition: none; }
+  .simon-pad.simon-press, .simon-pad.lit .simon-shape { transform: none; }
+  .simon-badge.simon-pop { animation: none; }
+}

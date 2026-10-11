@@ -1,0 +1,202 @@
+/* 七並べ: green felt table with four suit rows (A..K), CPU seats with card stacks and pass pips,
+   a fanned hand with playable cards raised, flying cards and stamp banners. Card faces come from styles-cards.css. */
+:root {
+  --sevens-felt: #1f8150;
+  --sevens-felt-hi: #2a9a63;
+  --sevens-felt-edge: #135a37;
+  --sevens-slot: rgba(255, 255, 255, .26);
+  --sevens-slot-ink: rgba(255, 255, 255, .55);
+  --sevens-glow: rgba(255, 212, 0, .38);
+  --sevens-shade: rgba(0, 0, 0, .3);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --sevens-felt: #17663f;
+    --sevens-felt-hi: #1f7a4c;
+    --sevens-felt-edge: #0c3d25;
+    --sevens-slot: rgba(255, 255, 255, .2);
+    --sevens-slot-ink: rgba(255, 255, 255, .45);
+    --sevens-glow: rgba(255, 216, 74, .32);
+    --sevens-shade: rgba(0, 0, 0, .45);
+  }
+}
+:root[data-theme="dark"] {
+  --sevens-felt: #17663f;
+  --sevens-felt-hi: #1f7a4c;
+  --sevens-felt-edge: #0c3d25;
+  --sevens-slot: rgba(255, 255, 255, .2);
+  --sevens-slot-ink: rgba(255, 255, 255, .45);
+  --sevens-glow: rgba(255, 216, 74, .32);
+  --sevens-shade: rgba(0, 0, 0, .45);
+}
+
+/* ---------- layout ---------- */
+.sevens-stage { padding: 14px 6px; gap: 8px; }
+#svSetup { padding-inline: 10px; box-sizing: border-box; }
+.sevens-play { gap: 8px; }
+.sevens-title { font-size: 1.2rem; min-height: 1.35em; }
+.sevens-record { font-size: .85rem; }
+.sevens-actions .btn { white-space: nowrap; }
+
+/* ---------- seats (CPUs on top, you above your hand) ---------- */
+.sevens-seats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; width: 100%; padding-top: 6px; }
+.sevens-seat {
+  position: relative; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; grid-template-areas: "ava name name" "stack stack pips";
+  align-items: center; gap: 3px 6px; min-width: 0; padding: 6px 7px; box-sizing: border-box; text-align: left;
+  border: 2px solid var(--line); border-radius: 12px; background: var(--paper);
+  transition: border-color .2s, background-color .2s, box-shadow .2s, transform .2s, opacity .2s;
+}
+.sevens-me { width: 100%; }
+.sevens-me .sevens-seat { grid-template-columns: auto auto minmax(0, 1fr) auto; grid-template-areas: "ava name pips stack"; padding: 4px 10px; }
+.sevens-me .sevens-pips { justify-self: start; }
+.sevens-ava {
+  grid-area: ava; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--seat); color: var(--seat-ink); font-size: .72rem; font-weight: 900;
+}
+.sevens-name { grid-area: name; font-weight: 700; font-size: .85rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sevens-stack { grid-area: stack; display: flex; align-items: center; gap: 4px; }
+.sevens-stack .pcard { --w: 15px; }
+.sevens-stack .pc-back { border-width: 2px; outline-width: 1px; }
+.sevens-count { font-family: var(--display); font-weight: 400; font-size: 1.15rem; line-height: 1; font-variant-numeric: tabular-nums; min-width: 1.1em; }
+.sevens-pips { grid-area: pips; display: flex; gap: 3px; justify-self: end; }
+.sevens-pips i { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--muted); box-sizing: border-box; transition: background-color .2s, border-color .2s; }
+.sevens-pips i.on { background: var(--alert); border-color: var(--alert); }
+.sevens-tag {
+  position: absolute; top: -10px; right: 6px; font-size: .68rem; font-weight: 700; line-height: 1.5; white-space: nowrap;
+  padding: 0 7px; border-radius: 999px; background: var(--card); border: 1.5px solid var(--line); color: var(--muted);
+}
+.sevens-tag:empty { display: none; }
+.sevens-seat.sevens-turn { border-color: var(--seat); box-shadow: 0 3px 0 var(--seat); transform: translateY(-2px); }
+.sevens-seat.sevens-turn .sevens-tag { background: var(--seat); border-color: var(--seat); color: var(--seat-ink); }
+.sevens-seat.sevens-think .sevens-ava { animation: sevensThink .9s ease-in-out infinite; }
+.sevens-seat.sevens-pass .sevens-tag {
+  background: var(--zap); border-color: var(--ink); color: var(--on-zap); font-size: .8rem;
+  animation: sevensTag .34s cubic-bezier(.2, 1.4, .4, 1) both;
+}
+.sevens-seat.sevens-done { background: var(--seat); border-color: var(--seat); color: var(--seat-ink); }
+.sevens-seat.sevens-done .sevens-ava { background: var(--seat-ink); color: var(--seat); }
+.sevens-seat.sevens-done .sevens-pips i { border-color: var(--seat-ink); }
+.sevens-seat.sevens-done .sevens-tag { background: var(--zap); border-color: var(--ink); color: var(--on-zap); }
+.sevens-seat.sevens-out { opacity: .6; border-style: dashed; }
+.sevens-seat.sevens-out .sevens-tag { background: var(--alert); border-color: var(--alert); color: var(--on-accent); }
+@media (max-width: 359px) { /* narrow phones: keep the hand count clear of the pass pips */
+  .sevens-seat { padding: 6px 5px; column-gap: 4px; }
+  .sevens-pips { gap: 2px; }
+  .sevens-pips i { width: 7px; height: 7px; }
+}
+@keyframes sevensThink { 50% { transform: scale(.8); } }
+@keyframes sevensTag { from { transform: scale(1.8) rotate(-8deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- table ---------- */
+.sevens-board-wrap { position: relative; width: min(100%, 480px); }
+.sevens-board {
+  display: flex; flex-direction: column; gap: 4px; width: 100%; box-sizing: border-box; padding: 6px 5px;
+  background: radial-gradient(ellipse at 50% 30%, var(--sevens-felt-hi), var(--sevens-felt) 75%);
+  border: 3px solid var(--sevens-felt-edge); border-radius: 14px; box-shadow: 0 4px 0 var(--ink);
+}
+.sevens-row { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 2px; }
+.sevens-slot {
+  position: relative; min-width: 0; aspect-ratio: 5 / 7; box-sizing: border-box; display: grid; place-items: center;
+  border: 1px dashed var(--sevens-slot); border-radius: calc(var(--sevens-sw, 22px) * .14);
+  transition: border-color .2s, box-shadow .2s;
+}
+.sevens-ghost {
+  display: flex; flex-direction: column; align-items: center; gap: 1px; line-height: 1; color: var(--sevens-slot-ink);
+  font-size: calc(var(--sevens-sw, 22px) * .36); font-weight: 900; letter-spacing: -.06em; opacity: .7;
+}
+.sevens-ghost svg { width: calc(var(--sevens-sw, 22px) * .32); height: calc(var(--sevens-sw, 22px) * .32); }
+.sevens-slot.sevens-on { border-color: transparent; }
+.sevens-slot.sevens-on .sevens-ghost { visibility: hidden; }
+.sevens-slot.sevens-open { border-style: solid; border-color: var(--sevens-slot-ink); }
+.sevens-slot.sevens-open .sevens-ghost { opacity: 1; }
+.sevens-slot.sevens-can {
+  border: 2px solid var(--zap); box-shadow: 0 0 0 2px var(--sevens-glow); cursor: pointer;
+  animation: sevensGlow 1.1s ease-in-out infinite;
+}
+.sevens-slot.sevens-can .sevens-ghost { color: var(--zap); opacity: 1; }
+.sevens-slot.sevens-last::after {
+  content: ""; position: absolute; inset: -3px; border: 2px solid var(--zap); border-radius: calc(var(--sevens-sw, 22px) * .2);
+  pointer-events: none; animation: sevensRing .5s ease-out both;
+}
+@keyframes sevensGlow { 50% { box-shadow: 0 0 0 4px var(--sevens-glow); } }
+@keyframes sevensRing { from { transform: scale(1.35); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* placed cards: small faces with a big rank and suit */
+.sevens-slot > .pcard {
+  position: absolute; inset: 0; width: auto; aspect-ratio: auto; --w: var(--sevens-sw, 22px);
+  animation: sevensLand .32s cubic-bezier(.2, 1.3, .4, 1) both;
+}
+.sevens-slot > .pcard.sevens-set { animation: none; } /* landed: do not pop again when the screen is shown again */
+.sevens-board .pc-center, .sevens-board .pc-corner.br { display: none; }
+.sevens-board .pc-corner.tl { inset: 0; justify-content: center; gap: 2px; font-size: calc(var(--w) * .42); letter-spacing: -.08em; }
+.sevens-board .pc-corner.tl svg { width: calc(var(--w) * .42); height: calc(var(--w) * .42); margin-top: 0; }
+.sevens-board .pc-front { border-width: 1px; border-radius: calc(var(--w) * .14); box-shadow: 0 1px 2px var(--sevens-shade); }
+@keyframes sevensLand { from { transform: scale(1.3); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- your hand ---------- */
+.sevens-hand {
+  position: relative; width: 100%; height: calc(var(--sevens-cw, 56px) * 1.4 + 30px); margin-top: 4px;
+  -webkit-user-select: none; user-select: none; touch-action: manipulation;
+}
+.sevens-hcard {
+  --x: 0px; --y: 0px; --rot: 0deg; --lift: 0px; --hover: 0px;
+  position: absolute; left: 0; bottom: 4px; width: var(--sevens-cw, 56px); margin: 0; padding: 0; border: 0;
+  background: none; font: inherit; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  transform: translate(var(--x), calc(var(--y) + var(--lift) + var(--hover))) rotate(var(--rot));
+  transform-origin: 50% 100%;
+  transition: transform .26s cubic-bezier(.3, .8, .3, 1);
+}
+.sevens-hcard .pcard { --w: var(--sevens-cw, 56px); transition: filter .2s; }
+.sevens-hcard.sevens-can { --lift: -18px; }
+.sevens-hcard.sevens-can .pc-front { box-shadow: 0 0 0 2.5px var(--zap), 0 6px 12px var(--pc-shadow); }
+.sevens-hcard.sevens-dim .pcard { filter: brightness(.68) saturate(.55); }
+.sevens-hcard.sevens-gone { visibility: hidden; }
+.sevens-hcard:focus-visible { outline: none; }
+.sevens-hcard:focus-visible .pc-front { outline: 3px solid var(--accent); outline-offset: 1px; }
+.sevens-hcard.sevens-nope .pcard { animation: sevensNope .32s ease-out; }
+.sevens-hcard.sevens-deal { animation: sevensDeal .46s cubic-bezier(.2, .9, .3, 1.1) backwards; }
+@media (hover: hover) {
+  .sevens-hcard.sevens-can:hover { --hover: -6px; }
+}
+@keyframes sevensNope { 20% { transform: translateX(-5px); } 45% { transform: translateX(5px); } 70% { transform: translateX(-3px); } }
+@keyframes sevensDeal { from { transform: translate(calc(var(--x) * .3 + 30%), 150px) rotate(-14deg); opacity: 0; } }
+
+/* ---------- flying card ---------- */
+.pcard.sevens-fly { position: fixed; z-index: 70; margin: 0; pointer-events: none; will-change: transform; }
+
+/* ---------- banner over the table ---------- */
+.sevens-banner {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 10px; pointer-events: none;
+}
+.sevens-banner-main {
+  font-family: var(--display); font-size: clamp(2.4rem, 13vw, 3.8rem); line-height: 1; padding: 8px 28px 12px;
+  border-radius: 18px; background: var(--zap); color: var(--on-zap); border: 3px solid var(--ink);
+  box-shadow: 0 6px 0 var(--ink); transform: rotate(-3deg);
+}
+.sevens-banner[data-tone="done"] .sevens-banner-main { background: var(--go); color: var(--on-go); }
+.sevens-banner[data-tone="out"] .sevens-banner-main { background: var(--alert); color: var(--on-accent); }
+.sevens-banner[data-tone="start"] .sevens-banner-main { background: var(--accent); color: var(--on-accent); }
+.sevens-banner-sub {
+  font-size: .9rem; font-weight: 700; padding: 4px 14px; border-radius: 999px; max-width: 90%; text-align: center;
+  background: var(--card); color: var(--ink); border: 2px solid var(--ink);
+}
+.sevens-banner.sevens-show .sevens-banner-main { animation: sevensStamp .42s cubic-bezier(.2, 1.4, .4, 1) both; }
+.sevens-banner.sevens-show .sevens-banner-sub { animation: sevensRise .3s .12s ease-out both; }
+@keyframes sevensStamp { from { transform: rotate(-3deg) scale(2.2); opacity: 0; } to { transform: rotate(-3deg) scale(1); opacity: 1; } }
+@keyframes sevensRise { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* ---------- ranking ---------- */
+.sevens-rank li { grid-template-columns: auto 1fr auto auto; }
+.sevens-rank li.sevens-you { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.sevens-rank .pos { font-family: var(--display); font-size: 1.1rem; color: var(--ink); }
+.sevens-rank li.ok .pos { color: var(--go); }
+.sevens-rank .num { font-size: .8rem; color: var(--muted); }
+
+@media (prefers-reduced-motion: reduce) {
+  .sevens-slot > .pcard, .sevens-slot.sevens-can, .sevens-slot.sevens-last::after, .sevens-hcard.sevens-deal,
+  .sevens-hcard.sevens-nope .pcard, .sevens-seat.sevens-think .sevens-ava, .sevens-seat.sevens-pass .sevens-tag,
+  .sevens-banner.sevens-show .sevens-banner-main, .sevens-banner.sevens-show .sevens-banner-sub { animation: none; }
+  .sevens-hcard, .sevens-seat, .sevens-slot, .sevens-pips i, .sevens-hcard .pcard { transition: none; }
+  .sevens-seat.sevens-turn { transform: none; }
+}

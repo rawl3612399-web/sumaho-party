@@ -1,0 +1,30 @@
+<!-- ===== 七並べ ===== -->
+<div class="mode" id="modeSevens" hidden>
+  <main class="stage sevens-stage" aria-live="polite">
+    <section class="panel" id="svSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">CPUの強さ</span><div class="chips" id="svLevelChips"></div></div>
+        <div class="opt"><span class="row-label">トンネル</span><div class="chips" id="svTunnelChips"></div></div>
+      </div>
+      <ul class="rules" id="svRules"></ul>
+      <p class="hint sevens-record" id="svRecord" hidden></p>
+    </section>
+    <section class="panel sevens-play" id="svPlay" hidden>
+      <div class="sevens-seats" id="svSeats"></div>
+      <span class="label" id="svLabel"></span>
+      <p class="d-title sevens-title" id="svTitle"></p>
+      <div class="sevens-board-wrap">
+        <div class="sevens-board" id="svBoard" role="group" aria-label="七並べの場"></div>
+        <div class="sevens-banner" id="svBanner" hidden>
+          <span class="sevens-banner-main" id="svBannerMain"></span>
+          <span class="sevens-banner-sub" id="svBannerSub"></span>
+        </div>
+      </div>
+      <ol class="result-list sevens-rank" id="svRank" hidden></ol>
+      <div class="sevens-me" id="svMe"></div>
+      <div class="sevens-hand" id="svHand" role="group" aria-label="あなたの手札"></div>
+      <p class="hint" id="svHint"></p>
+    </section>
+  </main>
+  <div class="actions sevens-actions" id="svActions"></div>
+</div>

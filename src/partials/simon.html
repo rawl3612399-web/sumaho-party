@@ -1,0 +1,52 @@
+<!-- ===== サイモン ===== -->
+<div class="mode" id="modeSimon" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="siSetup">
+      <div class="simon-mini" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+      <p class="simon-best" id="siSetupBest"></p>
+      <div class="opts">
+        <div class="opt"><span class="row-label">モード</span><div class="chips" id="siModeChips"></div></div>
+      </div>
+      <ul class="rules" id="siRules"></ul>
+      <details class="simon-ranks">
+        <summary>ランクの目安</summary>
+        <ul id="siRankList"></ul>
+      </details>
+    </section>
+    <section class="panel" id="siPlay" hidden>
+      <span class="label" id="siLabel"></span>
+      <p class="d-title" id="siTitle"></p>
+      <div class="word-card" id="siCard" hidden></div>
+      <div class="simon-wrap" id="siWrap">
+        <div class="simon-meta">
+          <span class="simon-stat" id="siBestStat">ベスト<b id="siBest">0</b></span>
+          <span class="simon-stat">スピード<b id="siSpeed">1</b></span>
+        </div>
+        <div class="simon-board" id="siBoard" data-state="lock">
+          <div class="simon-pad" data-pad="0" role="button" tabindex="0" aria-label="緑（マル）">
+            <svg class="simon-shape" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/></svg>
+          </div>
+          <div class="simon-pad" data-pad="1" role="button" tabindex="0" aria-label="赤（サンカク）">
+            <svg class="simon-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5 22 20.5H2z"/></svg>
+          </div>
+          <div class="simon-pad" data-pad="2" role="button" tabindex="0" aria-label="黄（シカク）">
+            <svg class="simon-shape" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="2"/></svg>
+          </div>
+          <div class="simon-pad" data-pad="3" role="button" tabindex="0" aria-label="青（ダイヤ）">
+            <svg class="simon-shape" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 1.5 22.5 12 12 22.5 1.5 12z"/></svg>
+          </div>
+          <div class="simon-hub" id="siHub" aria-hidden="true">
+            <span class="simon-hub-label">ラウンド</span>
+            <span class="simon-hub-num" id="siRound">1</span>
+            <span class="simon-hub-state" id="siHubState"></span>
+          </div>
+          <span class="simon-badge" id="siBadge" aria-hidden="true">スピードアップ！</span>
+        </div>
+        <div class="simon-progress" aria-hidden="true"><span class="simon-progress-fill" id="siProgress"></span></div>
+      </div>
+      <ul class="simon-stats" id="siStats" hidden></ul>
+      <p class="hint" id="siHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="siActions"></div>
+</div>
