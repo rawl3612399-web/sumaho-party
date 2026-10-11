@@ -1,0 +1,21 @@
+<!-- ===== ブロックおとし ===== -->
+<div class="mode" id="modeBlockfall" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="bfSetup">
+      <canvas class="blockfall-hero" id="bfHero" aria-hidden="true"></canvas>
+      <div class="opts">
+        <div class="opt"><span class="row-label">スタートレベル</span><div class="chips" id="bfLevelChips"></div></div>
+      </div>
+      <p class="blockfall-best" id="bfBest"></p>
+      <ul class="rules" id="bfRules"></ul>
+    </section>
+    <section class="panel" id="bfPlay" hidden>
+      <span class="label" id="bfLabel"></span>
+      <p class="d-title" id="bfTitle"></p>
+      <div class="word-card" id="bfCard"></div>
+      <ul class="blockfall-details" id="bfDetails" hidden></ul>
+      <p class="hint" id="bfHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="bfActions"></div>
+</div>

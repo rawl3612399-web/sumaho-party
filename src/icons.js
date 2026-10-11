@@ -28,6 +28,12 @@ const Icons = (() => {
     reversi: svg('<rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.7" cy="8.7" r="2.2"/><circle cx="15.3" cy="15.3" r="2.2"/><circle cx="15.3" cy="8.7" r="2.2" fill="currentColor"/><circle cx="8.7" cy="15.3" r="2.2" fill="currentColor"/>'),
     gomoku: svg('<path d="M3 6h18M3 12h18M3 18h18M6 3v18M12 3v18M18 3v18" stroke-width="1.3"/><circle cx="6" cy="18" r="2.6" fill="currentColor"/><circle cx="12" cy="12" r="2.6" fill="currentColor"/><circle cx="18" cy="6" r="2.6" fill="currentColor"/>'),
     mancala: svg('<rect x="1.5" y="4.5" width="21" height="15" rx="7"/><ellipse cx="5.7" cy="12" rx="1.5" ry="4.2" stroke-width="1.5"/><ellipse cx="18.3" cy="12" rx="1.5" ry="4.2" stroke-width="1.5"/><circle cx="9.9" cy="9.4" r="1.4" stroke-width="1.4"/><circle cx="14.1" cy="9.4" r="1.4" stroke-width="1.4"/><circle cx="9.9" cy="14.6" r="1.4" stroke-width="1.4"/><circle cx="14.1" cy="14.6" r="1.4" stroke-width="1.4"/>'),
+    reaction: svg('<path d="M13 3 6.5 13H12l-1 8 6.5-10H12z"/><path d="M19 5.5a8 8 0 0 1 1.6 5"/><path d="M5 18.5a8 8 0 0 1-1.6-5"/>'),
+    colorhunt: svg('<rect x="3" y="3" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="2"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="2"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="2" fill="currentColor" fill-opacity=".45"/>'),
+    mole: svg('<ellipse cx="12" cy="19.5" rx="8.5" ry="2.5"/><path d="M6.5 19.5V14a5.5 5.5 0 0 1 11 0v5.5"/><path d="M10 13.2h.01M14 13.2h.01"/><path d="M11.2 15.8h1.6"/><path d="M12 3v2.2M5.6 5.6l1.5 1.5M18.4 5.6l-1.5 1.5"/>'),
+    aim: svg('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/><circle cx="12" cy="12" r=".9" fill="currentColor"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>'),
+    snake: svg('<path d="M4 19h7a3.5 3.5 0 0 0 0-7H8.5a3 3 0 0 1 0-6H15"/><circle cx="17.5" cy="6" r="2.5"/><path d="M18.3 5.3h.01"/><circle cx="18.5" cy="17.5" r="2"/><path d="M18.5 15.5c.3-.9 1-1.5 1.8-1.6"/>'),
+    blockfall: svg('<path d="M7 2h15v5h-5v5h-5V7H7z"/><rect x="2" y="17" width="5" height="5" rx="1"/><rect x="7" y="17" width="5" height="5" rx="1"/><rect x="17" y="17" width="5" height="5" rx="1"/><rect x="2" y="12" width="5" height="5" rx="1"/>'),
     /* games:icons */
   };
 })();

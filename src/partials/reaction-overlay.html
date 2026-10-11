@@ -1,0 +1,15 @@
+<!-- ===== 反応速度テスト (full screen tap layer) ===== -->
+<div class="reaction-layer" id="reLayer" data-state="idle" data-mode="eye" hidden>
+  <div class="reaction-pad" id="rePad" role="button" tabindex="0" aria-label="合図が出たらここをタップ">
+    <span class="reaction-ring" aria-hidden="true"><i></i><i></i></span>
+    <div class="reaction-msgbox" role="status" aria-live="polite">
+      <p class="reaction-msg"><span id="reMsg"></span><small id="reUnit" hidden></small></p>
+      <p class="reaction-sub" id="reSub"></p>
+    </div>
+  </div>
+  <div class="reaction-top">
+    <button class="reaction-quit" id="reQuit" type="button">やめる</button>
+    <span class="reaction-info" id="reInfo"></span>
+  </div>
+  <ol class="reaction-dots" id="reDots" aria-hidden="true"></ol>
+</div>

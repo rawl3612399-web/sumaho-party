@@ -22,6 +22,12 @@
     { id: "reversi", title: "リバーシ", players: "2人・CPU", desc: "石をはさんでひっくり返す陣取り", color: "--c-mint", el: "modeReversi", game: Reversi, group: "classic" },
     { id: "gomoku", title: "五目ならべ", players: "2人・CPU", desc: "先に5つならべたら勝ち", color: "--c-brown", el: "modeGomoku", game: Gomoku, group: "classic" },
     { id: "mancala", title: "マンカラ", players: "2人・CPU", desc: "石をまいて、ゴールにたくさん集める", color: "--c-gold", el: "modeMancala", game: Mancala, group: "classic" },
+    { id: "reaction", title: "反応速度テスト", players: "1人", desc: "合図でタップ。反応の速さをミリ秒で測る", color: "--c-green", el: "modeReaction", game: Reaction, group: "reflex" },
+    { id: "colorhunt", title: "違う色さがし", players: "1人", desc: "1つだけ色がちがうマスを60秒で探す", color: "--c-pink", el: "modeColorHunt", game: ColorHunt, group: "reflex" },
+    { id: "mole", title: "もぐらたたき", players: "1人", desc: "もぐらを30秒たたきまくれ。爆弾に注意", color: "--c-brown", el: "modeMole", game: Mole, group: "reflex" },
+    { id: "aim", title: "的当てタップ", players: "1人", desc: "出てくる的をすばやくタップ。命中率も勝負", color: "--c-orange", el: "modeAim", game: Aim, group: "reflex" },
+    { id: "snake", title: "スネーク", players: "1人", desc: "エサを食べてのびるヘビ。壁と体に注意", color: "--c-lime", el: "modeSnake", game: Snake, group: "reflex" },
+    { id: "blockfall", title: "ブロックおとし", players: "1人", desc: "横一列そろえて消す落ちものパズル", color: "--c-indigo", el: "modeBlockfall", game: Blockfall, group: "reflex" },
     /* games:entries */
   ];
   const SOUND_LABEL = { all: "音楽と効果音", sfx: "効果音だけ", off: "音なし" };

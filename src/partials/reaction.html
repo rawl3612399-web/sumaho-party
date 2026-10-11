@@ -1,0 +1,26 @@
+<!-- ===== 反応速度テスト ===== -->
+<div class="mode" id="modeReaction" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="reSetup">
+      <div class="reaction-hero" id="reHero" aria-hidden="true"></div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">合図</span><div class="chips" id="reModeChips"></div></div>
+        <div class="opt"><span class="row-label">回数</span><div class="chips" id="reTrialChips"></div></div>
+      </div>
+      <div class="reaction-records" id="reRecords"></div>
+      <p class="reaction-note" id="reNote" role="alert" hidden></p>
+      <ul class="rules" id="reRules"></ul>
+    </section>
+    <section class="panel" id="rePlay" hidden>
+      <span class="label" id="reLabel"></span>
+      <p class="d-title" id="reTitle"></p>
+      <div class="word-card" id="reCard"></div>
+      <p class="hint" id="reHint"></p>
+      <p class="reaction-next" id="reNext" hidden></p>
+      <p class="reaction-stats" id="reStats" hidden></p>
+      <ul class="result-list reaction-times" id="reList" hidden></ul>
+      <div class="reaction-records" id="reBest" hidden></div>
+    </section>
+  </main>
+  <div class="actions" id="reActions"></div>
+</div>

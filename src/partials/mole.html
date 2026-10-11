@@ -1,0 +1,71 @@
+<!-- ===== もぐらたたき ===== -->
+<div class="mode" id="modeMole" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="mlSetup">
+      <div class="mole-legend" id="mlLegend" aria-label="もぐらの種類">
+        <div class="mole-legend-item" data-kind="normal"><span class="mole-legend-art"></span><span class="mole-legend-name">もぐら</span><b class="mole-legend-pts">+1</b></div>
+        <div class="mole-legend-item" data-kind="gold"><span class="mole-legend-art"></span><span class="mole-legend-name">金もぐら</span><b class="mole-legend-pts">+5</b></div>
+        <div class="mole-legend-item" data-kind="bomb"><span class="mole-legend-art"></span><span class="mole-legend-name">爆弾</span><b class="mole-legend-pts">−3</b></div>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">時間</span><div class="chips" id="mlTimeChips"></div></div>
+      </div>
+      <p class="mole-best" id="mlBest"></p>
+      <ul class="rules" id="mlRules"></ul>
+    </section>
+    <section class="panel" id="mlPlay" hidden>
+      <span class="label" id="mlLabel"></span>
+      <p class="d-title" id="mlTitle"></p>
+      <div class="word-card" id="mlCard"></div>
+      <div class="mole-arena" id="mlArena" aria-live="off" hidden>
+        <div class="mole-hud" id="mlHud">
+          <div class="mole-stat"><span class="mole-stat-label">のこり</span><b class="mole-stat-num" id="mlTime">30</b></div>
+          <div class="mole-stat mole-stat-main"><span class="mole-stat-label">スコア</span><b class="mole-stat-num" id="mlScore">0</b></div>
+          <div class="mole-stat"><span class="mole-stat-label">コンボ</span><b class="mole-stat-num" id="mlCombo">0</b></div>
+        </div>
+        <div class="mole-timebar" aria-hidden="true"><span id="mlBar"></span></div>
+        <div class="mole-field" id="mlField">
+          <div class="mole-board" id="mlBoard"></div>
+          <p class="mole-banner" id="mlBanner" aria-hidden="true"></p>
+          <div class="mole-pause" id="mlPause" hidden><span>一時停止中</span></div>
+        </div>
+      </div>
+      <ul class="mole-stats" id="mlStats" hidden></ul>
+      <p class="hint" id="mlHint"></p>
+    </section>
+  </main>
+  <div class="actions" id="mlActions"></div>
+  <template id="mlCritterArt"><svg viewBox="0 -18 100 128" aria-hidden="true">
+<g class="mole-g-mole">
+<path class="mole-fur" d="M10 112V58C10 26 28 8 50 8S90 26 90 58v54z"/>
+<g class="mole-crown"><path d="M30 14 26-8l13 11 11-15 11 15 13-11-4 22z"/><circle cx="50" cy="3" r="3.4"/></g>
+<ellipse class="mole-belly" cx="50" cy="92" rx="26" ry="22"/>
+<ellipse class="mole-cheek" cx="25" cy="54" rx="7" ry="4.5"/><ellipse class="mole-cheek" cx="75" cy="54" rx="7" ry="4.5"/>
+<g class="mole-eyes"><circle class="mole-eye" cx="36" cy="38" r="5.5"/><circle class="mole-eye" cx="64" cy="38" r="5.5"/><circle class="mole-glint" cx="37.8" cy="36" r="1.9"/><circle class="mole-glint" cx="65.8" cy="36" r="1.9"/></g>
+<path class="mole-dizzy" d="M30 32l12 12M42 32 30 44M58 32l12 12M70 32 58 44"/>
+<ellipse class="mole-snout" cx="50" cy="56" rx="17" ry="12.5"/>
+<ellipse class="mole-nose" cx="50" cy="49" rx="8" ry="5.8"/>
+<path class="mole-tooth" d="M45.5 61h9v6.5a1.5 1.5 0 0 1-1.5 1.5h-6a1.5 1.5 0 0 1-1.5-1.5z"/>
+<path class="mole-whisker" d="M31 56H15M31 61l-14 5M69 56h16M69 61l14 5"/>
+<ellipse class="mole-paw" cx="22" cy="84" rx="10" ry="7.5"/><ellipse class="mole-paw" cx="78" cy="84" rx="10" ry="7.5"/>
+<path class="mole-shine" d="M86 10l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z"/>
+<path class="mole-shine" d="M12 20l1.8 4.2 4.2 1.8-4.2 1.8-1.8 4.2-1.8-4.2L6 26l4.2-1.8z"/>
+</g>
+<g class="mole-g-bomb">
+<path class="mole-fuse" d="M64 24c4-10 12-14 20-14"/>
+<rect class="mole-cap" x="54" y="18" width="20" height="13" rx="3" transform="rotate(32 64 24)"/>
+<circle class="mole-bomb-body" cx="50" cy="68" r="38"/>
+<ellipse class="mole-bomb-shine" cx="33" cy="50" rx="10" ry="6.5" transform="rotate(-38 33 50)"/>
+<path class="mole-brow" d="M29 57l14 6M71 57l-14 6"/>
+<circle class="mole-bomb-eye" cx="38" cy="72" r="6.5"/><circle class="mole-bomb-eye" cx="62" cy="72" r="6.5"/>
+<circle class="mole-eye" cx="39" cy="73" r="3.2"/><circle class="mole-eye" cx="61" cy="73" r="3.2"/>
+<path class="mole-bomb-mouth" d="M41 90q9-6 18 0"/>
+<circle class="mole-spark" cx="85" cy="10" r="7"/>
+</g>
+</svg></template>
+  <template id="mlHammerArt"><svg viewBox="0 0 100 100" aria-hidden="true">
+<rect class="mole-handle" x="44" y="34" width="12" height="64" rx="5"/>
+<rect class="mole-head" x="14" y="8" width="72" height="32" rx="9"/>
+<rect class="mole-band" x="24" y="10" width="7" height="28"/><rect class="mole-band" x="69" y="10" width="7" height="28"/>
+</svg></template>
+</div>

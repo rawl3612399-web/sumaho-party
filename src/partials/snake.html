@@ -1,0 +1,35 @@
+<!-- ===== スネーク ===== -->
+<div class="mode" id="modeSnake" hidden>
+  <main class="stage" aria-live="polite">
+    <section class="panel" id="snSetup">
+      <div class="snake-hero" aria-hidden="true">
+        <svg viewBox="0 0 240 96" focusable="false">
+          <rect class="snake-hero-bg" x="3" y="3" width="234" height="90" rx="16"></rect>
+          <path class="snake-hero-line" d="M30 70H94V30H158V58H178"></path>
+          <path class="snake-hero-body" d="M30 70H94V30H158V58H178"></path>
+          <circle class="snake-hero-head" cx="182" cy="58" r="12"></circle>
+          <circle class="snake-hero-eye" cx="186" cy="52" r="4"></circle>
+          <circle class="snake-hero-eye" cx="186" cy="64" r="4"></circle>
+          <circle class="snake-hero-pupil" cx="187.5" cy="52" r="2"></circle>
+          <circle class="snake-hero-pupil" cx="187.5" cy="64" r="2"></circle>
+          <g class="snake-hero-food"><circle cx="214" cy="58" r="9"></circle><ellipse class="snake-hero-leaf" cx="218" cy="47" rx="5" ry="2.6" transform="rotate(-30 218 47)"></ellipse></g>
+          <path class="snake-hero-star" d="M52 22l3.5 7.2 7.9 1.1-5.7 5.6 1.4 7.8L52 40l-7.1 3.7 1.4-7.8-5.7-5.6 7.9-1.1z"></path>
+        </svg>
+      </div>
+      <div class="opts">
+        <div class="opt"><span class="row-label">スピード</span><div class="chips" id="snSpeedChips"></div></div>
+        <div class="opt"><span class="row-label">壁</span><div class="chips" id="snWallChips"></div></div>
+      </div>
+      <ul class="rules" id="snRules"></ul>
+    </section>
+    <section class="panel" id="snPlay" hidden>
+      <span class="label" id="snLabel"></span>
+      <p class="d-title" id="snTitle"></p>
+      <div class="word-card" id="snCard"></div>
+      <ul class="snake-details" id="snList" hidden></ul>
+      <p class="hint" id="snHint"></p>
+    </section>
+    <div class="snake-recs" id="snRecords" hidden></div>
+  </main>
+  <div class="actions" id="snActions"></div>
+</div>

@@ -1,0 +1,157 @@
+/* 違う色さがし: setup preview, HUD with timer bar, the tile board, results.
+   Tile colors are game content and are set inline from colorhunt.js (rgb values from the rules); everything else uses tokens. */
+
+/* ---------- setup ---------- */
+.colorhunt-hero {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px;
+  width: 132px; aspect-ratio: 1; padding: 9px; box-sizing: border-box; margin-bottom: 4px;
+  background: var(--paper); border: 2.5px solid var(--ink); border-radius: 20px; box-shadow: 0 5px 0 var(--ink);
+  transform: rotate(-3deg);
+}
+.colorhunt-hero span {
+  border-radius: 9px; background: var(--c-pink);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 14%, transparent);
+}
+.colorhunt-hero .colorhunt-odd { background: color-mix(in srgb, var(--c-pink) 74%, var(--card)); animation: colorhuntPeek 2.6s ease-in-out infinite; }
+@keyframes colorhuntPeek { 0%, 72%, 100% { transform: none; } 82% { transform: scale(1.14); } 91% { transform: scale(.96); } }
+.colorhunt-best { color: var(--ink); font-weight: 700; }
+
+/* ---------- live layout (a little more room for the board) ---------- */
+.colorhunt-stage.colorhunt-live { padding: 14px 10px; gap: 12px; }
+.colorhunt-play { gap: 12px; }
+.colorhunt-actions:empty { display: none; }
+.hint.colorhunt-alert { font-family: var(--display); font-size: 1.15rem; color: var(--alert); }
+
+/* ---------- HUD ---------- */
+.colorhunt-hud {
+  width: min(100%, 440px); display: grid; grid-template-columns: 1.15fr 1fr 1fr 44px; gap: 8px; align-items: stretch;
+}
+.colorhunt-stat {
+  position: relative; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 3px 4px 4px; border-radius: 12px; background: var(--paper); border: 2px solid var(--line);
+}
+.colorhunt-stat > span:first-child { font-size: .68rem; color: var(--muted); letter-spacing: .08em; white-space: nowrap; }
+.colorhunt-stat b {
+  display: block; font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.05;
+  font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.colorhunt-time b::after { content: "秒"; font-family: var(--body); font-size: .7rem; color: var(--muted); margin-left: 2px; }
+.colorhunt-hud.colorhunt-urgent .colorhunt-time { border-color: var(--alert); animation: pulse .5s ease-in-out infinite; }
+.colorhunt-hud.colorhunt-urgent .colorhunt-time b { color: var(--alert); }
+.colorhunt-pause {
+  width: 44px; min-height: 44px; padding: 0; display: grid; place-items: center; cursor: pointer;
+  border-radius: 12px; border: 2px solid var(--ink); background: var(--card); color: var(--ink);
+}
+.colorhunt-pause svg { width: 20px; height: 20px; }
+.colorhunt-pause:disabled { opacity: .35; cursor: default; }
+.colorhunt-bar { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.colorhunt-bar i { display: block; height: 100%; border-radius: inherit; background: var(--go); transform-origin: left center; }
+.colorhunt-hud.colorhunt-urgent .colorhunt-bar i { background: var(--alert); }
+.colorhunt-float {
+  position: absolute; left: 50%; top: -16px; z-index: 2; pointer-events: none; white-space: nowrap; opacity: 0;
+  font-family: var(--display); font-size: 1.2rem; color: var(--alert);
+  transform: translate(-50%, 0);
+}
+.colorhunt-float.colorhunt-rise { animation: colorhuntRise .85s ease-out; }
+@keyframes colorhuntRise {
+  0% { opacity: 0; transform: translate(-50%, 8px) scale(.8); }
+  20% { opacity: 1; transform: translate(-50%, -8px) scale(1.15); }
+  100% { opacity: 0; transform: translate(-50%, -30px); }
+}
+@keyframes colorhuntFade { 20%, 70% { opacity: 1; } }
+.colorhunt-bump { animation: colorhuntBump .26s ease-out; }
+@keyframes colorhuntBump { 40% { transform: scale(1.28); } }
+.colorhunt-hurt { animation: colorhuntHurt .45s ease-out; }
+@keyframes colorhuntHurt { 0%, 45% { color: var(--alert); transform: scale(1.2); } }
+
+/* ---------- board ---------- */
+.colorhunt-wrap {
+  position: relative; width: min(100%, 440px, max(240px, calc(100vh - 290px))); aspect-ratio: 1; flex: none;
+}
+@supports (height: 100svh) {
+  .colorhunt-wrap { width: min(100%, 440px, max(240px, calc(100svh - 290px))); }
+}
+.colorhunt-board {
+  --n: 2;
+  width: 100%; height: 100%; box-sizing: border-box;
+  display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); grid-template-rows: repeat(var(--n), minmax(0, 1fr));
+  gap: clamp(3px, calc(14px - var(--n) * 1.4px), 10px); padding: clamp(5px, calc(15px - var(--n) * 1.2px), 11px);
+  background: var(--paper); border: 2.5px solid var(--ink); border-radius: 20px; box-shadow: 0 5px 0 var(--ink);
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+}
+.colorhunt-tile {
+  position: relative; min-width: 0; min-height: 0; margin: 0; padding: 0; border: 0; font: inherit; cursor: pointer;
+  border-radius: clamp(5px, calc(26px - var(--n) * 2.6px), 20px);
+  background: var(--line);
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--ink) 14%, transparent);
+  transition: transform .07s; -webkit-tap-highlight-color: transparent;
+}
+.colorhunt-tile:active { transform: scale(.93); }
+.colorhunt-board.colorhunt-in .colorhunt-tile { animation: colorhuntIn .2s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes colorhuntIn { from { transform: scale(.78); opacity: .35; } }
+.colorhunt-board .colorhunt-tile.colorhunt-miss { animation: colorhuntMiss .32s ease-out; }
+@keyframes colorhuntMiss {
+  20% { transform: translateX(-5px) rotate(-4deg); }
+  45% { transform: translateX(5px) rotate(3deg); }
+  70% { transform: translateX(-3px); }
+}
+.colorhunt-tile.colorhunt-miss::after {
+  content: "×"; position: absolute; inset: 0; margin: auto; width: min(74%, 40px); height: min(74%, 40px);
+  display: grid; place-items: center; border-radius: 50%; box-sizing: border-box;
+  background: var(--card); color: var(--alert); border: 3px solid var(--alert);
+  font-weight: 900; font-size: clamp(.9rem, 4.4vw, 1.4rem); line-height: 1;
+  animation: colorhuntMark .75s ease-out forwards;
+}
+@keyframes colorhuntMark {
+  0% { opacity: 0; transform: scale(.4); }
+  20% { opacity: 1; transform: scale(1.1); }
+  70% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: scale(.9); }
+}
+.colorhunt-board.colorhunt-done .colorhunt-tile:not(.colorhunt-answer) { opacity: .4; }
+.colorhunt-board .colorhunt-tile.colorhunt-answer {
+  z-index: 1; outline: 4px solid var(--ink); outline-offset: 2px;
+  animation: colorhuntAnswer .55s ease-in-out 2;
+}
+.colorhunt-tile.colorhunt-answer::after {
+  content: ""; position: absolute; inset: 24%; border-radius: 50%; border: 3px solid var(--card);
+}
+@keyframes colorhuntAnswer { 50% { transform: scale(1.14); } }
+.colorhunt-wrap.colorhunt-shake { animation: colorhuntShake .28s linear; }
+@keyframes colorhuntShake {
+  20% { transform: translateX(-6px); } 40% { transform: translateX(5px); }
+  60% { transform: translateX(-4px); } 80% { transform: translateX(2px); }
+}
+.colorhunt-fx { position: absolute; inset: 0; pointer-events: none; }
+.colorhunt-burst {
+  position: absolute; box-sizing: border-box; border: 4px solid var(--zap); border-radius: 30%;
+  transform: translate(-50%, -50%) scale(.7); animation: colorhuntBurst .45s ease-out forwards;
+}
+@keyframes colorhuntBurst {
+  0% { opacity: 1; transform: translate(-50%, -50%) scale(.7); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1.9); }
+}
+
+/* ---------- results ---------- */
+.word-card.colorhunt-score { min-height: 0; padding: 10px 16px 12px; gap: 2px; }
+.word-card.colorhunt-score .wc-main { font-size: clamp(3.4rem, 18vw, 5rem); line-height: 1.1; }
+.word-card.colorhunt-new { border-color: var(--accent); box-shadow: 0 6px 0 var(--accent-deep); }
+.word-card.colorhunt-new .wc-sub { color: var(--accent); font-weight: 900; }
+.colorhunt-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: min(100%, 340px); }
+.colorhunt-cell {
+  min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 6px 6px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.colorhunt-cell span { font-size: .72rem; color: var(--muted); letter-spacing: .06em; }
+.colorhunt-cell b { font-family: var(--display); font-weight: 400; font-size: 1.3rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.colorhunt-cell small { font-size: .7rem; color: var(--muted); text-align: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .colorhunt-hero .colorhunt-odd, .colorhunt-board.colorhunt-in .colorhunt-tile, .colorhunt-board .colorhunt-tile.colorhunt-miss,
+  .colorhunt-tile.colorhunt-miss::after, .colorhunt-board .colorhunt-tile.colorhunt-answer, .colorhunt-wrap.colorhunt-shake,
+  .colorhunt-bump, .colorhunt-hurt, .colorhunt-hud.colorhunt-urgent .colorhunt-time { animation: none; }
+  .colorhunt-tile { transition: none; }
+  .colorhunt-tile:active { transform: none; }
+  .colorhunt-burst { display: none; }
+  .colorhunt-float.colorhunt-rise { animation: colorhuntFade .85s ease-out; }
+}

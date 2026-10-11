@@ -1,0 +1,30 @@
+<!-- ===== スネーク (full-screen board) ===== -->
+<div class="snake-layer" id="snLayer" data-state="idle" hidden>
+  <div class="snake-hud">
+    <div class="snake-stat snake-stat-main"><span>スコア</span><b id="snScore">0</b></div>
+    <div class="snake-stat"><span>長さ</span><b id="snLength">3</b></div>
+    <div class="snake-stat"><span>スピード</span><b id="snLevel">1</b></div>
+    <div class="snake-stat"><span>ベスト</span><b id="snBest">0</b></div>
+    <button type="button" class="snake-pause" id="snPauseBtn" aria-label="一時停止">
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6" y="5" width="4" height="14" rx="1.5"></rect><rect x="14" y="5" width="4" height="14" rx="1.5"></rect></svg>
+    </button>
+  </div>
+  <div class="snake-field" id="snField">
+    <canvas class="snake-canvas" id="snCanvas" role="img" aria-label="スネークの盤面"></canvas>
+    <p class="snake-toast" id="snToast" role="status" hidden></p>
+    <div class="snake-paused" id="snPaused" hidden>
+      <div class="snake-paused-box">
+        <p class="snake-paused-title">一時停止中</p>
+        <p class="snake-paused-sub" id="snPausedSub"></p>
+        <div class="snake-paused-actions" id="snPausedActions"></div>
+      </div>
+    </div>
+  </div>
+  <div class="snake-pad" id="snPad">
+    <button type="button" class="key snake-key snake-up" data-dir="up" aria-label="上へ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 15.5l7-7 7 7"></path></svg></button>
+    <button type="button" class="key snake-key snake-left" data-dir="left" aria-label="左へ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15.5 5l-7 7 7 7"></path></svg></button>
+    <span class="snake-pad-hub" aria-hidden="true"></span>
+    <button type="button" class="key snake-key snake-right" data-dir="right" aria-label="右へ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8.5 5l7 7-7 7"></path></svg></button>
+    <button type="button" class="key snake-key snake-down" data-dir="down" aria-label="下へ"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 8.5l7 7 7-7"></path></svg></button>
+  </div>
+</div>

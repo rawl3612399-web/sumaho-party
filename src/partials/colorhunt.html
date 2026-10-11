@@ -1,0 +1,33 @@
+<!-- ===== 違う色さがし ===== -->
+<div class="mode" id="modeColorHunt" hidden>
+  <main class="stage colorhunt-stage" id="chStage" aria-live="polite">
+    <section class="panel" id="chSetup">
+      <div class="colorhunt-hero" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span><span class="colorhunt-odd"></span><span></span><span></span><span></span>
+      </div>
+      <p class="hint colorhunt-best" id="chBest"></p>
+      <ul class="rules" id="chRules"></ul>
+    </section>
+    <section class="panel colorhunt-play" id="chPlay" hidden>
+      <span class="label" id="chLabel"></span>
+      <p class="d-title" id="chTitle"></p>
+      <div class="word-card" id="chCard"></div>
+      <div class="colorhunt-hud" id="chHud" aria-live="off" hidden>
+        <div class="colorhunt-stat colorhunt-time"><span>のこり</span><b id="chTime">60</b><span class="colorhunt-float" id="chFloat" aria-hidden="true"></span></div>
+        <div class="colorhunt-stat"><span>ステージ</span><b id="chScore">0</b></div>
+        <div class="colorhunt-stat"><span>マス</span><b id="chSize">2×2</b></div>
+        <button class="colorhunt-pause" id="chPause" type="button" aria-label="一時停止">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"></rect><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"></rect></svg>
+        </button>
+        <div class="colorhunt-bar" aria-hidden="true"><i id="chBar"></i></div>
+      </div>
+      <div class="colorhunt-wrap" id="chWrap" hidden>
+        <div class="colorhunt-board" id="chBoard" role="group" aria-label="色のマス"></div>
+        <div class="colorhunt-fx" id="chFx" aria-hidden="true"></div>
+      </div>
+      <div class="colorhunt-stats" id="chStats" hidden></div>
+      <p class="hint" id="chHint"></p>
+    </section>
+  </main>
+  <div class="actions colorhunt-actions" id="chActions"></div>
+</div>

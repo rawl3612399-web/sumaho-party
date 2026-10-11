@@ -1,0 +1,254 @@
+/* もぐらたたき: grass field, dirt mounds with holes, springy moles, hammer swings and star bursts. */
+:root {
+  --mole-field: #cfe9b6; --mole-field-line: #c0e0a0;
+  --mole-dirt: #b47b4a; --mole-dirt-deep: #8a5a31; --mole-pit: #2b1a0f;
+  --mole-fur: #73503a; --mole-fur-deep: #4f3524; --mole-belly: #f2d8b2; --mole-nose: #e5708c;
+  --mole-gold: #f4c21c; --mole-gold-deep: #a87c00;
+  --mole-bomb: #2c3039; --mole-bomb-rim: #15171c; --mole-eye: #1d140e; --mole-white: #ffffff;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --mole-field: #2c4935; --mole-field-line: #32523c;
+    --mole-dirt: #8b5f39; --mole-dirt-deep: #654225; --mole-pit: #110a05;
+    --mole-fur: #8a6241; --mole-fur-deep: #5e412a; --mole-belly: #e6cba2; --mole-nose: #ef8aa4;
+    --mole-gold: #ffd040; --mole-gold-deep: #b88a0c;
+    --mole-bomb: #23262e; --mole-bomb-rim: #6c7482; --mole-eye: #1d140e; --mole-white: #fffaf2;
+  }
+}
+:root[data-theme="dark"] {
+  --mole-field: #2c4935; --mole-field-line: #32523c;
+  --mole-dirt: #8b5f39; --mole-dirt-deep: #654225; --mole-pit: #110a05;
+  --mole-fur: #8a6241; --mole-fur-deep: #5e412a; --mole-belly: #e6cba2; --mole-nose: #ef8aa4;
+  --mole-gold: #ffd040; --mole-gold-deep: #b88a0c;
+  --mole-bomb: #23262e; --mole-bomb-rim: #6c7482; --mole-eye: #1d140e; --mole-white: #fffaf2;
+}
+
+#mlPlay.mole-live { gap: 8px; }
+#mlActions { justify-content: center; }
+
+/* ---------- setup ---------- */
+.mole-legend { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.mole-legend-item {
+  min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 4px 6px; border-radius: 16px; border: 2px solid var(--line); background: var(--mole-field);
+}
+.mole-legend-art { width: 52px; display: block; }
+.mole-legend-art svg { display: block; width: 100%; height: auto; aspect-ratio: 100 / 128; overflow: visible; animation: moleBob 1.8s ease-in-out infinite; }
+.mole-legend-item:nth-child(2) svg { animation-delay: -.6s; }
+.mole-legend-item:nth-child(3) svg { animation-delay: -1.2s; }
+@keyframes moleBob { 50% { transform: translateY(-4px); } }
+.mole-legend-name { font-size: .78rem; font-weight: 700; color: var(--ink); }
+.mole-legend-pts { font-family: var(--display); font-weight: 400; font-size: 1.3rem; line-height: 1.1; color: var(--ink); }
+.mole-legend-item[data-kind="gold"] .mole-legend-pts { color: var(--c-gold); }
+.mole-legend-item[data-kind="bomb"] .mole-legend-pts { color: var(--alert); }
+.mole-best { margin: 0; font-weight: 700; font-size: .92rem; text-wrap: balance; }
+
+/* ---------- HUD ---------- */
+.mole-arena { width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.mole-hud { width: min(100%, 420px); display: grid; grid-template-columns: 1fr 1.3fr 1fr; gap: 8px; }
+.mole-stat {
+  min-width: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 3px 6px 4px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+  transition: border-color .15s;
+}
+.mole-stat-label { font-size: .7rem; color: var(--muted); letter-spacing: .12em; }
+.mole-stat-num { font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.mole-stat-main { border-color: var(--ink); }
+.mole-stat-main .mole-stat-num { font-size: 1.9rem; }
+.mole-stat.mole-combo-on { border-color: var(--c-orange); }
+.mole-combo-on .mole-stat-num { color: var(--c-orange); }
+.mole-urgent #mlTime { color: var(--alert); animation: pulse .5s ease-in-out infinite; }
+.mole-bump { animation: moleBump .3s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes moleBump { 0% { transform: scale(1.4); } 100% { transform: none; } }
+
+.mole-timebar { width: min(100%, 420px); height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.mole-timebar span { display: block; height: 100%; border-radius: inherit; background: var(--go); transform-origin: left center; }
+.mole-urgent .mole-timebar span { background: var(--alert); }
+
+/* ---------- field and holes ---------- */
+.mole-field {
+  position: relative; box-sizing: border-box; aspect-ratio: 1; padding: 4%;
+  width: min(100%, 420px);
+  width: min(100%, 420px, max(250px, 100svh - 300px));
+  border-radius: 22px; border: 2.5px solid var(--ink); box-shadow: 0 5px 0 var(--ink); margin-bottom: 5px;
+  background-color: var(--mole-field);
+  background-image: repeating-linear-gradient(135deg, transparent 0 16px, var(--mole-field-line) 16px 32px);
+  overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none;
+  transition: box-shadow .2s;
+}
+.mole-urgent .mole-field { box-shadow: 0 5px 0 var(--ink), 0 0 0 4px var(--alert); }
+.mole-board { width: 100%; height: 100%; display: grid; grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(3, 1fr); gap: 2%; }
+.mole-hole { position: relative; min-width: 0; cursor: pointer; touch-action: none; -webkit-touch-callout: none; }
+.mole-hole.is-cursor::before {
+  content: ""; position: absolute; inset: 2%; border-radius: 16px; border: 3px dashed var(--accent); pointer-events: none;
+}
+.mole-mound, .mole-pit, .mole-slot { pointer-events: none; }
+.mole-mound {
+  position: absolute; left: 1%; right: 1%; bottom: 2%; height: 40%;
+  border-radius: 50% 50% 44% 44% / 62% 62% 38% 38%;
+  background: radial-gradient(ellipse at 50% 28%, var(--mole-dirt) 58%, var(--mole-dirt-deep) 100%);
+  transform-origin: 50% 100%;
+}
+.mole-pit {
+  position: absolute; left: 10%; right: 10%; bottom: 13%; height: 24%; border-radius: 50%;
+  background: var(--mole-pit); border-top: 3px solid var(--mole-dirt-deep); box-sizing: border-box;
+  transform-origin: 50% 100%;
+}
+.mole-slot {
+  position: absolute; left: 10%; right: 10%; top: -6%; bottom: 13%; overflow: hidden;
+  border-radius: 0 0 50% 50% / 0 0 12.9% 12.9%;
+}
+.mole-critter {
+  position: absolute; left: 9%; right: 9%; bottom: 0; display: block;
+  transform: translateY(105%); transform-origin: 50% 100%;
+  transition: transform .13s cubic-bezier(.55, 0, .9, .4);
+}
+.mole-critter svg { display: block; width: 100%; height: auto; aspect-ratio: 100 / 128; overflow: visible; }
+.mole-hole.is-up .mole-critter { transform: translateY(6%); transition: transform .28s cubic-bezier(.18, 1.55, .4, 1); }
+.mole-hole.is-hit .mole-critter { animation: moleBonk .38s ease-in forwards; }
+.mole-hole.is-hit[data-kind="bomb"] .mole-critter { animation: moleBlast .38s ease-out forwards; }
+@keyframes moleBonk {
+  0% { transform: translateY(14%) scale(1.18, .76); }
+  35% { transform: translateY(9%) scale(.96, 1.05); }
+  60% { transform: translateY(12%) scale(1); }
+  100% { transform: translateY(105%) scale(1); }
+}
+@keyframes moleBlast {
+  0% { transform: translateY(6%) scale(1.25); opacity: 1; }
+  85% { transform: translateY(10%) scale(1.55); opacity: 0; }
+  100% { transform: translateY(105%); opacity: 0; }
+}
+.mole-thud .mole-mound, .mole-thud .mole-pit { animation: moleThud .22s ease-out; }
+@keyframes moleThud { 35% { transform: scale(1.05, .9); } }
+
+/* ---------- critter drawing (shared by the field and the legend) ---------- */
+.mole-g-bomb, .mole-crown, .mole-shine, .mole-dizzy { display: none; }
+[data-kind="bomb"] .mole-g-mole { display: none; }
+[data-kind="bomb"] .mole-g-bomb, [data-kind="gold"] .mole-crown, [data-kind="gold"] .mole-shine { display: inline; }
+[data-kind="gold"] { --fur: var(--mole-gold); --fur-deep: var(--mole-gold-deep); }
+.mole-hole.is-hit .mole-dizzy { display: inline; }
+.mole-hole.is-hit .mole-eyes { display: none; }
+.mole-fur, .mole-paw { fill: var(--fur, var(--mole-fur)); stroke: var(--fur-deep, var(--mole-fur-deep)); stroke-width: 3; }
+.mole-belly { fill: var(--mole-belly); }
+.mole-snout { fill: var(--mole-belly); stroke: var(--fur-deep, var(--mole-fur-deep)); stroke-width: 2; }
+.mole-nose { fill: var(--mole-nose); }
+.mole-cheek { fill: var(--mole-nose); opacity: .45; }
+.mole-eye { fill: var(--mole-eye); }
+.mole-glint { fill: var(--mole-white); }
+.mole-tooth { fill: var(--mole-white); stroke: var(--mole-eye); stroke-width: 1.5; }
+.mole-whisker, .mole-dizzy { fill: none; stroke: var(--mole-eye); stroke-width: 2.4; stroke-linecap: round; }
+.mole-whisker { opacity: .55; }
+.mole-crown path { fill: var(--mole-gold); stroke: var(--mole-eye); stroke-width: 2.5; stroke-linejoin: round; }
+.mole-crown circle { fill: var(--alert); }
+.mole-shine { fill: var(--mole-white); animation: moleTwinkle .9s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes moleTwinkle { 50% { transform: scale(.4); opacity: .4; } }
+.mole-bomb-body { fill: var(--mole-bomb); stroke: var(--mole-bomb-rim); stroke-width: 3; }
+.mole-bomb-shine { fill: var(--mole-white); opacity: .3; }
+.mole-cap { fill: var(--muted); stroke: var(--mole-bomb-rim); stroke-width: 2; }
+.mole-fuse { fill: none; stroke: var(--mole-dirt-deep); stroke-width: 4; stroke-linecap: round; }
+.mole-brow, .mole-bomb-mouth { fill: none; stroke: var(--mole-white); stroke-width: 4; stroke-linecap: round; }
+.mole-bomb-eye { fill: var(--mole-white); }
+.mole-spark { fill: var(--zap); stroke: var(--alert); stroke-width: 2.5; animation: moleSpark .14s steps(2) infinite; transform-box: fill-box; transform-origin: center; }
+@keyframes moleSpark { 50% { transform: scale(1.45) rotate(45deg); } }
+
+/* ---------- hammer, stars, points ---------- */
+.mole-hammer {
+  position: absolute; left: 46%; top: -2%; width: 58%; height: 58%; z-index: 3;
+  pointer-events: none; opacity: 0; transform-origin: 50% 98%;
+}
+.mole-hammer svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.mole-hammer.mole-swing { animation: moleSwing .3s ease-out; }
+@keyframes moleSwing {
+  0% { opacity: 1; transform: rotate(40deg); }
+  38% { opacity: 1; transform: rotate(-40deg); }
+  60% { opacity: 1; transform: rotate(-30deg); }
+  100% { opacity: 0; transform: rotate(-30deg); }
+}
+.mole-handle { fill: var(--c-amber); stroke: var(--mole-eye); stroke-width: 3; }
+.mole-head { fill: var(--c-red); stroke: var(--mole-eye); stroke-width: 3; }
+.mole-band { fill: var(--mole-white); opacity: .55; }
+
+.mole-burst { position: absolute; left: 50%; top: 36%; width: 0; height: 0; z-index: 4; pointer-events: none; }
+.mole-burst b {
+  position: absolute; left: -30px; top: -30px; width: 60px; height: 60px; box-sizing: border-box;
+  border-radius: 50%; border: 4px solid var(--zap); animation: moleRing .35s ease-out forwards;
+}
+.mole-burst i {
+  position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; background: var(--zap);
+  clip-path: polygon(50% 0, 62% 36%, 100% 38%, 70% 60%, 80% 98%, 50% 76%, 20% 98%, 30% 60%, 0 38%, 38% 36%);
+  animation: moleStar .55s cubic-bezier(.2, .8, .4, 1) forwards;
+}
+.mole-burst-gold i { width: 20px; height: 20px; left: -10px; top: -10px; background: var(--mole-gold); }
+.mole-burst-gold b { border-color: var(--mole-gold); }
+.mole-burst-bomb i { background: var(--alert); clip-path: none; border-radius: 50%; }
+.mole-burst-bomb b { border-color: var(--alert); border-width: 6px; }
+@keyframes moleRing { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes moleStar {
+  0% { transform: rotate(var(--a)) translateY(0) scale(.3); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) rotate(120deg) scale(1); opacity: 0; }
+}
+.mole-pts {
+  position: absolute; left: 50%; top: 4%; z-index: 5; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(1.2rem, 6vw, 1.7rem); line-height: 1; color: var(--ink);
+  text-shadow: 2px 0 0 var(--card), -2px 0 0 var(--card), 0 2px 0 var(--card), 0 -2px 0 var(--card);
+  transform: translateX(-50%); animation: molePts .7s ease-out forwards;
+}
+.mole-pts.is-gold { color: var(--c-gold); font-size: clamp(1.5rem, 8vw, 2.1rem); }
+.mole-pts.is-bad { color: var(--alert); font-size: clamp(1.5rem, 8vw, 2.1rem); }
+@keyframes molePts {
+  0% { transform: translate(-50%, 10px) scale(.6); opacity: 0; }
+  20% { transform: translate(-50%, 0) scale(1.15); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translate(-50%, -26px) scale(1); opacity: 0; }
+}
+
+/* ---------- banner and pause ---------- */
+.mole-banner {
+  position: absolute; left: 50%; top: 50%; z-index: 6; margin: 0; pointer-events: none; white-space: nowrap;
+  font-family: var(--display); font-size: clamp(1.8rem, 9vw, 2.8rem); line-height: 1.1; color: var(--ink);
+  text-shadow: 3px 0 0 var(--card), -3px 0 0 var(--card), 0 3px 0 var(--card), 0 -3px 0 var(--card);
+  transform: translate(-50%, -50%); opacity: 0;
+}
+.mole-banner.is-hot { color: var(--alert); }
+.mole-banner.is-combo { color: var(--c-orange); }
+.mole-banner.mole-show { animation: moleBanner 1.1s ease-out forwards; }
+.mole-banner.mole-stay { animation: moleBannerIn .4s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+@keyframes moleBanner {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(2); }
+  15% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  75% { opacity: 1; transform: translate(-50%, -50%); }
+  100% { opacity: 0; transform: translate(-50%, -80%); }
+}
+@keyframes moleBannerIn { 0% { opacity: 0; transform: translate(-50%, -50%) scale(2); } 100% { opacity: 1; transform: translate(-50%, -50%); } }
+.mole-pause {
+  position: absolute; inset: 0; z-index: 7; display: grid; place-items: center;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+  font-family: var(--display); font-size: clamp(1.6rem, 8vw, 2.2rem);
+}
+
+/* ---------- results ---------- */
+.mole-result-card .wc-main { font-size: clamp(3rem, 17vw, 4.6rem); font-variant-numeric: tabular-nums; }
+.mole-result-card.is-new { border-color: var(--c-gold); box-shadow: 0 6px 0 var(--c-gold); }
+.mole-result-card.is-new .wc-sub { color: var(--alert); font-weight: 900; font-size: 1.05rem; }
+.mole-stats {
+  list-style: none; margin: 0; padding: 0; width: 100%; max-width: 340px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.mole-stats li {
+  min-width: 0; display: flex; justify-content: space-between; align-items: baseline; gap: 6px;
+  padding: 6px 12px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+  font-size: .82rem; color: var(--muted);
+}
+.mole-stats b { font-family: var(--display); font-weight: 400; font-size: 1.25rem; color: var(--ink); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .mole-critter, .mole-hole.is-up .mole-critter { transition: none; }
+  .mole-hole.is-hit .mole-critter, .mole-hole.is-hit[data-kind="bomb"] .mole-critter { animation: none; transform: translateY(6%); }
+  .mole-hammer.mole-swing { animation: moleFade .3s linear; transform: rotate(-30deg); }
+  .mole-pts { animation: moleFade .7s linear forwards; }
+  .mole-banner.mole-show { animation: moleFade 1.1s linear forwards; }
+  .mole-banner.mole-stay { animation: none; opacity: 1; }
+  .mole-legend-art svg, .mole-shine, .mole-spark, .mole-urgent #mlTime, .mole-bump, .mole-thud .mole-mound, .mole-thud .mole-pit { animation: none; }
+}
+@keyframes moleFade { 0%, 70% { opacity: 1; } 100% { opacity: 0; } }

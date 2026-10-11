@@ -1,0 +1,127 @@
+/* 的当てタップ: play field, bullseye targets, hit bursts, HUD, result tiles and best records. Colors come from tokens in styles.css. */
+#modeAim { --am: var(--c-orange); --am-bull: var(--c-gold); }
+
+#amActions { justify-content: center; }
+
+/* ---------- live play layout: the field fills the stage ---------- */
+.stage.aim-stage-live { padding: 12px; gap: 10px; }
+#amPlay.aim-live { flex: 1; gap: 10px; justify-content: flex-start; }
+
+.aim-hud { width: 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px 8px; }
+.aim-stat {
+  min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 5px 4px 6px; border-radius: 12px; border: 2px solid var(--line); background: var(--paper);
+}
+.aim-stat small { max-width: 100%; font-size: .7rem; font-weight: 700; color: var(--muted); letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aim-stat b { font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.aim-urgent .aim-stat:first-child { border-color: var(--alert); }
+.aim-urgent .aim-stat:first-child b { color: var(--alert); }
+.aim-track { grid-column: 1 / -1; height: 8px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.aim-track span { display: block; height: 100%; background: var(--am); transform-origin: left center; transition: transform .12s linear; }
+.aim-urgent .aim-track span { background: var(--alert); }
+.aim-bump { animation: aimBump .24s cubic-bezier(.2, 1.6, .4, 1); }
+.aim-drop { animation: aimDrop .3s ease-out; }
+@keyframes aimBump { 0% { transform: scale(1.35); color: var(--am); } 100% { transform: none; } }
+@keyframes aimDrop { 0% { color: var(--alert); transform: translateY(3px); } 100% { transform: none; } }
+
+/* ---------- field ---------- */
+.aim-field {
+  position: relative; overflow: hidden; box-sizing: border-box;
+  width: 100%; flex: 1 1 auto; min-height: 300px;
+  border: 2.5px solid var(--ink); border-radius: 18px;
+  background-color: var(--paper);
+  background-image: radial-gradient(circle, var(--line) 1.6px, transparent 1.8px);
+  background-size: 22px 22px; background-position: center;
+  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+  cursor: crosshair;
+}
+.aim-field > * { pointer-events: none; }
+
+/* ---------- target (outer box is moved, inner face is animated) ---------- */
+.aim-target { position: absolute; left: 0; top: 0; z-index: 2; will-change: transform; }
+.aim-face {
+  position: absolute; inset: 0; box-sizing: border-box; border-radius: 50%;
+  border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink);
+  background-origin: border-box;
+  background-image: radial-gradient(circle closest-side,
+    var(--ink) 0 9%, var(--am) 10% 33%, var(--card) 34% 66%, var(--am) 67% 100%);
+}
+.aim-spawn { animation: aimSpawn .2s cubic-bezier(.2, 1.5, .4, 1); }
+@keyframes aimSpawn { 0% { transform: scale(.15); opacity: .2; } 100% { transform: none; opacity: 1; } }
+
+/* ---------- hit and miss effects ---------- */
+.aim-ghost, .aim-burst, .aim-float, .aim-miss { position: absolute; transform: translate(-50%, -50%); }
+.aim-ghost { z-index: 1; animation: aimGhost .2s ease-out forwards; }
+.aim-ghost .aim-face { box-shadow: none; }
+@keyframes aimGhost { to { transform: translate(-50%, -50%) scale(1.4); opacity: 0; } }
+.aim-burst { box-sizing: border-box; border-radius: 50%; border: 4px solid var(--am); animation: aimBurst .45s ease-out forwards; }
+.aim-burst.aim-bull { border-width: 6px; border-color: var(--am-bull); animation-duration: .55s; }
+@keyframes aimBurst { 0% { transform: translate(-50%, -50%) scale(.9); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(2); opacity: 0; } }
+.aim-spark {
+  position: absolute; width: 8px; height: 8px; margin: -4px 0 0 -4px; border-radius: 2px;
+  background: var(--am); animation: aimSpark .5s cubic-bezier(.1, .7, .3, 1) forwards;
+}
+.aim-spark-alt { background: var(--am-bull); border-radius: 50%; }
+@keyframes aimSpark { to { transform: translate(var(--dx, 0), var(--dy, 0)) rotate(140deg) scale(.3); opacity: 0; } }
+.aim-float {
+  z-index: 3; font-family: var(--display); font-size: 1.35rem; line-height: 1; white-space: nowrap;
+  color: var(--ink); font-variant-numeric: tabular-nums;
+  animation: aimFloat .6s ease-out forwards;
+}
+.aim-float.aim-bull { font-size: 1.9rem; color: var(--am); }
+@keyframes aimFloat {
+  0% { transform: translate(-50%, -30%) scale(.7); opacity: 0; }
+  20% { transform: translate(-50%, -90%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -170%) scale(1); opacity: 0; }
+}
+.aim-miss { width: 24px; height: 24px; animation: aimMiss .4s ease-out forwards; }
+.aim-miss::before, .aim-miss::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 22px; height: 3px; margin: -1.5px 0 0 -11px;
+  border-radius: 2px; background: var(--muted);
+}
+.aim-miss::before { transform: rotate(45deg); }
+.aim-miss::after { transform: rotate(-45deg); }
+@keyframes aimMiss { 0% { transform: translate(-50%, -50%) scale(.5); opacity: .95; } 100% { transform: translate(-50%, -50%) scale(1.15); opacity: 0; } }
+
+/* ---------- pause / finish veil ---------- */
+.aim-veil {
+  position: absolute; inset: 0; z-index: 4; display: grid; place-content: center; gap: 6px; text-align: center;
+  background: color-mix(in srgb, var(--paper) 80%, transparent);
+}
+.aim-veil b { font-family: var(--display); font-weight: 400; font-size: clamp(2.2rem, 11vw, 3.2rem); line-height: 1.2; }
+.aim-veil small { font-size: .9rem; color: var(--muted); }
+
+/* ---------- results ---------- */
+.word-card.aim-score .wc-main { color: var(--am); font-size: clamp(3rem, 16vw, 4.4rem); font-variant-numeric: tabular-nums; }
+.word-card.aim-best .wc-sub { color: var(--ink); font-weight: 700; }
+.aim-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 340px; }
+.aim-tile {
+  min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 6px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.aim-tile span { font-size: .75rem; font-weight: 700; color: var(--muted); }
+.aim-tile b { font-family: var(--display); font-weight: 400; font-size: 1.5rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+
+/* ---------- best records per mode ---------- */
+.aim-records { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; max-width: 380px; }
+.aim-rec-head { grid-column: 1 / -1; margin: 0; font-size: .78rem; color: var(--muted); letter-spacing: .12em; text-align: left; }
+.aim-rec {
+  min-width: 0; display: flex; flex-direction: column; align-items: center;
+  padding: 8px 4px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.aim-rec span { max-width: 100%; font-size: .72rem; font-weight: 700; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aim-rec b { font-family: var(--display); font-weight: 400; font-size: 1.6rem; line-height: 1.15; font-variant-numeric: tabular-nums; }
+.aim-rec small { font-size: .7rem; color: var(--muted); min-height: 1em; }
+.aim-rec.on { border-color: var(--am); }
+.aim-rec.on span { color: var(--ink); }
+.aim-rec.aim-new { background: var(--am); border-color: var(--am); color: var(--on-tile); animation: aimNew .9s ease-in-out 3; }
+.aim-rec.aim-new span, .aim-rec.aim-new small { color: var(--on-tile); }
+@keyframes aimNew { 50% { transform: scale(1.07) rotate(-2deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .aim-spawn, .aim-bump, .aim-drop, .aim-rec.aim-new, .aim-ghost, .aim-float, .aim-miss { animation: none; }
+  .aim-burst, .aim-spark, .aim-ghost { display: none; }
+  .aim-float { transform: translate(-50%, -100%); }
+  .aim-miss { opacity: .6; }
+  .aim-track span { transition: none; }
+}

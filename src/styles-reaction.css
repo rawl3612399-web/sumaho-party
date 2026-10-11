@@ -1,0 +1,141 @@
+/* 反応速度テスト: setup hero, records, results and the full-screen tap layer. Colors come from tokens in styles.css. */
+
+/* ---------- setup ---------- */
+.reaction-hero { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; }
+.reaction-lamp {
+  flex: 1 1 0; max-width: 150px; min-height: 64px; box-sizing: border-box;
+  display: grid; place-items: center; padding: 8px 10px;
+  border-radius: 18px; border: 2.5px solid var(--ink); box-shadow: 0 4px 0 var(--ink); margin-bottom: 4px;
+  font-family: var(--display); font-size: clamp(1rem, 4.6vw, 1.3rem); line-height: 1.2; text-wrap: balance;
+}
+.reaction-lamp.wait { background: var(--c-indigo); color: var(--on-tile); }
+.reaction-lamp.go { background: var(--go); color: var(--on-go); animation: reactionLamp 2.6s ease-out infinite; }
+.reaction-lamp.beep { background: var(--card); color: var(--ink); border-style: dashed; animation: reactionLamp 2.6s ease-out infinite; }
+.reaction-arrow {
+  flex: none; width: 12px; height: 12px; margin-right: 4px;
+  border-top: 3px solid var(--muted); border-right: 3px solid var(--muted); transform: rotate(45deg);
+}
+@keyframes reactionLamp {
+  0%, 55% { opacity: .3; transform: scale(.96); }
+  57% { opacity: 1; transform: scale(1.07); }
+  70%, 100% { opacity: 1; transform: none; }
+}
+
+.reaction-note { margin: 0; font-size: .88rem; font-weight: 700; color: var(--alert); text-wrap: balance; }
+
+/* ---------- records ---------- */
+.reaction-records { width: 100%; max-width: 360px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; text-align: left; }
+.reaction-records-head { grid-column: 1 / -1; margin: 0; font-size: .78rem; color: var(--muted); letter-spacing: .08em; }
+.reaction-rec {
+  position: relative; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  padding: 8px 12px; border-radius: 14px; border: 2px solid var(--line); background: var(--paper);
+}
+.reaction-rec span { font-size: .75rem; color: var(--muted); }
+.reaction-rec b { font-family: var(--display); font-weight: 400; font-size: 1.5rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.reaction-rec.new { border-color: var(--accent); }
+.reaction-rec.new b { color: var(--accent); }
+.reaction-rec em {
+  position: absolute; top: -10px; right: 8px; font-style: normal; font-size: .7rem; font-weight: 900;
+  padding: 2px 8px; border-radius: 999px; background: var(--accent); color: var(--on-accent);
+  animation: reactionBadge .5s cubic-bezier(.2, 1.4, .4, 1) .35s both;
+}
+@keyframes reactionBadge { from { transform: scale(0) rotate(-12deg); } to { transform: none; } }
+
+/* ---------- results ---------- */
+.word-card.reaction-score .wc-main { color: var(--accent); font-size: clamp(3.4rem, 19vw, 6rem); }
+.word-card.reaction-score.reaction-long .wc-main { font-size: clamp(2.6rem, 14vw, 4.6rem); }
+.reaction-next {
+  margin: 0; font-size: .85rem; font-weight: 700; color: var(--ink);
+  border: 1.5px dashed var(--muted); border-radius: 999px; padding: 4px 14px; font-variant-numeric: tabular-nums;
+}
+.reaction-stats { margin: 0; font-size: .85rem; color: var(--muted); font-weight: 700; font-variant-numeric: tabular-nums; text-wrap: balance; }
+.reaction-times li { padding-block: 5px; }
+.reaction-times .who { font-size: .85rem; color: var(--muted); font-weight: 700; }
+/* 10 trials: two columns of compact rows (the fastest keeps its colored border; the stats line names it too). */
+.reaction-times.reaction-compact { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.reaction-times.reaction-compact li { grid-template-columns: auto 1fr; gap: 6px; padding: 4px 10px; }
+.reaction-times.reaction-compact .who, .reaction-times.reaction-compact .mark { display: none; }
+.reaction-times.reaction-compact .num { font-size: 1.15rem; text-align: right; white-space: nowrap; }
+
+/* ---------- full-screen tap layer ---------- */
+.reaction-layer {
+  position: fixed; inset: 0; z-index: 50; overflow: hidden;
+  background: var(--c-indigo); color: var(--on-tile);
+  user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; touch-action: none;
+}
+.reaction-pad {
+  position: absolute; inset: 0; box-sizing: border-box;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: calc(env(safe-area-inset-top, 0px) + 72px) 20px calc(env(safe-area-inset-bottom, 0px) + 110px);
+  text-align: center; cursor: pointer; outline: none;
+}
+.reaction-pad:focus-visible { outline: 3px solid currentColor; outline-offset: -10px; }
+.reaction-msgbox { position: relative; display: flex; flex-direction: column; align-items: center; gap: 10px; max-width: 100%; }
+.reaction-msg {
+  margin: 0; font-family: var(--display); font-size: clamp(3rem, 15vw, 6rem); line-height: 1.1;
+  font-variant-numeric: tabular-nums; text-wrap: balance; word-break: keep-all; overflow-wrap: anywhere;
+}
+.reaction-msg small { font-size: .38em; margin-left: .12em; }
+.reaction-sub { margin: 0; font-size: 1.05rem; font-weight: 700; min-height: 1.5em; text-wrap: balance; }
+
+.reaction-ring {
+  position: absolute; left: 50%; top: 50%; width: min(72vw, 56vh, 360px); aspect-ratio: 1;
+  transform: translate(-50%, -50%); pointer-events: none; opacity: 0;
+}
+.reaction-ring i {
+  position: absolute; inset: 0; border-radius: 50%; border: 3px solid currentColor;
+  animation: reactionBreathe 2.6s ease-in-out infinite;
+}
+.reaction-ring i:nth-child(2) { animation-delay: -1.3s; }
+.reaction-layer[data-state="count"] .reaction-ring,
+.reaction-layer[data-state="wait"] .reaction-ring,
+.reaction-layer[data-mode="ear"][data-state="go"] .reaction-ring { opacity: 1; }
+@keyframes reactionBreathe {
+  0% { transform: scale(.5); opacity: 0; }
+  45% { opacity: .35; }
+  100% { transform: scale(1); opacity: 0; }
+}
+.reaction-layer[data-mode="eye"][data-state="go"] .reaction-ring { opacity: 1; }
+.reaction-layer[data-mode="eye"][data-state="go"] .reaction-ring i { animation: reactionBurst .45s ease-out both; }
+@keyframes reactionBurst { from { transform: scale(.4); opacity: .8; } to { transform: scale(1.25); opacity: 0; } }
+
+/* State colors. In ear mode the screen deliberately does not change when the signal sounds. */
+.reaction-layer[data-mode="eye"][data-state="go"] { background: var(--go); color: var(--on-go); }
+.reaction-layer[data-state="foul"] { background: var(--alert); color: var(--on-accent); }
+.reaction-layer[data-state="shown"],
+.reaction-layer[data-state="late"],
+.reaction-layer[data-state="paused"],
+.reaction-layer[data-state="idle"] { background: var(--paper); color: var(--ink); }
+.reaction-layer[data-state="shown"] .reaction-msg { color: var(--accent); }
+
+.reaction-top {
+  position: absolute; top: 0; left: 0; right: 0; pointer-events: none;
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 0;
+}
+.reaction-quit {
+  pointer-events: auto; font: inherit; font-size: .95rem; font-weight: 700; color: inherit; cursor: pointer;
+  min-height: 44px; padding: 8px 18px; border-radius: 999px; border: 2px solid currentColor; background: transparent;
+}
+.reaction-layer[data-state="count"] .reaction-quit { visibility: hidden; }
+.reaction-info { font-weight: 900; font-size: 1rem; font-variant-numeric: tabular-nums; text-align: right; min-width: 0; }
+
+.reaction-dots {
+  position: absolute; left: 16px; right: 16px; bottom: calc(env(safe-area-inset-bottom, 0px) + 22px);
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 6px;
+  margin: 0; padding: 0; list-style: none; pointer-events: none;
+}
+.reaction-dots li {
+  min-width: 2.9em; height: 30px; padding-inline: 6px; box-sizing: border-box;
+  display: grid; place-items: center; border-radius: 999px; border: 2px dashed currentColor; opacity: .45;
+  font-size: .78rem; font-weight: 900; font-variant-numeric: tabular-nums;
+}
+.reaction-dots li.now { border-style: solid; opacity: .85; }
+.reaction-dots li.done { border-style: solid; opacity: 1; background: color-mix(in srgb, currentColor 14%, transparent); }
+.reaction-dots li.fresh { animation: reactionDot .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes reactionDot { from { transform: scale(1.6); } to { transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .reaction-lamp.go, .reaction-lamp.beep, .reaction-rec em, .reaction-dots li.fresh { animation: none; }
+  .reaction-ring { display: none; }
+}

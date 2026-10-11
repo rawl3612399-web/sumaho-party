@@ -1,0 +1,30 @@
+<!-- ===== 的当てタップ ===== -->
+<div class="mode" id="modeAim" hidden>
+  <main class="stage" id="amStage" aria-live="polite">
+    <section class="panel" id="amSetup">
+      <div class="opts">
+        <div class="opt"><span class="row-label">モード</span><div class="chips" id="amModeChips"></div></div>
+      </div>
+      <ul class="rules" id="amRules"></ul>
+    </section>
+    <section class="panel" id="amPlay" hidden>
+      <span class="label" id="amLabel"></span>
+      <p class="d-title" id="amTitle"></p>
+      <div class="word-card" id="amCard"></div>
+      <div class="aim-hud" id="amHud" aria-live="off" hidden>
+        <div class="aim-stat"><small id="amTimeLabel">タイム</small><b id="amTime">0.00</b></div>
+        <div class="aim-stat"><small id="amCountLabel">のこりの的</small><b id="amCount">30</b></div>
+        <div class="aim-stat"><small>命中率</small><b id="amAcc">--</b></div>
+        <div class="aim-track"><span id="amBar"></span></div>
+      </div>
+      <div class="aim-field" id="amField" aria-hidden="true" hidden>
+        <div class="aim-target" id="amTarget" hidden><span class="aim-face" id="amFace"></span></div>
+        <div class="aim-veil" id="amVeil" hidden><b id="amVeilMain"></b><small id="amVeilSub"></small></div>
+      </div>
+      <div class="aim-stats" id="amStats" hidden></div>
+      <p class="hint" id="amHint"></p>
+    </section>
+    <div class="aim-records" id="amRecords" hidden></div>
+  </main>
+  <div class="actions" id="amActions"></div>
+</div>
